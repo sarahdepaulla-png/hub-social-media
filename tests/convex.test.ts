@@ -400,3 +400,34 @@ describe("mural de referências", () => {
     await expect(as(liliUser).mutation(api.ideas.update, { ideaId: id, adaptation: "x" })).rejects.toThrow(/Só quem enviou/);
   });
 });
+
+describe("curtir, comentar e editar cartões", () => {
+  test("cliente curte e comenta; comentário traz a ideia de volta para o estúdio", async () => {
+    const { as, liliUser, admin, biaUser } = await setup();
+    const id = await as(admin).mutation(api.ideas.create, { slug: "lili", title: "Bastidores da aula" });
+    await as(liliUser).mutation(api.ideas.toggleLike, { ideaId: id });
+    await as(admin).mutation(api.ideas.toggleLike, { ideaId: id });
+    await as(liliUser).mutation(api.ideas.addComment, { ideaId: id, body: "Amei, posso gravar quinta" });
+    let [card] = await as(liliUser).query(api.ideas.list, { slug: "lili" });
+    expect(card.likes).toMatchObject({ count: 2, mine: true });
+    expect(card.likes.names).toContain("Estúdio");
+    expect(card.comments[0]).toMatchObject({ body: "Amei, posso gravar quinta", isMine: true });
+    expect(card.status).toBe("nova");
+
+    await as(liliUser).mutation(api.ideas.toggleLike, { ideaId: id });
+    [card] = await as(liliUser).query(api.ideas.list, { slug: "lili" });
+    expect(card.likes).toMatchObject({ count: 1, mine: false });
+
+    await expect(as(biaUser).mutation(api.ideas.toggleLike, { ideaId: id })).rejects.toThrow(/não encontrada/);
+    await expect(as(biaUser).mutation(api.ideas.addComment, { ideaId: id, body: "oi" })).rejects.toThrow(/não encontrada/);
+    await expect(as(liliUser).mutation(api.ideas.removeComment, { commentId: (await as(admin).query(api.ideas.list, { slug: "lili" }))[0].comments[0]._id })).resolves.toBeNull();
+  });
+
+  test("editar o cartão inteiro", async () => {
+    const { as, admin } = await setup();
+    const id = await as(admin).mutation(api.ideas.create, { slug: "vivi", title: "Antes", link: "https://www.tiktok.com/@a/video/1" });
+    await as(admin).mutation(api.ideas.update, { ideaId: id, title: "Depois", description: "Contexto", adaptation: "Versão com agulha", link: "https://youtu.be/dQw4w9WgXcQ" });
+    const [card] = await as(admin).query(api.ideas.list, { slug: "vivi" });
+    expect(card).toMatchObject({ title: "Depois", description: "Contexto", adaptation: "Versão com agulha", platform: "youtube", previewPending: true });
+  });
+});

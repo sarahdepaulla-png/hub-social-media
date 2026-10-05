@@ -168,48 +168,149 @@ function CardImage({ idea }: { idea: Idea }) {
   );
 }
 
-function Adaptation({ idea }: { idea: Idea }) {
+function EditCard({ idea, onDone }: { idea: Idea; onDone: () => void }) {
   const update = useMutation(api.ideas.update);
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(idea.adaptation ?? "");
+  const uploadUrl = useMutation(api.ideas.generateUploadUrl);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (editing) {
-    return (
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const d = new FormData(e.currentTarget);
+    const file = d.get("arquivo") as File | null;
+    setPending(true);
+    setError(null);
+    try {
+      let fileId: Id<"_storage"> | undefined;
+      if (file && file.size > 0) {
+        if (file.size > MAX_BYTES) throw new Error("O arquivo passa de 25 MB.");
+        const url = await uploadUrl();
+        const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
+        if (!res.ok) throw new Error("Não foi possível enviar o arquivo.");
+        fileId = ((await res.json()) as { storageId: Id<"_storage"> }).storageId;
+      }
+      await update({
+        ideaId: idea._id as Id<"ideas">,
+        title: String(d.get("titulo") ?? ""),
+        link: String(d.get("link") ?? ""),
+        description: String(d.get("descricao") ?? ""),
+        adaptation: String(d.get("adaptacao") ?? ""),
+        fileId,
+        removeFile: d.get("tirarArquivo") === "on" && !fileId,
+      });
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error && !("data" in err) ? err.message : errorText(err));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-3 p-4">
+      <strong className="text-base">Editar cartão</strong>
+      <label className="flex flex-col gap-1 text-[13px] font-semibold">
+        Título
+        <input name="titulo" defaultValue={idea.title} className={`${field} min-h-11`} />
+      </label>
+      <label className="flex flex-col gap-1 text-[13px] font-semibold">
+        Link
+        <input name="link" type="url" defaultValue={idea.link ?? ""} placeholder="https://" className={`${field} min-h-11`} />
+        <span className="font-normal text-texto-2">Trocou o link? A imagem é buscada de novo.</span>
+      </label>
+      <label className="flex flex-col gap-1 text-[13px] font-semibold">
+        Como adaptar
+        <textarea name="adaptacao" rows={3} defaultValue={idea.adaptation ?? ""} className={`${field} resize-y py-2`} />
+      </label>
+      <label className="flex flex-col gap-1 text-[13px] font-semibold">
+        Descrição
+        <textarea name="descricao" rows={2} defaultValue={idea.description ?? ""} className={`${field} resize-y py-2`} />
+      </label>
+      <label className="flex flex-col gap-1 text-[13px] font-semibold">
+        {idea.hasFile ? "Trocar imagem ou arquivo" : "Imagem ou arquivo (troca a imagem do cartão)"}
+        <input
+          name="arquivo"
+          type="file"
+          accept="image/*,video/*,application/pdf"
+          className="text-sm font-normal file:mr-3 file:min-h-9 file:rounded-full file:border-[1.5px] file:border-vinho file:bg-white file:px-3 file:font-semibold file:text-vinho"
+        />
+      </label>
+      {idea.hasFile && (
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="tirarArquivo" className="size-4 accent-rosa-forte" />
+          Tirar o arquivo e usar a imagem do link
+        </label>
+      )}
+      {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
+      <span className="flex gap-2">
+        <button type="submit" disabled={pending} className="min-h-10 rounded-full bg-vinho px-5 text-sm font-semibold text-white disabled:opacity-50">
+          {pending ? "Salvando" : "Salvar"}
+        </button>
+        <button type="button" onClick={onDone} className="min-h-10 px-3 text-sm font-semibold text-texto-2">
+          Cancelar
+        </button>
+      </span>
+    </form>
+  );
+}
+
+function Conversation({ idea }: { idea: Idea }) {
+  const add = useMutation(api.ideas.addComment);
+  const removeComment = useMutation(api.ideas.removeComment);
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-linha pt-3">
+      {idea.comments.length === 0 && <p className="text-sm text-texto-2">Ninguém comentou ainda.</p>}
+      {idea.comments.map((c) => (
+        <div key={c._id} className="flex gap-2.5">
+          <span
+            aria-hidden="true"
+            className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${c.authorIsStudio ? "bg-vinho" : "bg-rosa-forte"}`}
+          >
+            {c.authorName.charAt(0).toUpperCase()}
+          </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-xs text-texto-2">
+              <strong className="text-vinho">{c.authorName}</strong> {stamp(c.at)}
+              {c.isMine && (
+                <button type="button" onClick={() => removeComment({ commentId: c._id })} className="ml-2 font-semibold underline">
+                  apagar
+                </button>
+              )}
+            </span>
+            <p className="whitespace-pre-line break-words text-sm leading-snug">{c.body}</p>
+          </div>
+        </div>
+      ))}
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          await update({ ideaId: idea._id as Id<"ideas">, adaptation: text });
-          setEditing(false);
+          if (!body.trim()) return;
+          try {
+            await add({ ideaId: idea._id as Id<"ideas">, body });
+            setBody("");
+            setError(null);
+          } catch (err) {
+            setError(errorText(err));
+          }
         }}
-        className="flex flex-col gap-2"
+        className="flex gap-2"
       >
-        <label className="sr-only" htmlFor={`adapt-${idea._id}`}>Como adaptar</label>
-        <textarea id={`adapt-${idea._id}`} rows={4} autoFocus value={text} onChange={(e) => setText(e.target.value)} className={`${field} resize-y py-2 text-[15px]`} />
-        <span className="flex gap-2">
-          <button type="submit" className="min-h-9 rounded-full bg-vinho px-4 text-sm font-semibold text-white">Salvar</button>
-          <button type="button" onClick={() => setEditing(false)} className="min-h-9 px-2 text-sm font-semibold text-texto-2">Cancelar</button>
-        </span>
-      </form>
-    );
-  }
-
-  if (!idea.adaptation) {
-    return idea.canEdit ? (
-      <button type="button" onClick={() => setEditing(true)} className="self-start rounded-md border border-dashed border-campo px-3 py-2 text-sm font-semibold text-texto-2 hover:border-vinho hover:text-vinho">
-        + Como dá para adaptar
-      </button>
-    ) : null;
-  }
-
-  return (
-    <div className="relative -rotate-1 bg-rosa px-3.5 pb-3 pt-2.5 text-vinho">
-      <span className="text-xs font-bold">Como adaptar</span>
-      <p className="whitespace-pre-line text-[15px] leading-snug">{idea.adaptation}</p>
-      {idea.canEdit && (
-        <button type="button" onClick={() => setEditing(true)} className="mt-1 text-xs font-semibold underline">
-          Editar
+        <label className="sr-only" htmlFor={`com-${idea._id}`}>Comentar</label>
+        <input
+          id={`com-${idea._id}`}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Escreva um comentário"
+          className={`${field} min-h-10 min-w-0 flex-1 text-[15px]`}
+        />
+        <button type="submit" disabled={!body.trim()} className="min-h-10 shrink-0 rounded-full bg-vinho px-4 text-sm font-semibold text-white disabled:opacity-40">
+          Enviar
         </button>
-      )}
+      </form>
+      {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
     </div>
   );
 }
@@ -217,71 +318,139 @@ function Adaptation({ idea }: { idea: Idea }) {
 function IdeaCard({ idea, admin, base }: { idea: Idea; admin: boolean; base: string }) {
   const setStatus = useMutation(api.ideas.setStatus);
   const remove = useMutation(api.ideas.remove);
+  const toggleLike = useMutation(api.ideas.toggleLike).withOptimisticUpdate((store, { ideaId }) => {
+    for (const { args, value } of store.getAllQueries(api.ideas.list)) {
+      if (!value) continue;
+      store.setQuery(
+        api.ideas.list,
+        args,
+        value.map((i) =>
+          i._id === ideaId ? { ...i, likes: { ...i.likes, mine: !i.likes.mine, count: i.likes.count + (i.likes.mine ? -1 : 1) } } : i,
+        ),
+      );
+    }
+  });
+  const [editing, setEditing] = useState(false);
+  const [talk, setTalk] = useState(false);
   const st = STATUS[idea.status];
   const title = idea.title.startsWith("Referência do") && idea.previewTitle ? idea.previewTitle : idea.title;
 
   return (
     <li className="mb-5 break-inside-avoid rounded-peca bg-white">
       <CardImage idea={idea} />
-      <div className="flex flex-col gap-3 p-4">
-        <strong className="text-[17px] leading-snug">{title}</strong>
-        {idea.description && <p className="whitespace-pre-line text-sm leading-relaxed text-texto-3">{idea.description}</p>}
-        <Adaptation idea={idea} />
-        {idea.fileUrl && (
-          <a href={idea.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-rosa-forte underline">
-            Ver arquivo anexado
-          </a>
-        )}
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
-          <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: st.color }}>
-            <span className="size-2 rounded-full" style={{ background: st.color }} />
-            {idea.status === "convertida" && idea.content ? `Virou conteúdo em ${shortDate(idea.content.date)}` : st.label}
-          </span>
-          <span className="text-texto-2">
-            {idea.authorIsStudio ? "Estúdio" : idea.authorName}, {stamp(idea.at)}
-          </span>
-        </span>
-        <span className="flex flex-wrap gap-2">
-          {idea.content && (
-            <Link href={`${base}/c/${idea.content._id}`} className="inline-flex min-h-9 items-center text-sm font-semibold text-rosa-forte">
-              Abrir conteúdo
-            </Link>
+      {editing ? (
+        <EditCard idea={idea} onDone={() => setEditing(false)} />
+      ) : (
+        <div className="flex flex-col gap-3 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <strong className="text-[17px] leading-snug">{title}</strong>
+            {idea.canEdit && (
+              <button type="button" onClick={() => setEditing(true)} className="min-h-8 shrink-0 rounded-full border border-campo px-3 text-xs font-semibold hover:border-vinho">
+                Editar
+              </button>
+            )}
+          </div>
+          {idea.description && <p className="whitespace-pre-line text-sm leading-relaxed text-texto-3">{idea.description}</p>}
+          {idea.adaptation ? (
+            <div className="-rotate-1 bg-rosa px-3.5 pb-3 pt-2.5 text-vinho">
+              <span className="text-xs font-bold">Como adaptar</span>
+              <p className="whitespace-pre-line text-[15px] leading-snug">{idea.adaptation}</p>
+            </div>
+          ) : (
+            idea.canEdit && (
+              <button type="button" onClick={() => setEditing(true)} className="self-start rounded-md border border-dashed border-campo px-3 py-2 text-sm font-semibold text-texto-2 hover:border-vinho hover:text-vinho">
+                + Como dá para adaptar
+              </button>
+            )
           )}
-          {admin && idea.status !== "convertida" && (
-            <>
-              <Link
-                href={`${base}/novo?data=${todayISO()}&tema=${encodeURIComponent(title)}&ideia=${idea._id}`}
-                className="inline-flex min-h-9 items-center rounded-full bg-vinho px-4 text-sm font-semibold text-white"
-              >
-                Levar ao calendário
-              </Link>
-              {idea.status === "nova" && (
-                <button type="button" onClick={() => setStatus({ ideaId: idea._id as Id<"ideas">, status: "analise" })} className="min-h-9 rounded-full border border-campo px-3.5 text-sm font-semibold">
-                  Em análise
-                </button>
-              )}
-              {idea.status !== "arquivada" ? (
-                <button type="button" onClick={() => setStatus({ ideaId: idea._id as Id<"ideas">, status: "arquivada" })} className="min-h-9 px-2 text-sm font-semibold text-texto-2">
-                  Arquivar
-                </button>
-              ) : (
-                <button type="button" onClick={() => setStatus({ ideaId: idea._id as Id<"ideas">, status: "analise" })} className="min-h-9 px-2 text-sm font-semibold text-texto-2">
-                  Reabrir
-                </button>
-              )}
-            </>
+          {idea.fileUrl && (
+            <a href={idea.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-rosa-forte underline">
+              Ver arquivo anexado
+            </a>
           )}
-          {!admin && idea.isMine && idea.status === "nova" && (
+
+          <div className="flex items-center gap-1 border-t border-linha pt-2">
             <button
               type="button"
-              onClick={() => confirm("Apagar esta referência?") && remove({ ideaId: idea._id as Id<"ideas"> })}
-              className="min-h-9 px-1 text-sm font-semibold text-texto-2"
+              aria-pressed={idea.likes.mine}
+              onClick={() => toggleLike({ ideaId: idea._id as Id<"ideas"> })}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-2.5 text-sm font-semibold hover:bg-creme"
             >
-              Apagar
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill={idea.likes.mine ? "var(--color-rosa-forte)" : "none"} stroke={idea.likes.mine ? "var(--color-rosa-forte)" : "currentColor"} strokeWidth="2">
+                <path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.2 3.1 4.5 6.9 4.5c2.1 0 3.6 1.2 5.1 3 1.5-1.8 3-3 5.1-3 3.8 0 6 3.7 4.5 7.3C19.5 16.4 12 21 12 21z" />
+              </svg>
+              {idea.likes.mine ? "Curtido" : "Curtir"}
+              {idea.likes.count > 0 && <span className="text-texto-2">{idea.likes.count}</span>}
             </button>
+            <button
+              type="button"
+              aria-expanded={talk}
+              onClick={() => setTalk((t) => !t)}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-2.5 text-sm font-semibold hover:bg-creme"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M20.5 11.5a8.5 8.5 0 01-12.6 7.4L3.5 20l1.2-4.2A8.5 8.5 0 1120.5 11.5z" />
+              </svg>
+              Comentar
+              {idea.comments.length > 0 && <span className="text-texto-2">{idea.comments.length}</span>}
+            </button>
+          </div>
+          {idea.likes.count > 0 && (
+            <span className="-mt-2 text-xs text-texto-2">Curtido por {idea.likes.names.join(", ")}</span>
           )}
-        </span>
-      </div>
+          {(talk || (idea.comments.length > 0 && idea.comments.length <= 2)) && <Conversation idea={idea} />}
+
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+            <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: st.color }}>
+              <span className="size-2 rounded-full" style={{ background: st.color }} />
+              {idea.status === "convertida" && idea.content ? `Virou conteúdo em ${shortDate(idea.content.date)}` : st.label}
+            </span>
+            <span className="text-texto-2">
+              {idea.authorIsStudio ? "Estúdio" : idea.authorName}, {stamp(idea.at)}
+            </span>
+          </span>
+          <span className="flex flex-wrap gap-2">
+            {idea.content && (
+              <Link href={`${base}/c/${idea.content._id}`} className="inline-flex min-h-9 items-center text-sm font-semibold text-rosa-forte">
+                Abrir conteúdo
+              </Link>
+            )}
+            {admin && idea.status !== "convertida" && (
+              <>
+                <Link
+                  href={`${base}/novo?data=${todayISO()}&tema=${encodeURIComponent(title)}&ideia=${idea._id}`}
+                  className="inline-flex min-h-9 items-center rounded-full bg-vinho px-4 text-sm font-semibold text-white"
+                >
+                  Levar ao calendário
+                </Link>
+                {idea.status === "nova" && (
+                  <button type="button" onClick={() => setStatus({ ideaId: idea._id as Id<"ideas">, status: "analise" })} className="min-h-9 rounded-full border border-campo px-3.5 text-sm font-semibold">
+                    Em análise
+                  </button>
+                )}
+                {idea.status !== "arquivada" ? (
+                  <button type="button" onClick={() => setStatus({ ideaId: idea._id as Id<"ideas">, status: "arquivada" })} className="min-h-9 px-2 text-sm font-semibold text-texto-2">
+                    Arquivar
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setStatus({ ideaId: idea._id as Id<"ideas">, status: "analise" })} className="min-h-9 px-2 text-sm font-semibold text-texto-2">
+                    Reabrir
+                  </button>
+                )}
+              </>
+            )}
+            {!admin && idea.isMine && idea.status === "nova" && (
+              <button
+                type="button"
+                onClick={() => confirm("Apagar esta referência?") && remove({ ideaId: idea._id as Id<"ideas"> })}
+                className="min-h-9 px-1 text-sm font-semibold text-texto-2"
+              >
+                Apagar
+              </button>
+            )}
+          </span>
+        </div>
+      )}
     </li>
   );
 }

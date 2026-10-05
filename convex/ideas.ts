@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireAdmin, requireClientBySlug, requireViewer } from "./lib/access";
@@ -44,9 +44,87 @@ export const list = query({
         isMine: i.authorId === viewer._id,
         canEdit: viewer.role === "admin" || i.authorId === viewer._id,
         content: content ? { _id: content._id, date: content.date } : null,
+        hasFile: !!i.fileId,
+        likes: await likers(ctx, i.likedBy ?? [], viewer._id),
+        comments: await commentsOf(ctx, i._id, viewer._id),
       });
     }
     return out;
+  },
+});
+
+async function likers(ctx: QueryCtx, ids: Id<"users">[], me: Id<"users">) {
+  const people = await Promise.all(ids.map((id) => ctx.db.get(id)));
+  return {
+    count: ids.length,
+    mine: ids.includes(me),
+    names: people.filter(Boolean).map((u) => (u!.role === "admin" ? "Estúdio" : displayName(u))),
+  };
+}
+
+async function commentsOf(ctx: QueryCtx, ideaId: Id<"ideas">, me: Id<"users">) {
+  const rows = await ctx.db
+    .query("ideaComments")
+    .withIndex("by_idea", (q) => q.eq("ideaId", ideaId))
+    .collect();
+  const out = [];
+  for (const c of rows) {
+    const author = await ctx.db.get(c.authorId);
+    out.push({
+      _id: c._id,
+      body: c.body,
+      at: c._creationTime,
+      authorName: author?.role === "admin" ? "Estúdio" : displayName(author),
+      authorIsStudio: author?.role === "admin",
+      isMine: c.authorId === me,
+    });
+  }
+  return out;
+}
+
+/** Carrega a ideia e confere se quem pede é do workspace dela (ou admin). */
+async function requireIdeaAccess(ctx: QueryCtx, ideaId: Id<"ideas">) {
+  const viewer = await requireViewer(ctx);
+  const idea = await ctx.db.get(ideaId);
+  if (!idea || (viewer.role !== "admin" && viewer.clientId !== idea.clientId)) {
+    throw new ConvexError("Ideia não encontrada.");
+  }
+  return { viewer, idea };
+}
+
+/** Curtir ou descurtir um cartão. */
+export const toggleLike = mutation({
+  args: { ideaId: v.id("ideas") },
+  handler: async (ctx, { ideaId }) => {
+    const { viewer, idea } = await requireIdeaAccess(ctx, ideaId);
+    const current = idea.likedBy ?? [];
+    const likedBy = current.includes(viewer._id) ? current.filter((id) => id !== viewer._id) : [...current, viewer._id];
+    await ctx.db.patch(ideaId, { likedBy });
+  },
+});
+
+/** Comentário na conversa do cartão. */
+export const addComment = mutation({
+  args: { ideaId: v.id("ideas"), body: v.string() },
+  handler: async (ctx, { ideaId, body }) => {
+    const { viewer, idea } = await requireIdeaAccess(ctx, ideaId);
+    const text = body.trim();
+    if (!text) throw new ConvexError("Escreva algo antes de enviar.");
+    if (text.length > 2000) throw new ConvexError("Comentário muito longo.");
+    await ctx.db.insert("ideaComments", { ideaId, clientId: idea.clientId, authorId: viewer._id, body: text });
+    // Comentário da cliente traz a ideia de volta para o radar do estúdio.
+    if (viewer.role !== "admin" && idea.status === "analise") await ctx.db.patch(ideaId, { status: "nova" });
+  },
+});
+
+export const removeComment = mutation({
+  args: { commentId: v.id("ideaComments") },
+  handler: async (ctx, { commentId }) => {
+    const viewer = await requireViewer(ctx);
+    const c = await ctx.db.get(commentId);
+    if (!c) return;
+    if (viewer.role !== "admin" && c.authorId !== viewer._id) throw new ConvexError("Só quem escreveu pode apagar.");
+    await ctx.db.delete(commentId);
   },
 });
 
@@ -138,10 +216,13 @@ export const update = mutation({
   args: {
     ideaId: v.id("ideas"),
     title: v.optional(v.string()),
+    description: v.optional(v.string()),
     adaptation: v.optional(v.string()),
     link: v.optional(v.string()),
+    fileId: v.optional(v.id("_storage")),
+    removeFile: v.optional(v.boolean()),
   },
-  handler: async (ctx, { ideaId, title, adaptation, link }) => {
+  handler: async (ctx, { ideaId, title, description, adaptation, link, fileId, removeFile }) => {
     const viewer = await requireViewer(ctx);
     const idea = await ctx.db.get(ideaId);
     if (!idea) throw new ConvexError("Ideia não encontrada.");
@@ -151,6 +232,11 @@ export const update = mutation({
     const patch: Partial<Doc<"ideas">> = {};
     if (title !== undefined && title.trim()) patch.title = title.trim();
     if (adaptation !== undefined) patch.adaptation = adaptation.trim() || undefined;
+    if (description !== undefined) patch.description = description.trim() || undefined;
+    if (fileId || removeFile) {
+      if (idea.fileId && idea.fileId !== fileId) await ctx.storage.delete(idea.fileId);
+      patch.fileId = fileId;
+    }
     let newLink: string | undefined;
     let linkChanged = false;
     if (link !== undefined) {
@@ -201,6 +287,9 @@ export const remove = mutation({
     if (viewer.role !== "admin" && !mine) throw new ConvexError("Esta ideia já está com o estúdio.");
     if (idea.fileId) await ctx.storage.delete(idea.fileId);
     if (idea.previewId) await ctx.storage.delete(idea.previewId);
+    for (const c of await ctx.db.query("ideaComments").withIndex("by_idea", (q) => q.eq("ideaId", ideaId)).collect()) {
+      await ctx.db.delete(c._id);
+    }
     await ctx.db.delete(ideaId);
   },
 });

@@ -160,7 +160,16 @@ export default defineSchema({
     previewId: v.optional(v.id("_storage")), // imagem tirada do link
     previewTitle: v.optional(v.string()),
     previewStatus: v.optional(v.union(v.literal("pendente"), v.literal("ok"), v.literal("falhou"))),
+    likedBy: v.optional(v.array(v.id("users"))),
   }).index("by_client", ["clientId"]),
+
+  // Conversa em cada cartão do mural de ideias.
+  ideaComments: defineTable({
+    ideaId: v.id("ideas"),
+    clientId: v.id("clients"),
+    authorId: v.id("users"),
+    body: v.string(),
+  }).index("by_idea", ["ideaId"]),
 
   // Biblioteca de datas. Sem clientId = vale para todo cliente dos nichos listados.
   opportunities: defineTable({

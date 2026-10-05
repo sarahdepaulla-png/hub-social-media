@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Asterisk, Loading, SelectionBox, StatusTag, Thumb, buttonClass } from "@/components/brand";
 import { useWorkspace } from "@/components/WorkspaceShell";
+import { StatusMenu } from "@/components/StatusMenu";
 import { currentMonth, monthName, shortDate, todayISO } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
 
@@ -61,6 +62,7 @@ export default function InicioPage() {
   if (data === undefined) return <Loading />;
   const { counts, waiting, adjusting, upcoming } = data;
   const base = `/w/${ws.slug}`;
+  const admin = ws.viewerRole === "admin";
 
   const headline =
     counts.total === 0
@@ -125,7 +127,7 @@ export default function InicioPage() {
           ) : (
             <ul className="flex snap-x gap-3.5 overflow-x-auto px-6 pb-2 md:grid md:grid-cols-4 md:overflow-visible">
               {waiting.map((c, i) => (
-                <li key={c._id} className="w-[214px] shrink-0 snap-start md:w-auto">
+                <li key={c._id} className="flex w-[214px] shrink-0 snap-start flex-col gap-2 md:w-auto">
                   <Link href={`${base}/c/${c._id}`} className="group flex flex-col gap-2.5">
                     <Thumb
                       url={c.coverUrl}
@@ -138,6 +140,7 @@ export default function InicioPage() {
                     </span>
                     <strong className="text-base leading-tight">{c.title}</strong>
                   </Link>
+                  {admin && <StatusMenu contentId={c._id} status={c.status} editable short />}
                 </li>
               ))}
             </ul>
@@ -151,14 +154,12 @@ export default function InicioPage() {
             <h2 className="text-xl font-extrabold tracking-[-0.04em]">Em ajuste pelo estúdio</h2>
             <ul className="flex flex-col">
               {adjusting.map((c) => (
-                <li key={c._id} className="border-t border-linha last:border-b">
-                  <Link href={`${base}/c/${c._id}`} className="flex items-center justify-between gap-4 py-3.5">
-                    <span className="flex flex-col gap-1">
-                      <strong className="text-base leading-tight">{c.title}</strong>
-                      <span className="text-[13px] text-texto-2">{shortDate(c.date)}</span>
-                    </span>
-                    <StatusTag status={c.status} short />
+                <li key={c._id} className="flex items-center justify-between gap-4 border-t border-linha last:border-b">
+                  <Link href={`${base}/c/${c._id}`} className="flex flex-1 flex-col gap-1 py-3.5">
+                    <strong className="text-base leading-tight">{c.title}</strong>
+                    <span className="text-[13px] text-texto-2">{shortDate(c.date)}</span>
                   </Link>
+                  <StatusMenu contentId={c._id} status={c.status} editable={admin} short />
                 </li>
               ))}
             </ul>
@@ -172,8 +173,8 @@ export default function InicioPage() {
           ) : (
             <ul className="flex flex-col">
               {upcoming.map((c, i) => (
-                <li key={c._id} className="border-t border-linha last:border-b">
-                  <Link href={`${base}/c/${c._id}`} className="flex items-center gap-4 py-3">
+                <li key={c._id} className="flex items-center gap-4 border-t border-linha last:border-b">
+                  <Link href={`${base}/c/${c._id}`} className="flex min-w-0 flex-1 items-center gap-4 py-3">
                     <Thumb url={c.coverUrl} tone={i + 1} className="h-[70px] w-14 shrink-0 rounded-lg" />
                     <span className="flex min-w-0 flex-1 flex-col gap-1">
                       <strong className="truncate text-base">{c.title}</strong>
@@ -181,8 +182,8 @@ export default function InicioPage() {
                         {shortDate(c.date)}. {PLATFORM[c.platform]}, {FORMAT[c.format].toLowerCase()}
                       </span>
                     </span>
-                    <StatusTag status={c.status} short className="shrink-0" />
                   </Link>
+                  <StatusMenu contentId={c._id} status={c.status} editable={admin} short className="shrink-0" />
                 </li>
               ))}
             </ul>

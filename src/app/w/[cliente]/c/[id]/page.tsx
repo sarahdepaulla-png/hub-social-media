@@ -6,7 +6,8 @@ import { useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { Loading, StatusTag, buttonClass } from "@/components/brand";
+import { Loading, buttonClass } from "@/components/brand";
+import { StatusMenu } from "@/components/StatusMenu";
 import { CaptionPicker } from "@/components/content/CaptionPicker";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { DecisionSheet } from "@/components/content/DecisionSheet";
@@ -79,7 +80,7 @@ export default function ConteudoPage() {
               {media.length > 1 ? `, ${media.length} cards` : ""}
             </span>
             <h1 className="titulo text-[34px] leading-[0.95] md:text-5xl">{content.title}</h1>
-            <StatusTag status={content.status} />
+            <StatusMenu contentId={content._id} status={content.status} editable={viewer.role === "admin"} />
             {(content.objective || content.pillar) && (
               <dl className="mt-1 grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
                 {content.objective && (

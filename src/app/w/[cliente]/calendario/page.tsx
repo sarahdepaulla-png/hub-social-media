@@ -7,8 +7,9 @@ import { Suspense, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { FunctionReturnType } from "convex/server";
-import { Asterisk, Loading, StatusTag, Thumb } from "@/components/brand";
+import { Asterisk, Loading, Thumb } from "@/components/brand";
 import { useWorkspace } from "@/components/WorkspaceShell";
+import { StatusMenu } from "@/components/StatusMenu";
 import { errorText } from "@/components/content/DecisionSheet";
 import { currentMonth, longDate, monthGrid, monthName, shiftMonth, todayISO } from "@/lib/dates";
 import { FORMAT, PLATFORM, STATUS, type Format, type Platform, type Status } from "@/lib/labels";
@@ -36,7 +37,7 @@ function PieceRow({ item, tone, base, admin, onMove }: { item: Card; tone: numbe
           {PLATFORM[item.platform]}, {FORMAT[item.format].toLowerCase()}
           {item.time ? `, ${item.time}` : ""}
         </span>
-        <StatusTag status={item.status} />
+        <StatusMenu contentId={item._id} status={item.status} editable={admin} />
         {admin && (
           <label className="inline-flex items-center gap-2 text-[13px] font-semibold text-rosa-forte">
             Mudar dia
@@ -372,25 +373,28 @@ function CalendarView() {
                         )}
                       </span>
                       {items.map((c, j) => (
-                        <Link
+                        <div
                           key={c._id}
-                          href={`${base}/c/${c._id}`}
                           draggable={admin}
                           onDragStart={() => setDragId(c._id)}
                           onDragEnd={() => setDragId(null)}
                           className={`flex items-start gap-2 ${dragId === c._id ? "opacity-40" : ""} ${admin ? "cursor-grab" : ""}`}
                         >
-                          <Thumb
-                            url={c.coverUrl}
-                            tone={j + Number(day.slice(8))}
-                            className={`h-[72px] w-[58px] shrink-0 rounded-lg ${c.status === "aprovado" ? "outline outline-2 outline-offset-2 outline-rosa-forte" : ""}`}
-                          />
+                          <Link href={`${base}/c/${c._id}`} draggable={false} className="shrink-0">
+                            <Thumb
+                              url={c.coverUrl}
+                              tone={j + Number(day.slice(8))}
+                              className={`h-[72px] w-[58px] shrink-0 rounded-lg ${c.status === "aprovado" ? "outline outline-2 outline-offset-2 outline-rosa-forte" : ""}`}
+                            />
+                          </Link>
                           <span className="flex min-w-0 flex-col gap-1">
-                            <span className="line-clamp-2 text-xs font-semibold leading-tight">{c.title}</span>
-                            <span className="text-[11px] text-texto-2">{FORMAT[c.format]}</span>
-                            <StatusTag status={c.status} short className="text-[11px]" />
+                            <Link href={`${base}/c/${c._id}`} draggable={false} className="flex flex-col gap-1">
+                              <span className="line-clamp-2 text-xs font-semibold leading-tight">{c.title}</span>
+                              <span className="text-[11px] text-texto-2">{FORMAT[c.format]}</span>
+                            </Link>
+                            <StatusMenu contentId={c._id} status={c.status} editable={admin} short className="text-[11px]" />
                           </span>
-                        </Link>
+                        </div>
                       ))}
                       {opps.map((o) => (
                         <span

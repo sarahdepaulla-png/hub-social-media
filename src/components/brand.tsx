@@ -112,7 +112,7 @@ export function Avatar({ name, color, url, size = 36 }: { name: string; color: s
       className="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-thumb font-bold text-vinho"
       style={{ width: size, height: size, border: `2.5px solid ${color}`, fontSize: size * 0.4 }}
     >
-      {url ? <img src={url} alt="" className="size-full object-cover" /> : name.charAt(0)}
+      {url ? <img src={url} alt="" draggable={false} className="size-full object-cover" /> : name.charAt(0)}
     </span>
   );
 }

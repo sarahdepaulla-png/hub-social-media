@@ -19,7 +19,9 @@ export function MediaViewer({
   externalUrl,
   justApproved = false,
   onIndexChange,
+  coverUrl = null,
 }: {
+  coverUrl?: string | null;
   media: MediaItem[];
   format: Format;
   status: Status;
@@ -88,7 +90,7 @@ export function MediaViewer({
                 aria-label={`Card ${i + 1} de ${media.length}`}
               >
                 {m.kind === "video" && m.url ? (
-                  <video src={m.url} controls playsInline preload="metadata" className="size-full bg-vinho object-contain" />
+                  <video src={m.url} poster={i === 0 && coverUrl ? coverUrl : undefined} controls playsInline preload="metadata" className="size-full bg-vinho object-contain" />
                 ) : m.kind === "link" && m.url ? (
                   <div className="flex size-full flex-col items-center justify-center gap-3 p-8 text-center">
                     <span className="text-lg font-bold">Mídia em link externo</span>

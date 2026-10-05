@@ -12,6 +12,8 @@ import { errorText } from "@/components/content/DecisionSheet";
 import { CaptionEditor } from "@/components/editor/CaptionEditor";
 import { ContentForm } from "@/components/editor/ContentForm";
 import { MediaManager } from "@/components/editor/MediaManager";
+import { CoverPicker } from "@/components/editor/CoverPicker";
+import { AutoCovers } from "@/components/AutoCovers";
 import { STATUS, type Status } from "@/lib/labels";
 
 export default function EditarPage() {
@@ -95,6 +97,8 @@ export default function EditarPage() {
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-12">
           <MediaManager contentId={contentId} media={media} version={content.version} />
+          <CoverPicker contentId={contentId} coverUrl={content.coverUrl} coverSource={content.coverSource} />
+          <AutoCovers contentId={contentId} />
           <ContentForm
             key={`${content._id}-${content.version}`}
             contentId={contentId}

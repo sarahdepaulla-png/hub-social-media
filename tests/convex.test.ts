@@ -307,3 +307,51 @@ describe("fila de conteúdo", () => {
     expect(moved).toContain("atualizada");
   });
 });
+
+describe("capas", () => {
+  test("imagem vira capa, quadro de vídeo não passa por cima, capa manual tem prioridade", async () => {
+    const { t, as, admin, waiting } = await setup();
+    const store = (text: string) => t.run((ctx) => ctx.storage.store(new Blob([text], { type: "image/jpeg" })));
+    const id = waiting[0];
+    const cover = async () => (await as(admin).query(api.contents.get, { contentId: id })).content;
+
+    // Só vídeo: sem capa, aparece na lista de capas a gerar.
+    const video = await store("video");
+    await as(admin).mutation(api.media.add, { contentId: id, kind: "video", storageId: video });
+    expect((await cover()).coverSource).toBeNull();
+    const missing = await as(admin).query(api.media.missingCovers, {});
+    expect(missing.map((m) => m.contentId)).toContain(id);
+
+    // Quadro do vídeo vira capa.
+    await as(admin).mutation(api.media.setCover, { contentId: id, storageId: await store("frame"), source: "quadro" });
+    expect((await cover()).coverSource).toBe("quadro");
+    expect((await as(admin).query(api.media.missingCovers, {})).map((m) => m.contentId)).not.toContain(id);
+
+    // Imagem chega: passa a ser a capa.
+    await as(admin).mutation(api.media.add, { contentId: id, kind: "imagem", storageId: await store("img") });
+    expect((await cover()).coverSource).toBe("imagem");
+
+    // Capa manual ganha de tudo e não é trocada por novas imagens.
+    await as(admin).mutation(api.media.setCover, { contentId: id, storageId: await store("manual"), source: "manual" });
+    await as(admin).mutation(api.media.add, { contentId: id, kind: "imagem", storageId: await store("img2") });
+    expect((await cover()).coverSource).toBe("manual");
+    await as(admin).mutation(api.media.setCover, { contentId: id, storageId: await store("frame2"), source: "quadro" });
+    expect((await cover()).coverSource).toBe("manual");
+
+    // Voltar para automática usa a primeira imagem.
+    await as(admin).mutation(api.media.resetCover, { contentId: id });
+    expect((await cover()).coverSource).toBe("imagem");
+
+    // Capa aparece no Estúdio e no mês.
+    const rows = await as(admin).query(api.clients.listForStudio, { month: "2026-10", today: "2026-10-05" });
+    const lili = rows.find((r) => r.slug === "lili")!;
+    expect(lili.strip.find((s) => s._id === id)?.coverUrl).toBeTruthy();
+  });
+
+  test("cliente não troca capa", async () => {
+    const { t, as, liliUser, waiting } = await setup();
+    const sid = await t.run((ctx) => ctx.storage.store(new Blob(["x"], { type: "image/jpeg" })));
+    await expect(as(liliUser).mutation(api.media.setCover, { contentId: waiting[0], storageId: sid, source: "manual" })).rejects.toThrow(/administradora/);
+    expect(await as(liliUser).query(api.media.missingCovers, {})).toEqual([]);
+  });
+});

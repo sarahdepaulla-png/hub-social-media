@@ -87,6 +87,8 @@ export const get = query({
         status: content.status,
         version: content.version,
         externalUrl: content.externalUrl ?? null,
+        coverUrl: content.coverId ? await ctx.storage.getUrl(content.coverId) : (content.coverUrl ?? null),
+        coverSource: content.coverSource ?? null,
       },
       media: mediaOut.sort((a, b) => a.order - b.order),
       captions: captions
@@ -420,6 +422,9 @@ export const remove = mutation({
       ...(await ctx.db.query("decisions").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),
     ];
     for (const r of rows) await ctx.db.delete(r._id);
+    if (content.coverId && (content.coverSource === "manual" || content.coverSource === "quadro")) {
+      await ctx.storage.delete(content.coverId);
+    }
     await ctx.db.delete(contentId);
   },
 });

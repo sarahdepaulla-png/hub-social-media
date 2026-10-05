@@ -47,7 +47,7 @@ export const listForStudio = query({
         accentColor: client.accentColor,
         photoUrl: client.photoId ? await ctx.storage.getUrl(client.photoId) : null,
         counts: countByStatus(list),
-        strip: list.map((c) => ({ _id: c._id, status: c.status, date: c.date })),
+        strip: await Promise.all(list.map(async (c) => ({ _id: c._id, status: c.status, date: c.date, title: c.title, coverUrl: c.coverId ? await ctx.storage.getUrl(c.coverId) : null }))),
         nextDate: next?.date ?? null,
       });
     }

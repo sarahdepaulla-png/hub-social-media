@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { MediaItem } from "@/components/content/MediaViewer";
 import { errorText } from "@/components/content/DecisionSheet";
+import { captureFrame, uploadToStorage } from "@/lib/videoFrame";
 
 const MAX_BYTES = 100 * 1024 * 1024;
 
@@ -15,6 +16,7 @@ export function MediaManager({ contentId, media, version }: { contentId: Id<"con
   const add = useMutation(api.media.add);
   const remove = useMutation(api.media.remove);
   const move = useMutation(api.media.move);
+  const setCover = useMutation(api.media.setCover);
   const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,19 @@ export function MediaManager({ contentId, media, version }: { contentId: Id<"con
         const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
         if (!res.ok) throw new Error(`Falha no envio (${res.status})`);
         const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
-        await add({ contentId, storageId, kind: file.type.startsWith("video/") ? "video" : "imagem" });
+        const isVideo = file.type.startsWith("video/");
+        await add({ contentId, storageId, kind: isVideo ? "video" : "imagem" });
+        // Vídeo sem capa: tira um quadro do arquivo local na hora (o servidor ignora se já houver capa).
+        if (isVideo) {
+          try {
+            setProgress(`Gerando capa de ${file.name}`);
+            const frame = await captureFrame(file);
+            const coverId = await uploadToStorage(await uploadUrl(), frame);
+            await setCover({ contentId, storageId: coverId as Id<"_storage">, source: "quadro" });
+          } catch {
+            // Sem capa automática: dá para subir uma à mão na seção Capa.
+          }
+        }
       } catch (err) {
         setError(err instanceof Error && !("data" in err) ? `${file.name}: ${err.message}` : errorText(err));
       }

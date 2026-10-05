@@ -93,6 +93,8 @@ export default defineSchema({
     version: v.number(),
     coverId: v.optional(v.id("_storage")),
     coverUrl: v.optional(v.string()),
+    // De onde veio a capa: primeira imagem, quadro do vídeo ou enviada à mão.
+    coverSource: v.optional(v.union(v.literal("imagem"), v.literal("quadro"), v.literal("manual"))),
     externalUrl: v.optional(v.string()),
     sourceIdeaId: v.optional(v.id("ideas")),
     sourceOpportunityId: v.optional(v.id("opportunities")),

@@ -39,6 +39,7 @@ export const studioInbox = query({
       detail: string | null;
       at: number;
       contentId: string | null;
+      coverUrl: string | null;
     }[] = [];
 
     for (const client of clients) {
@@ -61,6 +62,7 @@ export const studioInbox = query({
           detail: last?.comment ?? null,
           at: last?._creationTime ?? content._creationTime,
           contentId: content._id,
+          coverUrl: content.coverId ? await ctx.storage.getUrl(content.coverId) : null,
         });
       }
     }
@@ -84,6 +86,7 @@ export const studioInbox = query({
         detail: list.map((i) => i.title).join(", "),
         at: Math.max(...list.map((i) => i._creationTime)),
         contentId: null,
+        coverUrl: null,
       });
     }
 

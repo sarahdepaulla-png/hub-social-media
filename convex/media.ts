@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, type MutationCtx } from "./_generated/server";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requireAdmin } from "./lib/access";
+import { getViewer, requireAdmin } from "./lib/access";
 import { logActivity } from "./lib/log";
 
 /** URL temporária para o navegador subir um arquivo direto no storage. */
@@ -13,7 +13,7 @@ export const generateUploadUrl = mutation({
   },
 });
 
-async function currentMedia(ctx: MutationCtx, content: Doc<"contents">) {
+async function currentMedia(ctx: QueryCtx, content: Doc<"contents">) {
   const list = await ctx.db
     .query("media")
     .withIndex("by_content_version", (q) => q.eq("contentId", content._id).eq("version", content.version))
@@ -21,12 +21,83 @@ async function currentMedia(ctx: MutationCtx, content: Doc<"contents">) {
   return list.sort((a, b) => a.order - b.order);
 }
 
-/** A capa é sempre a primeira imagem da versão atual. */
+/**
+ * Capa da peça. Ordem de prioridade:
+ * 1. capa enviada à mão (manual) nunca é trocada sozinha;
+ * 2. primeira imagem da versão atual;
+ * 3. quadro tirado do vídeo (gerado no navegador da admin).
+ */
 async function refreshCover(ctx: MutationCtx, content: Doc<"contents">) {
-  const list = await currentMedia(ctx, content);
-  const first = list.find((m) => m.kind === "imagem" && m.storageId);
-  await ctx.db.patch(content._id, { coverId: first?.storageId, coverUrl: first ? undefined : content.coverUrl });
+  const fresh = (await ctx.db.get(content._id))!;
+  if (fresh.coverSource === "manual") return;
+  const list = await currentMedia(ctx, fresh);
+  const firstImage = list.find((m) => m.kind === "imagem" && m.storageId);
+  if (firstImage) {
+    if (fresh.coverSource === "quadro" && fresh.coverId) await ctx.storage.delete(fresh.coverId);
+    await ctx.db.patch(fresh._id, { coverId: firstImage.storageId, coverSource: "imagem", coverUrl: undefined });
+    return;
+  }
+  // Sem imagem: mantém um quadro de vídeo já gerado, se ainda houver vídeo.
+  const hasVideo = list.some((m) => m.kind === "video");
+  if (fresh.coverSource === "quadro" && hasVideo) return;
+  if (fresh.coverSource === "quadro" && fresh.coverId) await ctx.storage.delete(fresh.coverId);
+  await ctx.db.patch(fresh._id, { coverId: undefined, coverSource: undefined });
 }
+
+/** Define a capa: "manual" (a admin escolheu) ou "quadro" (gerada do vídeo). */
+export const setCover = mutation({
+  args: { contentId: v.id("contents"), storageId: v.id("_storage"), source: v.union(v.literal("manual"), v.literal("quadro")) },
+  handler: async (ctx, { contentId, storageId, source }) => {
+    const admin = await requireAdmin(ctx);
+    const content = await loadContent(ctx, contentId);
+    // Quadro automático não passa por cima de imagem nem de capa manual.
+    if (source === "quadro" && (content.coverSource === "imagem" || content.coverSource === "manual")) {
+      await ctx.storage.delete(storageId);
+      return;
+    }
+    if (content.coverId && (content.coverSource === "manual" || content.coverSource === "quadro")) {
+      await ctx.storage.delete(content.coverId);
+    }
+    await ctx.db.patch(contentId, { coverId: storageId, coverSource: source, coverUrl: undefined });
+    if (source === "manual") {
+      await logActivity(ctx, { clientId: content.clientId, contentId, userId: admin._id, kind: "midia", summary: "Trocou a capa" });
+    }
+  },
+});
+
+/** Volta para a capa automática (primeira imagem ou quadro do vídeo). */
+export const resetCover = mutation({
+  args: { contentId: v.id("contents") },
+  handler: async (ctx, { contentId }) => {
+    await requireAdmin(ctx);
+    const content = await loadContent(ctx, contentId);
+    if (content.coverSource !== "manual") return;
+    if (content.coverId) await ctx.storage.delete(content.coverId);
+    await ctx.db.patch(contentId, { coverId: undefined, coverSource: undefined });
+    await refreshCover(ctx, { ...content, coverId: undefined, coverSource: undefined });
+  },
+});
+
+/** Peças com vídeo e sem capa: o navegador da admin gera o quadro. */
+export const missingCovers = query({
+  args: { contentId: v.optional(v.id("contents")) },
+  handler: async (ctx, { contentId }) => {
+    const viewer = await getViewer(ctx);
+    if (viewer?.role !== "admin") return [];
+    const contents = contentId
+      ? [await ctx.db.get(contentId)].filter((c): c is Doc<"contents"> => !!c)
+      : (await ctx.db.query("contents").collect()).filter((c) => !c.coverId);
+    const out: { contentId: Doc<"contents">["_id"]; videoUrl: string }[] = [];
+    for (const c of contents) {
+      if (c.coverId || out.length >= 12) continue;
+      const video = (await currentMedia(ctx, c)).find((m) => m.kind === "video" && (m.storageId || m.url));
+      if (!video) continue;
+      const url = video.storageId ? await ctx.storage.getUrl(video.storageId) : video.url;
+      if (url) out.push({ contentId: c._id, videoUrl: url });
+    }
+    return out;
+  },
+});
 
 async function loadContent(ctx: MutationCtx, contentId: Id<"contents">) {
   const content = await ctx.db.get(contentId);

@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/* Design system do Hub Social Media.
+   Vinho, rosa chiclete e creme. Inter Tight pesada e apertada nos títulos. */
+@theme {
+  --color-vinho: #5c0f31;
+  --color-vinho-escuro: #4a0b25;
+  --color-rosa: #ff8dc7;
+  --color-rosa-grade: #f77dba;
+  --color-rosa-forte: #c2186b;
+  --color-rosa-forte-hover: #8e0f4b;
+  --color-creme: #f8ece6;
+  --color-papel: #ffffff;
+  --color-linha: #ebcfd9;
+  --color-campo: #d9a9bd;
+  --color-texto-2: #7a4a5e;
+  --color-texto-3: #5c3346;
+  --color-thumb: #ebc6d3;
+  --color-thumb-2: #e3b3c6;
+  --color-thumb-3: #f2d4de;
+
+  --color-st-ideia: #b88aa0;
+  --color-st-producao: #8a63d2;
+  --color-st-aguardando: #f0a030;
+  --color-st-ajuste: #e5482e;
+  --color-st-ajuste-texto: #b8321c;
+  --color-st-aprovado: #c2186b;
+  --color-st-agendado: #0f7a6e;
+  --color-st-publicado: #5c0f31;
+
+  --font-sans: "Inter Tight Variable", "Inter Tight", system-ui, sans-serif;
+
+  --radius-peca: 14px;
+  --shadow-flutua: 0 12px 40px rgba(74, 11, 37, 0.18);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-creme);
+    color: var(--color-vinho);
+    font-family: var(--font-sans);
+  }
+  a {
+    color: inherit;
+  }
+  :focus-visible {
+    outline: 2.5px solid var(--color-rosa-forte);
+    outline-offset: 2px;
+  }
+}
+
+@utility titulo {
+  letter-spacing: -0.05em;
+  font-weight: 900;
+  line-height: 0.9;
+}
+
+@utility grade-rosa {
+  background-color: var(--color-rosa);
+  background-image:
+    linear-gradient(var(--color-rosa-grade) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-rosa-grade) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+@keyframes adesivo-pop {
+  0% { transform: scale(1.6) rotate(8deg); opacity: 0; }
+  70% { transform: scale(0.94) rotate(-14deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-12deg); }
+}
+
+@keyframes asterisco-gira {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

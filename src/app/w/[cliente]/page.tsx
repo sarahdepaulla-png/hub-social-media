@@ -12,6 +12,47 @@ function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+const PLATFORM_NAME: Record<string, string> = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", pinterest: "Pinterest", site: "Site" };
+
+/** Mural em miniatura: as últimas referências, com atalho para o mural completo. */
+function IdeaStrip({ slug }: { slug: string }) {
+  const ideas = useQuery(api.ideas.latest, { slug });
+  const href = `/w/${slug}/ideias`;
+  if (ideas === undefined) return null;
+  return (
+    <section className="flex flex-col gap-3.5">
+      <div className="flex items-baseline justify-between px-6">
+        <h2 className="text-[22px] font-extrabold tracking-[-0.045em]">Ideias e referências</h2>
+        <Link href={href} className="min-h-11 content-center text-[15px] font-semibold text-rosa-forte">
+          {ideas.length ? "Ver mural" : "Adicionar"}
+        </Link>
+      </div>
+      {ideas.length === 0 ? (
+        <Link href={href} className="mx-6 rounded-peca border border-dashed border-campo p-5 text-[15px] text-texto-2 hover:border-vinho">
+          Viu um post que é a sua cara? Cole o link no mural de ideias.
+        </Link>
+      ) : (
+        <ul className="flex snap-x gap-3 overflow-x-auto px-6 pb-1">
+          {ideas.map((i, n) => (
+            <li key={i._id} className="w-32 shrink-0 snap-start">
+              <Link href={href} className="flex flex-col gap-1.5">
+                {i.imageUrl ? (
+                  <Thumb url={i.imageUrl} tone={n} className="aspect-[4/5] w-full" />
+                ) : (
+                  <span className="grade-rosa flex aspect-[4/5] w-full items-center justify-center rounded-peca p-2 text-center text-sm font-black text-white">
+                    {i.platform ? PLATFORM_NAME[i.platform] : "Ideia"}
+                  </span>
+                )}
+                <span className="line-clamp-2 text-[13px] font-semibold leading-tight">{i.title}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default function InicioPage() {
   const ws = useWorkspace();
   const month = currentMonth();
@@ -98,6 +139,8 @@ export default function InicioPage() {
             </ul>
           )}
         </section>
+
+        <IdeaStrip slug={ws.slug} />
 
         {adjusting.length > 0 && (
           <section className="flex flex-col gap-3 px-6">

@@ -355,3 +355,48 @@ describe("capas", () => {
     expect(await as(liliUser).query(api.media.missingCovers, {})).toEqual([]);
   });
 });
+
+describe("mural de referências", () => {
+  test("lê og:image e título, inclusive com atributos invertidos", async () => {
+    const { parsePreview, platformOf, youtubeId } = await import("../convex/lib/preview");
+    const html = `<html><head><title>Fallback</title>
+      <meta content="https://cdn.site.com/a.jpg?x=1&amp;y=2" property="og:image">
+      <meta property="og:title" content="5 erros no alongamento &#39;posteriores&#39;"></head></html>`;
+    expect(parsePreview(html, "https://site.com/p/1")).toEqual({
+      image: "https://cdn.site.com/a.jpg?x=1&y=2",
+      title: "5 erros no alongamento 'posteriores'",
+    });
+    expect(parsePreview(`<meta name="twitter:image" content="/img/c.png"><title>Oi</title>`, "https://ex.com/a/b").image).toBe("https://ex.com/img/c.png");
+    expect(parsePreview("<title>Instagram</title>", "https://instagram.com/p/x").title).toBeNull();
+    expect(platformOf("https://www.instagram.com/reel/abc/")).toBe("instagram");
+    expect(platformOf("https://vm.tiktok.com/xyz")).toBe("tiktok");
+    expect(platformOf("https://br.pinterest.com/pin/1")).toBe("pinterest");
+    expect(youtubeId("https://youtu.be/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+    expect(youtubeId("https://www.youtube.com/shorts/abcDEF123")).toBe("abcDEF123");
+  });
+
+  test("referência só com link ganha título automático e fica buscando a imagem", async () => {
+    const { as, liliUser, admin } = await setup();
+    await as(liliUser).mutation(api.ideas.create, { slug: "lili", link: "https://www.instagram.com/p/abc/", adaptation: "Gostei do boneco" });
+    const [idea] = await as(liliUser).query(api.ideas.list, { slug: "lili" });
+    expect(idea).toMatchObject({ title: "Referência do Instagram", platform: "instagram", previewPending: true, adaptation: "Gostei do boneco", status: "nova", canEdit: true });
+    await expect(as(liliUser).mutation(api.ideas.create, { slug: "lili" })).rejects.toThrow(/Cole um link/);
+
+    // Admin complementa a adaptação; o que a admin cria não conta como "nova".
+    await as(admin).mutation(api.ideas.update, { ideaId: idea._id, adaptation: "Versão com os erros da clínica" });
+    await as(admin).mutation(api.ideas.create, { slug: "lili", title: "Trend do áudio" });
+    const list = await as(admin).query(api.ideas.list, { slug: "lili" });
+    expect(list.find((i) => i._id === idea._id)?.adaptation).toBe("Versão com os erros da clínica");
+    expect(list.find((i) => i.title === "Trend do áudio")?.status).toBe("analise");
+    const ws = await as(admin).query(api.clients.bySlug, { slug: "lili" });
+    expect(ws.newIdeas).toBe(1);
+    const strip = await as(liliUser).query(api.ideas.latest, { slug: "lili" });
+    expect(strip).toHaveLength(2);
+  });
+
+  test("cliente não edita referência de outra pessoa", async () => {
+    const { as, liliUser, admin } = await setup();
+    const id = await as(admin).mutation(api.ideas.create, { slug: "lili", title: "Do estúdio" });
+    await expect(as(liliUser).mutation(api.ideas.update, { ideaId: id, adaptation: "x" })).rejects.toThrow(/Só quem enviou/);
+  });
+});

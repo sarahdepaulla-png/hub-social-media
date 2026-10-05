@@ -156,6 +156,10 @@ export default defineSchema({
     status: v.union(v.literal("nova"), v.literal("analise"), v.literal("convertida"), v.literal("arquivada")),
     contentId: v.optional(v.id("contents")),
     opportunityId: v.optional(v.id("opportunities")), // pedido feito a partir de uma data
+    adaptation: v.optional(v.string()), // como dá para adaptar a referência
+    previewId: v.optional(v.id("_storage")), // imagem tirada do link
+    previewTitle: v.optional(v.string()),
+    previewStatus: v.optional(v.union(v.literal("pendente"), v.literal("ok"), v.literal("falhou"))),
   }).index("by_client", ["clientId"]),
 
   // Biblioteca de datas. Sem clientId = vale para todo cliente dos nichos listados.

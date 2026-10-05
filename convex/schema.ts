@@ -96,7 +96,9 @@ export default defineSchema({
     externalUrl: v.optional(v.string()),
     sourceIdeaId: v.optional(v.id("ideas")),
     sourceOpportunityId: v.optional(v.id("opportunities")),
+    importKey: v.optional(v.string()), // peças criadas pela fila de conteúdo (pasta conteudo/)
   })
+    .index("by_import_key", ["importKey"])
     .index("by_client_date", ["clientId", "date"])
     .index("by_client_status", ["clientId", "status"]),
 

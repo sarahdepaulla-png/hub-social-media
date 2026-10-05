@@ -284,3 +284,26 @@ describe("link de acesso", () => {
     expect(again[0].token).toBe(link.token);
   });
 });
+
+describe("fila de conteúdo", () => {
+  test("cria, atualiza sem duplicar e respeita o que a cliente decidiu", async () => {
+    const { t, as, admin } = await setup();
+    const items = JSON.parse(await (await import("node:fs/promises")).readFile("conteudo/vivi-2026-10.json", "utf8"));
+    await t.mutation(internal.imports.apply, { items });
+    await t.mutation(internal.imports.apply, { items });
+    let month = await as(admin).query(api.calendar.month, { slug: "vivi", month: "2026-10" });
+    expect(month.contents.map((c) => c.title)).toHaveLength(4);
+    const first = month.contents.find((c) => c.date === "2026-10-05")!;
+    const view = await as(admin).query(api.contents.get, { contentId: first._id });
+    expect(view.captions).toHaveLength(2);
+    expect(view.content.status).toBe("producao");
+
+    await t.run((ctx) => ctx.db.patch(first._id, { status: "aprovado" }));
+    await t.mutation(internal.imports.apply, { items: [{ ...items[0], date: "2026-10-30" }] });
+    month = await as(admin).query(api.calendar.month, { slug: "vivi", month: "2026-10" });
+    expect(month.contents.find((c) => c._id === first._id)?.date).toBe("2026-10-05");
+
+    const moved = await t.mutation(internal.imports.apply, { items: [{ ...items[1], date: "2026-10-09" }] });
+    expect(moved).toContain("atualizada");
+  });
+});

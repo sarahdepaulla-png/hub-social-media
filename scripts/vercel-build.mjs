@@ -8,6 +8,7 @@
  * Configurado em vercel.json. Não roda no seu computador.
  */
 import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { exportJWK, exportPKCS8, generateKeyPair } from "jose";
 
 const log = (msg) => console.log(`\n[hub] ${msg}`);
@@ -75,6 +76,21 @@ for (const name of ["ADMIN_EMAILS", "AUTH_RESEND_KEY", "AUTH_EMAIL_FROM"]) {
 }
 if (!process.env.ADMIN_EMAILS && !getEnv("ADMIN_EMAILS")) {
   console.warn("[hub] Atenção: ADMIN_EMAILS não definido. Ninguém vai conseguir entrar como admin.");
+}
+
+log("Aplicando a fila de conteúdo (pasta conteudo/)");
+if (existsSync("conteudo")) {
+  for (const file of readdirSync("conteudo").filter((f) => f.endsWith(".json")).sort()) {
+    let items;
+    try {
+      items = JSON.parse(readFileSync(`conteudo/${file}`, "utf8"));
+    } catch (e) {
+      console.error(`[hub] ${file}: JSON inválido (${e.message})`);
+      continue;
+    }
+    const r = convex(["run", "imports:apply", JSON.stringify({ items })], { quiet: true });
+    console.log(r.ok ? `[hub] ${file}:\n${r.out}` : `[hub] ${file} falhou: ${r.err}`);
+  }
 }
 
 log("Conferindo dados iniciais");

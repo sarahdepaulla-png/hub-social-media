@@ -26,9 +26,9 @@ export function Asterisk({ size = 40, color = "currentColor", spinning = false, 
   );
 }
 
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({ className = "text-[19px]" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[19px] font-black tracking-[-0.05em] ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 font-black tracking-[-0.05em] ${className}`}>
       Hub <Asterisk size={14} color="var(--color-rosa-forte)" /> Social Media
     </span>
   );

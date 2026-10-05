@@ -177,7 +177,7 @@ export default function InicioPage() {
                         {shortDate(c.date)}. {PLATFORM[c.platform]}, {FORMAT[c.format].toLowerCase()}
                       </span>
                     </span>
-                    <StatusTag status={c.status} short className="hidden sm:inline-flex" />
+                    <StatusTag status={c.status} short className="shrink-0" />
                   </Link>
                 </li>
               ))}

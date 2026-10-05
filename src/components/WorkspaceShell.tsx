@@ -57,7 +57,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
                 Estúdio
               </Link>
             ) : (
-              <Logo className="hidden sm:inline-flex" />
+              <Logo className="text-[15px] sm:text-[19px]" />
             )}
           </div>
           <nav aria-label="Workspace" className="hidden items-center gap-7 text-[15px] md:flex">
@@ -78,11 +78,9 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <span className="text-[15px] font-semibold">{ws.name}</span>
+            <span className="hidden text-[15px] font-semibold sm:inline">{ws.name}</span>
             <Avatar name={ws.name} color={ws.accentColor} url={ws.photoUrl} />
-            <span className="hidden md:inline">
-              <SignOutButton variant="link" />
-            </span>
+            <SignOutButton variant="link" />
           </div>
         </header>
 

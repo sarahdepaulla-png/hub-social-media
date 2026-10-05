@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Suspense, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import type { FunctionReturnType } from "convex/server";
 import { Asterisk, Loading, StatusTag, Thumb } from "@/components/brand";
 import { useWorkspace } from "@/components/WorkspaceShell";
 import { errorText } from "@/components/content/DecisionSheet";
@@ -16,6 +17,85 @@ const WEEK_SHORT = ["D", "S", "T", "Q", "Q", "S", "S"];
 const WEEK_LONG = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 const selectClass = "min-h-10 rounded-full border border-campo bg-white pl-3.5 pr-8 text-sm text-vinho";
+
+type Card = FunctionReturnType<typeof api.calendar.month>["contents"][number];
+type Opp = FunctionReturnType<typeof api.calendar.month>["opportunities"][number];
+
+/** Uma peça na agenda do celular, com "Mudar dia" para a admin. */
+function PieceRow({ item, tone, base, admin, onMove }: { item: Card; tone: number; base: string; admin: boolean; onMove: (id: string, day: string) => void }) {
+  return (
+    <div className="flex gap-3.5">
+      <Link href={`${base}/c/${item._id}`} className="shrink-0">
+        <Thumb url={item.coverUrl} tone={tone} label={item.coverUrl ? undefined : FORMAT[item.format]} className="h-[100px] w-20 rounded-lg" />
+      </Link>
+      <span className="flex min-w-0 flex-col gap-1.5 pt-0.5">
+        <Link href={`${base}/c/${item._id}`} className="text-base font-bold leading-tight">
+          {item.title}
+        </Link>
+        <span className="text-[13px] text-texto-2">
+          {PLATFORM[item.platform]}, {FORMAT[item.format].toLowerCase()}
+          {item.time ? `, ${item.time}` : ""}
+        </span>
+        <StatusTag status={item.status} />
+        {admin && (
+          <label className="inline-flex items-center gap-2 text-[13px] font-semibold text-rosa-forte">
+            Mudar dia
+            <input
+              type="date"
+              defaultValue={item.date}
+              onChange={(e) => e.target.value && e.target.value !== item.date && onMove(item._id, e.target.value)}
+              className="min-h-9 rounded-md border border-campo bg-white px-2 text-[13px] font-normal text-vinho"
+            />
+          </label>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** Lista do mês no celular: todos os dias com peças ou datas do nicho. */
+function MonthList({
+  days,
+  byDay,
+  oppsByDay,
+  accent,
+  base,
+  admin,
+  today,
+  onMove,
+}: {
+  days: string[];
+  byDay: Map<string, Card[]>;
+  oppsByDay: Map<string, Opp[]>;
+  accent: string;
+  base: string;
+  admin: boolean;
+  today: string;
+  onMove: (id: string, day: string) => void;
+}) {
+  if (days.length === 0) return <p className="px-2 text-[15px] text-texto-2">Nada programado neste mês.</p>;
+  return (
+    <ol className="flex flex-col gap-3">
+      {days.map((day) => (
+        <li key={day} className={`flex flex-col gap-3 rounded-peca bg-white p-4 ${day === today ? "shadow-[inset_0_0_0_3px_var(--color-rosa)]" : ""}`}>
+          <h2 className="flex items-baseline gap-2">
+            <span className="text-[30px] font-extrabold leading-none tracking-[-0.05em]">{day.slice(8)}</span>
+            <span className="text-sm capitalize text-texto-2">{longDate(day).split(",")[0]}</span>
+            {day === today && <span className="rounded-full bg-rosa px-2 text-xs font-bold">hoje</span>}
+          </h2>
+          {(oppsByDay.get(day) ?? []).map((o) => (
+            <span key={o._id} className="self-start -rotate-1 rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ background: accent }}>
+              {o.title}
+            </span>
+          ))}
+          {(byDay.get(day) ?? []).map((c, i) => (
+            <PieceRow key={c._id} item={c} tone={i + Number(day.slice(8))} base={base} admin={admin} onMove={onMove} />
+          ))}
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 function CalendarView() {
   const ws = useWorkspace();
@@ -32,6 +112,7 @@ function CalendarView() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDay, setOverDay] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"mes" | "lista">("mes");
   const admin = ws.viewerRole === "admin";
   const base = `/w/${ws.slug}`;
 
@@ -57,6 +138,17 @@ function CalendarView() {
     const next = shiftMonth(month, delta);
     router.replace(`${base}/calendario?mes=${next}`, { scroll: false });
     setSelected(today.startsWith(next) ? today : `${next}-01`);
+  };
+
+  /** Reagendar pelo celular (no computador também dá para arrastar). */
+  const moveTo = async (contentId: string, day: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+    try {
+      await update({ contentId: contentId as Id<"contents">, date: day });
+      setError(null);
+    } catch (err) {
+      setError(errorText(err));
+    }
   };
 
   const drop = async (day: string) => {
@@ -97,8 +189,9 @@ function CalendarView() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
           </button>
           {admin && (
-            <Link href={`${base}/novo?data=${selected}`} className="ml-2 hidden min-h-11 items-center rounded-full bg-vinho px-5 text-sm font-semibold text-white md:inline-flex">
-              Novo conteúdo
+            <Link href={`${base}/novo?data=${selected}`} className="ml-2 inline-flex min-h-11 items-center rounded-full bg-vinho px-4 text-sm font-semibold text-white md:px-5">
+              <span className="md:hidden">Novo</span>
+              <span className="hidden md:inline">Novo conteúdo</span>
             </Link>
           )}
         </div>
@@ -143,9 +236,43 @@ function CalendarView() {
         <Loading />
       ) : (
         <>
-          {/* Celular: grade compacta + agenda do dia tocado */}
+          {/* Celular: mês em grade (com agenda do dia) ou lista completa do mês */}
           <div className="md:hidden">
-            <div className="grid grid-cols-7 gap-[3px] pb-1.5 text-center text-[11px] font-semibold text-texto-2">
+            <div role="group" aria-label="Modo de ver" className="mb-4 grid grid-cols-2 rounded-full bg-white p-1">
+              {(["mes", "lista"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={view === v}
+                  onClick={() => setView(v)}
+                  className={`min-h-10 rounded-full text-sm font-semibold ${view === v ? "bg-vinho text-white" : "text-texto-3"}`}
+                >
+                  {v === "mes" ? "Mês" : "Lista do mês"}
+                </button>
+              ))}
+            </div>
+
+            {view === "lista" ? (
+              <MonthList
+                days={cells.filter((d): d is string => !!d && (byDay.has(d) || oppsByDay.has(d)))}
+                byDay={byDay}
+                oppsByDay={oppsByDay}
+                accent={ws.accentColor}
+                base={base}
+                admin={admin}
+                today={today}
+                onMove={moveTo}
+              />
+            ) : (
+            <>
+            <div className="rounded-t-md bg-white">
+              <div aria-hidden="true" className="-mt-2 flex h-5 items-end justify-around px-2">
+                {Array.from({ length: 12 }, (_, i) => (
+                  <span key={i} className="h-4 w-1.5 rounded-t-md border-2 border-b-0 border-vinho" />
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-[3px] bg-white pb-1.5 pt-1 text-center text-[11px] font-semibold text-texto-2">
               {WEEK_SHORT.map((d, i) => <span key={i}>{d}</span>)}
             </div>
             <div className="grid grid-cols-7 gap-[3px]">
@@ -193,14 +320,7 @@ function CalendarView() {
               ))}
               {dayItems.length === 0 && <p className="text-[15px] text-texto-2">Nada programado neste dia.</p>}
               {dayItems.map((c, i) => (
-                <Link key={c._id} href={`${base}/c/${c._id}`} className="flex gap-3.5">
-                  <Thumb url={c.coverUrl} tone={i} className="h-[90px] w-[72px] shrink-0 rounded-lg" />
-                  <span className="flex flex-col gap-1.5 pt-0.5">
-                    <strong className="text-base leading-tight">{c.title}</strong>
-                    <span className="text-[13px] text-texto-2">{PLATFORM[c.platform]}, {FORMAT[c.format].toLowerCase()}</span>
-                    <StatusTag status={c.status} />
-                  </span>
-                </Link>
+                <PieceRow key={c._id} item={c} tone={i} base={base} admin={admin} onMove={moveTo} />
               ))}
               {admin && (
                 <Link href={`${base}/novo?data=${selected}`} className="mt-1 min-h-11 content-center text-[15px] font-semibold text-rosa-forte">
@@ -208,6 +328,8 @@ function CalendarView() {
                 </Link>
               )}
             </section>
+            </>
+            )}
           </div>
 
           {/* Desktop: agenda de espiral */}

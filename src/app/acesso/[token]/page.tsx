@@ -26,7 +26,7 @@ export default function AcessoPage() {
     <main className="flex min-h-dvh flex-col">
       <section className="grade-rosa px-6 pb-12 pt-8">
         <div className="mx-auto flex max-w-md flex-col gap-10">
-          <Logo className="text-white" />
+          <Logo className="text-[19px] text-white" />
           <h1 className="titulo flex items-center gap-3 text-[56px] text-white">
             {failed ? "Link inválido" : "Entrando"}
             <Asterisk size={42} color="var(--color-vinho)" spinning={!failed} />

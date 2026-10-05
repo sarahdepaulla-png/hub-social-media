@@ -69,11 +69,11 @@ export default function EstudioPage() {
                     <span className="text-[13px] text-texto-2">{c.counts.total} conteúdos</span>
                   </span>
                 </Link>
-                <span className="flex items-center gap-4 text-sm">
+                <span className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                   <span className={c.counts.ajuste > 0 ? "font-bold text-st-ajuste-texto" : ""}>
                     {c.counts.aguardando} aguardando{c.counts.ajuste > 0 ? `, ${c.counts.ajuste} em ajuste` : ""}
                   </span>
-                  <span className="hidden text-texto-2 sm:inline">{c.nextDate ? `Próximo: ${shortDate(c.nextDate)}` : "Sem próximas datas"}</span>
+                  <span className="text-texto-2">{c.nextDate ? `Próximo: ${shortDate(c.nextDate)}` : "Sem próximas datas"}</span>
                   {c.newIdeas > 0 && (
                     <Link href={`/w/${c.slug}/ideias`} className="rounded-full bg-rosa px-3 py-1 font-semibold text-vinho">
                       {c.newIdeas === 1 ? "1 ideia nova" : `${c.newIdeas} ideias novas`}

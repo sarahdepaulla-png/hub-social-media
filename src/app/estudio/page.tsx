@@ -66,7 +66,10 @@ export default function EstudioPage() {
                   <Avatar name={c.name} color={c.accentColor} url={c.photoUrl} size={42} />
                   <span className="flex flex-col">
                     <strong className="text-[17px]">{c.name}</strong>
-                    <span className="text-[13px] text-texto-2">{c.counts.total} conteúdos</span>
+                    <span className="text-[13px] text-texto-2">
+                      {c.counts.total} conteúdos ·{" "}
+                      <strong className="text-vinho">{c.counts.publicados} {c.counts.publicados === 1 ? "postado" : "postados"}</strong>
+                    </span>
                   </span>
                 </Link>
                 <span className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">

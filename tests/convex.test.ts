@@ -57,7 +57,7 @@ describe("início", () => {
   test("contadores batem com o seed", async () => {
     const { as, liliUser } = await setup();
     const d = await as(liliUser).query(api.dashboard.forClient, { slug: "lili", month: "2026-10", today: "2026-10-05" });
-    expect(d.counts).toMatchObject({ total: 12, aprovados: 5, aguardando: 4, ajuste: 1, producao: 2 });
+    expect(d.counts).toMatchObject({ total: 12, publicados: 2, aprovados: 3, aguardando: 4, ajuste: 1, producao: 2 });
     expect(d.waiting.map((w) => w.date)).toEqual(["2026-10-13", "2026-10-15", "2026-10-20", "2026-10-29"]);
   });
 });

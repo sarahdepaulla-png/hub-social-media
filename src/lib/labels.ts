@@ -9,7 +9,7 @@ export const STATUS: Record<Status, { label: string; short: string; color: strin
   ajuste: { label: "Ajuste solicitado", short: "Ajuste", color: "var(--color-st-ajuste)" },
   aprovado: { label: "Aprovado", short: "Aprovado", color: "var(--color-st-aprovado)" },
   agendado: { label: "Agendado", short: "Agendado", color: "var(--color-st-agendado)" },
-  publicado: { label: "Publicado", short: "Publicado", color: "var(--color-st-publicado)" },
+  publicado: { label: "Publicado", short: "Postado", color: "var(--color-st-publicado)" },
 };
 
 export const PLATFORM: Record<Platform, string> = {

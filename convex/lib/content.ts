@@ -6,8 +6,8 @@ export type Status = Doc<"contents">["status"];
 /** Quanto tempo a pessoa tem para desfazer a própria decisão. */
 export const UNDO_WINDOW_MS = 10 * 60 * 1000;
 
-/** Conta como "aprovado" tudo que já passou pela aprovação. */
-export const APPROVED_GROUP: Status[] = ["aprovado", "agendado", "publicado"];
+/** Aprovado e ainda não postado (aprovado ou agendado). Postado conta à parte. */
+export const APPROVED_GROUP: Status[] = ["aprovado", "agendado"];
 
 export function monthRange(month: string) {
   // month = "AAAA-MM"
@@ -23,9 +23,10 @@ export async function contentsInMonth(ctx: QueryCtx, clientId: Doc<"clients">["_
 }
 
 export function countByStatus(list: Doc<"contents">[]) {
-  const c = { total: list.length, aprovados: 0, aguardando: 0, ajuste: 0, producao: 0, ideia: 0 };
+  const c = { total: list.length, publicados: 0, aprovados: 0, aguardando: 0, ajuste: 0, producao: 0, ideia: 0 };
   for (const item of list) {
-    if (APPROVED_GROUP.includes(item.status)) c.aprovados++;
+    if (item.status === "publicado") c.publicados++;
+    else if (APPROVED_GROUP.includes(item.status)) c.aprovados++;
     else if (item.status === "aguardando") c.aguardando++;
     else if (item.status === "ajuste") c.ajuste++;
     else if (item.status === "producao") c.producao++;

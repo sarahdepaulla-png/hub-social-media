@@ -93,14 +93,18 @@ export default function InicioPage() {
       </section>
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-10">
-        <section aria-label="Resumo do mês" className="mx-6 grid grid-cols-4 border-y border-linha">
+        <section aria-label="Resumo do mês" className="mx-6 grid grid-cols-6 border-y border-linha md:grid-cols-5">
           {[
+            { n: counts.publicados, label: "Postados", status: "publicado" as const },
             { n: counts.aprovados, label: "Aprovados", status: "aprovado" as const },
             { n: counts.aguardando, label: "Aguardando", status: "aguardando" as const },
             { n: counts.ajuste, label: "Ajustes", status: "ajuste" as const },
             { n: counts.producao + counts.ideia, label: "Produção", status: "producao" as const },
-          ].map((c) => (
-            <div key={c.label} className="flex flex-col gap-1 py-3 md:py-5">
+          ].map((c, i) => (
+            <div
+              key={c.label}
+              className={`flex flex-col gap-1 py-3 md:col-span-1 md:py-5 ${i < 3 ? "col-span-2" : "col-span-3 border-t border-linha md:border-t-0"}`}
+            >
               <span className="text-[34px] font-extrabold leading-none tracking-[-0.04em] md:text-5xl">{c.n}</span>
               <StatusTag status={c.status} short className="text-xs md:text-sm" />
             </div>

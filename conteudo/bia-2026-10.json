@@ -1,0 +1,102 @@
+[
+  {
+    "key": "bia-2026-10-agenda-dezembro",
+    "client": "bia",
+    "date": "2026-10-08",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Agenda de dezembro aberta",
+    "objective": "Vendas",
+    "pillar": "Agenda"
+  },
+  {
+    "key": "bia-2026-10-trend-onde-voce-ta",
+    "client": "bia",
+    "date": "2026-10-13",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "Trend “Onde você tá?”",
+    "objective": "Alcance",
+    "pillar": "Trend"
+  },
+  {
+    "key": "bia-2026-10-feedback-real",
+    "client": "bia",
+    "date": "2026-10-19",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Feedback real de cliente",
+    "objective": "Prova social",
+    "pillar": "Feedbacks"
+  },
+  {
+    "key": "bia-2026-10-um-dia-no-estudio",
+    "client": "bia",
+    "date": "2026-10-23",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "Um dia no Estúdio Beatriz Pereira",
+    "objective": "Conexão e bastidores",
+    "pillar": "Bastidores"
+  },
+  {
+    "key": "bia-2026-10-esse-e-seu-sinal",
+    "client": "bia",
+    "date": "2026-10-29",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "“Esse é seu sinal…”",
+    "objective": "Conversão",
+    "pillar": "Agenda"
+  },
+  {
+    "key": "bia-2026-10-stories-agenda-dezembro",
+    "client": "bia",
+    "date": "2026-10-08",
+    "platform": "instagram",
+    "format": "stories",
+    "title": "Stories: Agenda de dezembro aberta",
+    "objective": "Vendas",
+    "pillar": "Agenda"
+  },
+  {
+    "key": "bia-2026-10-stories-feedback-1",
+    "client": "bia",
+    "date": "2026-10-09",
+    "platform": "instagram",
+    "format": "stories",
+    "title": "Stories: feedbacks de clientes (1 de 4)",
+    "objective": "Prova social",
+    "pillar": "Feedbacks"
+  },
+  {
+    "key": "bia-2026-10-stories-feedback-2",
+    "client": "bia",
+    "date": "2026-10-15",
+    "platform": "instagram",
+    "format": "stories",
+    "title": "Stories: feedbacks de clientes (2 de 4)",
+    "objective": "Prova social",
+    "pillar": "Feedbacks"
+  },
+  {
+    "key": "bia-2026-10-stories-feedback-3",
+    "client": "bia",
+    "date": "2026-10-21",
+    "platform": "instagram",
+    "format": "stories",
+    "title": "Stories: feedbacks de clientes (3 de 4)",
+    "objective": "Prova social",
+    "pillar": "Feedbacks"
+  },
+  {
+    "key": "bia-2026-10-stories-feedback-4",
+    "client": "bia",
+    "date": "2026-10-27",
+    "platform": "instagram",
+    "format": "stories",
+    "title": "Stories: feedbacks de clientes (4 de 4)",
+    "objective": "Prova social",
+    "pillar": "Feedbacks"
+  }
+]

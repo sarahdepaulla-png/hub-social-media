@@ -31,7 +31,8 @@ export const studioInbox = query({
     const clients = await ctx.db.query("clients").collect();
     const byId = new Map<string, (typeof clients)[number]>(clients.map((c) => [c._id, c]));
     const items: {
-      kind: "ajuste" | "ideias";
+      kind: "ajuste" | "ideias" | "briefing";
+      briefingId?: string;
       clientSlug: string;
       clientName: string;
       accentColor: string;
@@ -85,6 +86,29 @@ export const studioInbox = query({
         title: list.length === 1 ? "1 ideia nova" : `${list.length} ideias novas`,
         detail: list.map((i) => i.title).join(", "),
         at: Math.max(...list.map((i) => i._creationTime)),
+        contentId: null,
+        coverUrl: null,
+      });
+    }
+
+    // Briefings que a cliente abriu e ainda não entraram em criação.
+    const briefs = await ctx.db
+      .query("briefings")
+      .withIndex("by_status", (q) => q.eq("status", "novo"))
+      .collect();
+    for (const b of briefs) {
+      const client = byId.get(b.clientId);
+      const author = await ctx.db.get(b.authorId);
+      if (!client || author?.role === "admin") continue;
+      items.push({
+        kind: "briefing",
+        briefingId: b._id,
+        clientSlug: client.slug,
+        clientName: client.name,
+        accentColor: client.accentColor,
+        title: b.title,
+        detail: b.body.slice(0, 140),
+        at: b._creationTime,
         contentId: null,
         coverUrl: null,
       });

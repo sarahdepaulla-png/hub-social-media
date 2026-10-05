@@ -21,23 +21,39 @@ export default function EstudioPage() {
       <AutoCovers />
       <header className="flex flex-col gap-2">
         <span className="text-[15px] capitalize text-texto-2">{longDate(today)}</span>
-        <h1 className="titulo text-6xl md:text-7xl">Estúdio</h1>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h1 className="titulo text-6xl md:text-7xl">Estúdio</h1>
+          <Link href="/estudio/esteira" className="inline-flex min-h-11 items-center rounded-full bg-vinho px-5 text-sm font-semibold text-white">
+            Abrir a esteira
+          </Link>
+        </div>
       </header>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-[28px] font-extrabold tracking-[-0.045em]">Precisa de você</h2>
         {inbox.length === 0 ? (
-          <p className="text-base text-texto-2">Nenhum ajuste pedido e nenhuma ideia nova. Bom momento para produzir.</p>
+          <p className="text-base text-texto-2">Nenhum ajuste pedido, briefing ou ideia nova. Bom momento para produzir.</p>
         ) : (
           <ul className="flex flex-col border-t border-linha">
             {inbox.map((item, i) => (
               <li key={i} className="border-b border-linha">
                 <Link
-                  href={item.contentId ? `/w/${item.clientSlug}/c/${item.contentId}` : `/w/${item.clientSlug}/ideias`}
+                  href={
+                    item.contentId
+                      ? `/w/${item.clientSlug}/c/${item.contentId}`
+                      : item.briefingId
+                        ? `/w/${item.clientSlug}/briefing/${item.briefingId}`
+                        : `/w/${item.clientSlug}/ideias`
+                  }
                   className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-4 py-3.5"
                 >
                   {item.kind === "ajuste" ? (
                     <Thumb url={item.coverUrl} tone={i} className="h-[70px] w-14 outline outline-2 outline-offset-2 outline-st-ajuste" />
+                  ) : item.kind === "briefing" ? (
+                    <span aria-hidden="true" className="flex h-[70px] w-14 flex-col items-center justify-center gap-1 rounded-peca bg-rosa text-[10px] font-bold uppercase tracking-wide text-vinho">
+                      <span className="size-2.5 rounded-full" style={{ background: item.accentColor }} />
+                      Brief
+                    </span>
                   ) : (
                     <span aria-hidden="true" className="flex h-[70px] w-14 items-center justify-center rounded-peca border border-dashed border-campo">
                       <span className="size-3 rounded-full" style={{ background: item.accentColor }} />
@@ -45,11 +61,15 @@ export default function EstudioPage() {
                   )}
                   <span className="flex min-w-0 flex-col gap-1">
                     <strong className="text-base">
-                      {item.kind === "ajuste" ? `${item.clientName} pediu ajuste: ${item.title}` : `${item.clientName}: ${item.title}`}
+                      {item.kind === "ajuste"
+                        ? `${item.clientName} pediu ajuste: ${item.title}`
+                        : item.kind === "briefing"
+                          ? `${item.clientName} mandou um briefing: ${item.title}`
+                          : `${item.clientName}: ${item.title}`}
                     </strong>
                     {item.detail && <span className="truncate text-sm text-texto-2">{item.detail}</span>}
                   </span>
-                  <span className="text-sm font-semibold text-rosa-forte">{item.kind === "ajuste" ? "Abrir" : "Ver ideias"}</span>
+                  <span className="text-sm font-semibold text-rosa-forte">{item.kind === "ajuste" ? "Abrir" : item.kind === "briefing" ? "Ler" : "Ver ideias"}</span>
                 </Link>
               </li>
             ))}
@@ -78,6 +98,11 @@ export default function EstudioPage() {
                     {c.counts.aguardando} aguardando{c.counts.ajuste > 0 ? `, ${c.counts.ajuste} em ajuste` : ""}
                   </span>
                   <span className="text-texto-2">{c.nextDate ? `Próximo: ${shortDate(c.nextDate)}` : "Sem próximas datas"}</span>
+                  {c.newBriefings > 0 && (
+                    <Link href="/estudio/esteira" className="rounded-full bg-vinho px-3 py-1 font-semibold text-white">
+                      {c.newBriefings === 1 ? "1 briefing" : `${c.newBriefings} briefings`}
+                    </Link>
+                  )}
                   {c.newIdeas > 0 && (
                     <Link href={`/w/${c.slug}/ideias`} className="rounded-full bg-rosa px-3 py-1 font-semibold text-vinho">
                       {c.newIdeas === 1 ? "1 ideia nova" : `${c.newIdeas} ideias novas`}

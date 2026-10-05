@@ -98,6 +98,7 @@ export default defineSchema({
     externalUrl: v.optional(v.string()),
     sourceIdeaId: v.optional(v.id("ideas")),
     sourceOpportunityId: v.optional(v.id("opportunities")),
+    briefingId: v.optional(v.id("briefings")),
     importKey: v.optional(v.string()), // peças criadas pela fila de conteúdo (pasta conteudo/)
   })
     .index("by_import_key", ["importKey"])
@@ -170,6 +171,24 @@ export default defineSchema({
     authorId: v.id("users"),
     body: v.string(),
   }).index("by_idea", ["ideaId"]),
+
+  // Briefing: pedido de conteúdo aberto pela cliente ou pelo estúdio.
+  // Entra na esteira e, ao começar a criação, vira uma peça do calendário.
+  briefings: defineTable({
+    clientId: v.id("clients"),
+    authorId: v.id("users"),
+    title: v.string(), // o que é o conteúdo
+    platform: v.optional(platform),
+    format: v.optional(format),
+    desiredDate: v.optional(v.string()), // AAAA-MM-DD
+    objective: v.optional(v.string()),
+    body: v.string(), // o briefing em si
+    links: v.array(v.string()),
+    status: v.union(v.literal("novo"), v.literal("em_criacao"), v.literal("arquivado")),
+    contentId: v.optional(v.id("contents")),
+  })
+    .index("by_client", ["clientId"])
+    .index("by_status", ["status"]),
 
   // Biblioteca de datas. Sem clientId = vale para todo cliente dos nichos listados.
   opportunities: defineTable({

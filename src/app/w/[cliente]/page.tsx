@@ -7,13 +7,55 @@ import { Asterisk, Loading, SelectionBox, StatusTag, Thumb, buttonClass } from "
 import { useWorkspace } from "@/components/WorkspaceShell";
 import { StatusMenu } from "@/components/StatusMenu";
 import { currentMonth, monthName, shortDate, todayISO } from "@/lib/dates";
-import { FORMAT, PLATFORM } from "@/lib/labels";
+import { BRIEF_STATUS, FORMAT, PLATFORM } from "@/lib/labels";
 
 function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
 const PLATFORM_NAME: Record<string, string> = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", pinterest: "Pinterest", site: "Site" };
+
+/** Briefings abertos: o que a cliente pediu e em que pé está. */
+function BriefingStrip({ slug }: { slug: string }) {
+  const list = useQuery(api.briefings.list, { slug });
+  if (!list || list.length === 0) return null;
+  const base = `/w/${slug}`;
+  return (
+    <section className="flex flex-col gap-3 px-6">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-xl font-extrabold tracking-[-0.04em]">Briefings</h2>
+        <Link href={`${base}/briefing/novo`} className="min-h-11 content-center text-[15px] font-semibold text-rosa-forte">
+          Abrir outro
+        </Link>
+      </div>
+      <ul className="flex flex-col">
+        {list.slice(0, 5).map((b) => {
+          const st = BRIEF_STATUS[b.status];
+          return (
+            <li key={b._id} className="border-t border-linha last:border-b">
+              <Link href={`${base}/briefing/${b._id}`} className="flex items-center justify-between gap-4 py-3.5">
+                <span className="flex min-w-0 flex-col gap-1">
+                  <strong className="truncate text-base leading-tight">{b.title}</strong>
+                  <span className="text-[13px] text-texto-2">
+                    {b.desiredDate ? `Para ${shortDate(b.desiredDate)}` : "Sem data"}. {b.authorIsStudio ? "Do estúdio" : `Pedido por ${b.authorName}`}
+                  </span>
+                </span>
+                {b.content ? (
+                  <StatusTag status={b.content.status} short className="shrink-0" />
+                ) : (
+                  <span className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-semibold">
+                    <span aria-hidden="true" className="size-2 rounded-full" style={{ background: st.color }} />
+                    {st.label}
+                  </span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 /** Mural em miniatura: as últimas referências, com atalho para o mural completo. */
 function IdeaStrip({ slug }: { slug: string }) {
@@ -86,11 +128,16 @@ export default function InicioPage() {
               </>
             )}
           </SelectionBox>
-          {ws.viewerRole === "admin" && (
-            <Link href={`${base}/novo`} className={`${buttonClass.primary} mt-2 self-start`}>
-              Novo conteúdo
+          <div className="mt-2 flex flex-wrap gap-3">
+            <Link href={`${base}/briefing/novo`} className={admin ? buttonClass.secondary : buttonClass.primary}>
+              Abrir briefing
             </Link>
-          )}
+            {admin && (
+              <Link href={`${base}/novo`} className={buttonClass.primary}>
+                Novo conteúdo
+              </Link>
+            )}
+          </div>
         </div>
       </section>
 
@@ -146,6 +193,8 @@ export default function InicioPage() {
             </ul>
           )}
         </section>
+
+        <BriefingStrip slug={ws.slug} />
 
         <IdeaStrip slug={ws.slug} />
 

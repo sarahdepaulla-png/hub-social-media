@@ -59,6 +59,9 @@ export const listForStudio = query({
         newIdeas: (await ctx.db.query("ideas").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
           (i) => i.status === "nova",
         ).length,
+        newBriefings: (await ctx.db.query("briefings").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
+          (b) => b.status === "novo",
+        ).length,
       });
     }
     return rows.sort((a, b) => b.counts.ajuste - a.counts.ajuste || b.counts.aguardando - a.counts.aguardando);

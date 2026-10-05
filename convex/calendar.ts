@@ -14,9 +14,16 @@ export const month = query({
       (a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""),
     );
     const contents = await Promise.all(list.map((c) => toCard(ctx, c)));
+    const briefings = (
+      await ctx.db
+        .query("briefings")
+        .withIndex("by_client", (q) => q.eq("clientId", client._id))
+        .collect()
+    ).filter((b) => b.status === "novo" && b.desiredDate && b.desiredDate >= `${month}-01` && b.desiredDate <= `${month}-31`);
     const opps = await opportunitiesFor(ctx, client, `${month}-01`, `${month}-31`);
     return {
       contents,
+      briefings: briefings.map((b) => ({ _id: b._id, date: b.desiredDate!, title: b.title })),
       opportunities: opps.map((o: Doc<"opportunities">) => ({
         _id: o._id,
         date: o.date,

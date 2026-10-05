@@ -11,6 +11,7 @@
   import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
   import type * as access from "../access.js";
 import type * as auth from "../auth.js";
+import type * as briefings from "../briefings.js";
 import type * as calendar from "../calendar.js";
 import type * as captions from "../captions.js";
 import type * as clients from "../clients.js";
@@ -44,6 +45,7 @@ import type * as viewer from "../viewer.js";
   declare const fullApi: ApiFromModules<{
     "access": typeof access,
 "auth": typeof auth,
+"briefings": typeof briefings,
 "calendar": typeof calendar,
 "captions": typeof captions,
 "clients": typeof clients,

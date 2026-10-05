@@ -431,3 +431,52 @@ describe("curtir, comentar e editar cartões", () => {
     expect(card).toMatchObject({ title: "Depois", description: "Contexto", adaptation: "Versão com agulha", platform: "youtube", previewPending: true });
   });
 });
+
+describe("briefing e esteira", () => {
+  test("cliente abre briefing, estúdio começa a criação e a peça nasce ligada a ele", async () => {
+    const { as, liliUser, biaUser, admin } = await setup();
+    const brief = {
+      title: "Postura no home office",
+      format: "reels" as const,
+      platform: "instagram" as const,
+      desiredDate: "2026-10-20",
+      objective: "Educar",
+      body: "Mostrar 3 ajustes simples na cadeira.",
+      links: ["https://instagram.com/p/ref", ""],
+    };
+    await expect(as(liliUser).mutation(api.briefings.create, { slug: "lili", ...brief, links: ["instagram.com"] })).rejects.toThrow(/https/);
+    await expect(as(biaUser).mutation(api.briefings.create, { slug: "lili", ...brief })).rejects.toThrow(/não encontrado/);
+    const briefingId = await as(liliUser).mutation(api.briefings.create, { slug: "lili", ...brief });
+
+    const [mine] = await as(liliUser).query(api.briefings.list, { slug: "lili" });
+    expect(mine).toMatchObject({ status: "novo", canEdit: true, links: ["https://instagram.com/p/ref"] });
+    await expect(as(biaUser).query(api.briefings.get, { briefingId })).rejects.toThrow(/não encontrado/);
+
+    // Aparece no calendário, no estúdio e na esteira.
+    const cal = await as(liliUser).query(api.calendar.month, { slug: "lili", month: "2026-10" });
+    expect(cal.briefings).toEqual([{ _id: briefingId, date: "2026-10-20", title: "Postura no home office" }]);
+    const inbox = await as(admin).query(api.dashboard.studioInbox, {});
+    expect(inbox.some((i) => i.kind === "briefing" && i.briefingId === briefingId)).toBe(true);
+    await expect(as(liliUser).query(api.briefings.pipeline, { month: "2026-10" })).rejects.toThrow(/administradora/);
+    let esteira = await as(admin).query(api.briefings.pipeline, { month: "2026-10" });
+    expect(esteira.briefings.map((b) => b._id)).toContain(briefingId);
+
+    await expect(as(liliUser).mutation(api.briefings.start, { briefingId, date: "2026-10-20", platform: "instagram", format: "reels" })).rejects.toThrow(/administradora/);
+    const contentId = await as(admin).mutation(api.briefings.start, { briefingId, date: "2026-10-21", platform: "instagram", format: "reels" });
+
+    const piece = await as(liliUser).query(api.contents.get, { contentId });
+    expect(piece.content).toMatchObject({ status: "producao", date: "2026-10-21", title: "Postura no home office", objective: "Educar" });
+    expect(piece.briefing?.body).toBe("Mostrar 3 ajustes simples na cadeira.");
+    const after = await as(liliUser).query(api.briefings.get, { briefingId });
+    expect(after).toMatchObject({ status: "em_criacao", canEdit: false, content: { _id: contentId, status: "producao" } });
+    await expect(as(liliUser).mutation(api.briefings.update, { briefingId, ...brief })).rejects.toThrow(/com o estúdio/);
+
+    esteira = await as(admin).query(api.briefings.pipeline, { month: "2026-10" });
+    expect(esteira.briefings.map((b) => b._id)).not.toContain(briefingId);
+    expect(esteira.contents.find((c) => c._id === contentId)).toMatchObject({ fromBriefing: true, client: { slug: "lili" } });
+
+    // Apagar a peça devolve o briefing para a esteira.
+    await as(admin).mutation(api.contents.remove, { contentId });
+    expect(await as(admin).query(api.briefings.get, { briefingId })).toMatchObject({ status: "novo", content: null });
+  });
+});

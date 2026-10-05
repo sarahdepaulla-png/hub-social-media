@@ -15,7 +15,7 @@ import { MediaViewer, PostBar } from "@/components/content/MediaViewer";
 import { longDate, stamp } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
 
-type Tab = "legenda" | "comentarios" | "historico";
+type Tab = "legenda" | "comentarios" | "historico" | "briefing";
 
 export default function ConteudoPage() {
   const { cliente, id } = useParams<{ cliente: string; id: string }>();
@@ -28,7 +28,7 @@ export default function ConteudoPage() {
   const onIndex = useCallback((i: number) => setCard(i), []);
 
   if (data === undefined) return <Loading />;
-  const { content, media, captions, decision, comments, queue, viewer, client } = data;
+  const { content, media, captions, decision, comments, queue, viewer, client, briefing } = data;
   const base = `/w/${cliente}`;
   const waiting = content.status === "aguardando";
   const chosen = captions.find((c) => c.chosen);
@@ -38,6 +38,7 @@ export default function ConteudoPage() {
     { id: "legenda", label: captions.length > 1 ? `Legendas ${captions.length}` : "Legenda" },
     { id: "comentarios", label: rootComments ? `Comentários ${rootComments}` : "Comentários" },
     { id: "historico", label: "Histórico" },
+    ...(briefing ? [{ id: "briefing" as const, label: "Briefing" }] : []),
   ];
 
   return (
@@ -132,6 +133,32 @@ export default function ConteudoPage() {
               {tab === "legenda" && <CaptionPicker captions={captions} locked={!waiting && viewer.role !== "admin"} />}
               {tab === "comentarios" && <CommentThread contentId={contentId} comments={comments} accent={client.accentColor} />}
               {tab === "historico" && <HistoryList contentId={contentId} />}
+              {tab === "briefing" && briefing && (
+                <div className="flex flex-col gap-4">
+                  <span className="text-sm text-texto-2">
+                    Aberto por {briefing.authorName}, {stamp(briefing.at)}
+                    {briefing.desiredDate ? `. Pedido para ${longDate(briefing.desiredDate)}` : ""}
+                  </span>
+                  {briefing.objective && (
+                    <span className="self-start rounded-full bg-rosa px-3 py-1 text-sm font-semibold text-vinho">{briefing.objective}</span>
+                  )}
+                  <p className="whitespace-pre-wrap text-base leading-relaxed">{briefing.body}</p>
+                  {briefing.links.length > 0 && (
+                    <ul className="flex flex-col gap-1.5">
+                      {briefing.links.map((l) => (
+                        <li key={l}>
+                          <a href={l} target="_blank" rel="noreferrer" className="break-all text-sm font-semibold text-rosa-forte underline">
+                            {l}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <Link href={`${base}/briefing/${briefing._id}`} className="min-h-11 content-center self-start text-sm font-semibold text-rosa-forte">
+                    Abrir o briefing completo
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

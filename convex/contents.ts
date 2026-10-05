@@ -72,6 +72,9 @@ export const get = query({
       .collect();
     const queue = waiting.filter((c) => c._id !== contentId).sort((a, b) => a.date.localeCompare(b.date));
 
+    const brief = content.briefingId ? await ctx.db.get(content.briefingId) : null;
+    const briefAuthor = brief ? await ctx.db.get(brief.authorId) : null;
+
     return {
       viewer: { _id: viewer._id, role: viewer.role! },
       client: { slug: client.slug, name: client.name, accentColor: client.accentColor },
@@ -89,6 +92,15 @@ export const get = query({
         externalUrl: content.externalUrl ?? null,
         coverUrl: content.coverId ? await ctx.storage.getUrl(content.coverId) : (content.coverUrl ?? null),
         coverSource: content.coverSource ?? null,
+      },
+      briefing: brief && {
+        _id: brief._id,
+        objective: brief.objective ?? null,
+        body: brief.body,
+        links: brief.links,
+        desiredDate: brief.desiredDate ?? null,
+        authorName: briefAuthor?.role === "admin" ? "Estúdio" : (briefAuthor?.name ?? briefAuthor?.email?.split("@")[0] ?? "Cliente"),
+        at: brief._creationTime,
       },
       media: mediaOut.sort((a, b) => a.order - b.order),
       captions: captions
@@ -422,6 +434,11 @@ export const remove = mutation({
       ...(await ctx.db.query("decisions").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),
     ];
     for (const r of rows) await ctx.db.delete(r._id);
+    // O briefing volta para a esteira se a peça for apagada.
+    if (content.briefingId) {
+      const brief = await ctx.db.get(content.briefingId);
+      if (brief?.contentId === contentId) await ctx.db.patch(brief._id, { status: "novo", contentId: undefined });
+    }
     if (content.coverId && (content.coverSource === "manual" || content.coverSource === "quadro")) {
       await ctx.storage.delete(content.coverId);
     }

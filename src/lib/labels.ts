@@ -28,3 +28,10 @@ export const FORMAT: Record<Format, string> = {
   video: "Vídeo",
   link: "Link externo",
 };
+
+/** Onde o briefing está. */
+export const BRIEF_STATUS = {
+  novo: { label: "Na fila do estúdio", color: "var(--color-st-aguardando)" },
+  em_criacao: { label: "Em criação", color: "var(--color-st-producao)" },
+  arquivado: { label: "Arquivado", color: "var(--color-st-ideia)" },
+} as const;

@@ -72,7 +72,8 @@ export const get = query({
       .collect();
     const queue = waiting.filter((c) => c._id !== contentId).sort((a, b) => a.date.localeCompare(b.date));
 
-    const brief = content.briefingId ? await ctx.db.get(content.briefingId) : null;
+    // O briefing é bastidor do estúdio: na aprovação, a cliente vê só a versão final.
+    const brief = content.briefingId && viewer.role === "admin" ? await ctx.db.get(content.briefingId) : null;
     const briefAuthor = brief ? await ctx.db.get(brief.authorId) : null;
 
     return {

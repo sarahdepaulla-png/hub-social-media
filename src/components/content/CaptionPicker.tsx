@@ -7,7 +7,7 @@ import type { Id } from "@convex/_generated/dataModel";
 type Caption = { _id: string; order: number; text: string; cta: string | null; hashtags: string | null; notes: string | null; chosen: boolean };
 
 /** Opções de legenda. A cliente toca na favorita e isso fica registrado. */
-export function CaptionPicker({ captions, locked }: { captions: Caption[]; locked: boolean }) {
+export function CaptionPicker({ captions, locked, studio = false }: { captions: Caption[]; locked: boolean; studio?: boolean }) {
   const choose = useMutation(api.contents.chooseCaption).withOptimisticUpdate((store, { captionId }) => {
     for (const { args, value } of store.getAllQueries(api.contents.get)) {
       if (!value) continue;
@@ -19,7 +19,7 @@ export function CaptionPicker({ captions, locked }: { captions: Caption[]; locke
   });
 
   if (captions.length === 0) {
-    return <p className="text-base text-texto-2">O estúdio ainda está escrevendo as legendas.</p>;
+    return <p className="text-base text-texto-2">{studio ? "Nenhuma legenda ainda." : "O estúdio ainda está escrevendo as legendas."}</p>;
   }
 
   const chosen = captions.find((c) => c.chosen) ?? (captions.length === 1 ? captions[0] : null);
@@ -27,7 +27,7 @@ export function CaptionPicker({ captions, locked }: { captions: Caption[]; locke
   return (
     <div className="flex flex-col gap-3">
       {captions.length > 1 && (
-        <span className="text-sm text-texto-2">{locked ? "Legenda escolhida para esta peça." : "Toque na legenda que você prefere."}</span>
+        <span className="text-sm text-texto-2">{studio ? (captions.some((c) => c.chosen) ? "A cliente já escolheu." : "A cliente ainda não escolheu.") : locked ? "Legenda escolhida para esta peça." : "Toque na legenda que você prefere."}</span>
       )}
       <fieldset className="flex flex-col gap-2.5" disabled={locked}>
         <legend className="sr-only">Opções de legenda</legend>
@@ -50,7 +50,7 @@ export function CaptionPicker({ captions, locked }: { captions: Caption[]; locke
             <span className="flex flex-col gap-1.5">
               <strong className="text-sm">
                 {captions.length > 1 ? `Opção ${c.order}` : "Legenda"}
-                {c.chosen && captions.length > 1 && <span className="font-medium text-rosa-forte"> (sua favorita)</span>}
+                {c.chosen && captions.length > 1 && <span className="font-medium text-rosa-forte">{studio ? " (escolhida pela cliente)" : " (sua favorita)"}</span>}
               </strong>
               <span className="whitespace-pre-line text-[15px] leading-relaxed text-texto-3">{c.text}</span>
             </span>

@@ -9,6 +9,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { FunctionReturnType } from "convex/server";
 import { Loading, Thumb } from "@/components/brand";
 import { StatusMenu } from "@/components/StatusMenu";
+import { PieceDrawer } from "@/components/PieceDrawer";
 import { errorText } from "@/components/content/DecisionSheet";
 import { currentMonth, monthName, shiftMonth, shortDate } from "@/lib/dates";
 import { FORMAT, type Status } from "@/lib/labels";
@@ -54,8 +55,7 @@ function BriefCard({ b }: { b: Brief }) {
   );
 }
 
-function PieceCard({ c, tone, onDrag }: { c: Piece; tone: number; onDrag: (id: string | null) => void }) {
-  const href = `/w/${c.client.slug}/c/${c._id}`;
+function PieceCard({ c, tone, onDrag, onOpen }: { c: Piece; tone: number; onDrag: (id: string | null) => void; onOpen: () => void }) {
   return (
     <li
       draggable
@@ -63,14 +63,14 @@ function PieceCard({ c, tone, onDrag }: { c: Piece; tone: number; onDrag: (id: s
       onDragEnd={() => onDrag(null)}
       className="flex cursor-grab gap-3 rounded-xl bg-white p-2.5 active:cursor-grabbing"
     >
-      <Link href={href} draggable={false} className="shrink-0">
+      <button type="button" onClick={onOpen} draggable={false} aria-label={`Abrir a ficha de ${c.title}`} className="shrink-0">
         <Thumb url={c.coverUrl} tone={tone} label={c.coverUrl ? undefined : FORMAT[c.format]} className="h-[76px] w-[60px] rounded-lg" />
-      </Link>
+      </button>
       <span className="flex min-w-0 flex-col gap-1">
         <ClientLabel c={c.client} />
-        <Link href={href} draggable={false} className="line-clamp-2 text-sm font-bold leading-tight hover:underline">
+        <button type="button" onClick={onOpen} draggable={false} className="line-clamp-2 text-left text-sm font-bold leading-tight hover:underline">
           {c.title}
-        </Link>
+        </button>
         <span className="text-xs text-texto-2">
           {shortDate(c.date)}. {FORMAT[c.format]}
           {c.fromBriefing ? ". Do briefing" : ""}
@@ -91,6 +91,7 @@ function Esteira() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<{ id: Id<"contents">; slug: string } | null>(null);
 
   const visible = useMemo(() => {
     if (!data) return null;
@@ -226,14 +227,15 @@ function Esteira() {
             ) : (
               <ul className="flex flex-col gap-2.5">
                 {s.items.map((c, i) => (
-                  <PieceCard key={c._id} c={c} tone={i} onDrag={setDragId} />
+                  <PieceCard key={c._id} c={c} tone={i} onDrag={setDragId} onOpen={() => setOpen({ id: c._id as Id<"contents">, slug: c.client.slug })} />
                 ))}
               </ul>
             )}
           </section>
         ))}
       </div>
-      <p className="hidden px-6 text-sm text-texto-2 lg:block">Arraste um card para outra coluna ou toque no status para mudar a etapa.</p>
+      <p className="hidden px-6 text-sm text-texto-2 lg:block">Clique num card para ver briefing, legenda e ajustes. Arraste para outra coluna ou toque no status para mudar a etapa.</p>
+      {open && <PieceDrawer key={open.id} contentId={open.id} slug={open.slug} onClose={() => setOpen(null)} />}
     </main>
   );
 }

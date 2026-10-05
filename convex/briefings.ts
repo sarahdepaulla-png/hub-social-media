@@ -137,6 +137,28 @@ export const update = mutation({
   },
 });
 
+/** Escreve o briefing de uma peça que nasceu sem ele (só a admin). */
+export const attach = mutation({
+  args: { contentId: v.id("contents"), ...fields },
+  handler: async (ctx, { contentId, ...f }) => {
+    const admin = await requireAdmin(ctx);
+    const content = await ctx.db.get(contentId);
+    if (!content) throw new ConvexError("Conteúdo não encontrado.");
+    if (content.briefingId && (await ctx.db.get(content.briefingId))) {
+      throw new ConvexError("Esta peça já tem briefing. Edite o que existe.");
+    }
+    const briefingId = await ctx.db.insert("briefings", {
+      clientId: content.clientId,
+      authorId: admin._id,
+      status: "em_criacao",
+      contentId,
+      ...clean(f),
+    });
+    await ctx.db.patch(contentId, { briefingId });
+    return briefingId;
+  },
+});
+
 /** Começa a criação: o briefing vira uma peça em produção no calendário. */
 export const start = mutation({
   args: { briefingId: v.id("briefings"), date: v.string(), platform, format },

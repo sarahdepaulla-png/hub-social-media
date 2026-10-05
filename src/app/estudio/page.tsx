@@ -6,6 +6,9 @@ import { api } from "@convex/_generated/api";
 import { Avatar, Loading, Thumb } from "@/components/brand";
 import { AutoCovers } from "@/components/AutoCovers";
 import { StatusMenu } from "@/components/StatusMenu";
+import { PieceDrawer } from "@/components/PieceDrawer";
+import type { Id } from "@convex/_generated/dataModel";
+import { useState } from "react";
 import { currentMonth, longDate, monthName, shortDate, todayISO } from "@/lib/dates";
 
 export default function EstudioPage() {
@@ -13,6 +16,7 @@ export default function EstudioPage() {
   const today = todayISO();
   const clients = useQuery(api.clients.listForStudio, { month, today });
   const inbox = useQuery(api.dashboard.studioInbox, {});
+  const [open, setOpen] = useState<{ id: Id<"contents">; slug: string } | null>(null);
 
   if (clients === undefined || inbox === undefined) return <Loading />;
 
@@ -45,6 +49,11 @@ export default function EstudioPage() {
                         ? `/w/${item.clientSlug}/briefing/${item.briefingId}`
                         : `/w/${item.clientSlug}/ideias`
                   }
+                  onClick={(e) => {
+                    if (!item.contentId) return;
+                    e.preventDefault();
+                    setOpen({ id: item.contentId as Id<"contents">, slug: item.clientSlug });
+                  }}
                   className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-4 py-3.5"
                 >
                   {item.kind === "ajuste" ? (
@@ -118,14 +127,14 @@ export default function EstudioPage() {
                 <ul className="flex snap-x gap-2.5 overflow-x-auto pb-1" aria-label={`Conteúdos de ${c.name} no mês`}>
                   {c.strip.map((s, i) => (
                     <li key={s._id} className="flex w-[92px] shrink-0 snap-start flex-col gap-1.5">
-                      <Link href={`/w/${c.slug}/c/${s._id}`} className="group flex flex-col gap-1.5" title={s.title}>
+                      <button type="button" onClick={() => setOpen({ id: s._id, slug: c.slug })} className="group flex flex-col gap-1.5 text-left" title={s.title}>
                         <Thumb
                           url={s.coverUrl}
                           tone={i}
                           className="aspect-[4/5] w-full transition-transform duration-150 group-hover:-rotate-1"
                         />
                         <span className="text-[11px] text-texto-2">{shortDate(s.date)}</span>
-                      </Link>
+                      </button>
                       <StatusMenu contentId={s._id} status={s.status} editable short className="text-[11px]" />
                     </li>
                   ))}
@@ -135,6 +144,7 @@ export default function EstudioPage() {
           ))}
         </ul>
       </section>
+      {open && <PieceDrawer key={open.id} contentId={open.id} slug={open.slug} onClose={() => setOpen(null)} />}
     </main>
   );
 }

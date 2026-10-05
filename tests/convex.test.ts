@@ -464,9 +464,11 @@ describe("briefing e esteira", () => {
     await expect(as(liliUser).mutation(api.briefings.start, { briefingId, date: "2026-10-20", platform: "instagram", format: "reels" })).rejects.toThrow(/administradora/);
     const contentId = await as(admin).mutation(api.briefings.start, { briefingId, date: "2026-10-21", platform: "instagram", format: "reels" });
 
-    const piece = await as(liliUser).query(api.contents.get, { contentId });
+    const piece = await as(admin).query(api.contents.get, { contentId });
     expect(piece.content).toMatchObject({ status: "producao", date: "2026-10-21", title: "Postura no home office", objective: "Educar" });
     expect(piece.briefing?.body).toBe("Mostrar 3 ajustes simples na cadeira.");
+    // Na aprovação a cliente vê só a versão final, sem o briefing.
+    expect((await as(liliUser).query(api.contents.get, { contentId })).briefing).toBeNull();
     const after = await as(liliUser).query(api.briefings.get, { briefingId });
     expect(after).toMatchObject({ status: "em_criacao", canEdit: false, content: { _id: contentId, status: "producao" } });
     await expect(as(liliUser).mutation(api.briefings.update, { briefingId, ...brief })).rejects.toThrow(/com o estúdio/);
@@ -478,5 +480,19 @@ describe("briefing e esteira", () => {
     // Apagar a peça devolve o briefing para a esteira.
     await as(admin).mutation(api.contents.remove, { contentId });
     expect(await as(admin).query(api.briefings.get, { briefingId })).toMatchObject({ status: "novo", content: null });
+  });
+});
+
+describe("briefing de peça existente", () => {
+  test("admin escreve o briefing de uma peça que nasceu sem ele", async () => {
+    const { as, liliUser, admin, waiting } = await setup();
+    const f = { title: "Peça antiga", body: "Contexto para a equipe.", links: [] };
+    await expect(as(liliUser).mutation(api.briefings.attach, { contentId: waiting[0], ...f })).rejects.toThrow(/administradora/);
+    const briefingId = await as(admin).mutation(api.briefings.attach, { contentId: waiting[0], ...f });
+    const piece = await as(admin).query(api.contents.get, { contentId: waiting[0] });
+    expect(piece.briefing?._id).toBe(briefingId);
+    await expect(as(admin).mutation(api.briefings.attach, { contentId: waiting[0], ...f })).rejects.toThrow(/já tem briefing/);
+    const esteira = await as(admin).query(api.briefings.pipeline, { month: "2026-10" });
+    expect(esteira.briefings.map((b) => b._id)).not.toContain(briefingId);
   });
 });

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "convex/react";
 import { Suspense } from "react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { Asterisk } from "@/components/brand";
 import { BriefingForm } from "@/components/briefing/BriefingForm";
 import { useWorkspace } from "@/components/WorkspaceShell";
@@ -14,6 +15,8 @@ function NovoBriefing() {
   const params = useSearchParams();
   const router = useRouter();
   const create = useMutation(api.briefings.create);
+  const attach = useMutation(api.briefings.attach);
+  const forContent = params.get("conteudo") as Id<"contents"> | null;
   const admin = ws.viewerRole === "admin";
   const date = params.get("data");
 
@@ -27,16 +30,23 @@ function NovoBriefing() {
           Briefing <Asterisk size={40} color="var(--color-rosa)" className="md:size-16" />
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-texto-3">
-          {admin
+          {forContent
+            ? "Briefing da peça que já está no calendário. Fica só com o estúdio: a cliente aprova a versão final."
+            : admin
             ? `Novo pedido de conteúdo para ${ws.name}. Ele entra na esteira e, quando a criação começar, vira uma peça do calendário.`
             : "Conte o que você quer publicar. O estúdio recebe na hora e, quando começar a criação, a peça aparece no seu calendário."}
         </p>
       </header>
       <BriefingForm
         initial={{ desiredDate: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined, title: params.get("tema") ?? "" }}
-        submitLabel={admin ? "Salvar na esteira" : "Enviar para o estúdio"}
+        submitLabel={forContent ? "Salvar briefing" : admin ? "Salvar na esteira" : "Enviar para o estúdio"}
         pendingLabel="Enviando"
         onSubmit={async (v) => {
+          if (forContent && admin) {
+            await attach({ contentId: forContent, ...v });
+            router.replace(`/w/${ws.slug}/c/${forContent}`);
+            return;
+          }
           const id = await create({ slug: ws.slug, ...v });
           router.replace(`/w/${ws.slug}/briefing/${id}?enviado=1`);
         }}

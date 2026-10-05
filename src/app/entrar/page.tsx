@@ -60,7 +60,7 @@ function LoginForm() {
             Entrar <Asterisk size={46} color="var(--color-vinho)" />
           </h1>
           <SelectionBox className="self-start px-4 py-2.5 text-[17px] leading-snug">
-            Sem senha. <strong>Mandamos um código para o seu e-mail.</strong>
+            Entre pelo <strong>link que o estúdio te mandou no WhatsApp.</strong>
           </SelectionBox>
         </div>
       </section>
@@ -68,6 +68,9 @@ function LoginForm() {
       <section className="mx-auto w-full max-w-md flex-1 px-6 py-10">
         {step === "email" ? (
           <form onSubmit={sendCode} className="flex flex-col gap-5">
+            <p className="text-[17px] leading-relaxed text-texto-3">
+              Perdeu o link? Peça um novo ao estúdio. Se o estúdio ativou o acesso por e-mail, você também pode receber um código abaixo.
+            </p>
             <label className="flex flex-col gap-2 text-sm font-semibold">
               Seu e-mail
               <input

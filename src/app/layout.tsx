@@ -3,6 +3,7 @@ import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import "@fontsource-variable/inter-tight";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
+import { TrashToastHost } from "@/components/Trash";
 
 export const metadata: Metadata = {
   title: { default: "Hub Social Media", template: "%s | Hub Social Media" },
@@ -20,7 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ConvexAuthNextjsServerProvider>
       <html lang="pt-BR">
         <body className="min-h-dvh antialiased">
-          <ConvexClientProvider>{children}</ConvexClientProvider>
+          <ConvexClientProvider>
+            {children}
+            <TrashToastHost />
+          </ConvexClientProvider>
         </body>
       </html>
     </ConvexAuthNextjsServerProvider>

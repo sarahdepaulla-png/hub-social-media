@@ -14,12 +14,21 @@ export function monthRange(month: string) {
   return { start: `${month}-01`, end: `${month}-31` };
 }
 
+/** Quanto tempo uma peça fica na lixeira antes de sumir de vez. */
+export const TRASH_DAYS = 15;
+export const TRASH_MS = TRASH_DAYS * 24 * 60 * 60 * 1000;
+
+/** Fora da lixeira. */
+export const alive = (c: Doc<"contents">) => !c.deletedAt;
+
 export async function contentsInMonth(ctx: QueryCtx, clientId: Doc<"clients">["_id"], month: string) {
   const { start, end } = monthRange(month);
-  return await ctx.db
-    .query("contents")
-    .withIndex("by_client_date", (q) => q.eq("clientId", clientId).gte("date", start).lte("date", end))
-    .collect();
+  return (
+    await ctx.db
+      .query("contents")
+      .withIndex("by_client_date", (q) => q.eq("clientId", clientId).gte("date", start).lte("date", end))
+      .collect()
+  ).filter(alive);
 }
 
 export function countByStatus(list: Doc<"contents">[]) {

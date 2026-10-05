@@ -10,6 +10,7 @@ import type { FunctionReturnType } from "convex/server";
 import { Loading, Thumb } from "@/components/brand";
 import { StatusMenu } from "@/components/StatusMenu";
 import { PieceDrawer } from "@/components/PieceDrawer";
+import { TrashButton } from "@/components/Trash";
 import { errorText } from "@/components/content/DecisionSheet";
 import { currentMonth, monthName, shiftMonth, shortDate } from "@/lib/dates";
 import { FORMAT, type Status } from "@/lib/labels";
@@ -61,8 +62,9 @@ function PieceCard({ c, tone, onDrag, onOpen }: { c: Piece; tone: number; onDrag
       draggable
       onDragStart={() => onDrag(c._id)}
       onDragEnd={() => onDrag(null)}
-      className="flex cursor-grab gap-3 rounded-xl bg-white p-2.5 active:cursor-grabbing"
+      className="group/peca relative flex cursor-grab gap-3 rounded-xl bg-white p-2.5 active:cursor-grabbing"
     >
+      <TrashButton contentId={c._id as Id<"contents">} title={c.title} editable reveal className="absolute right-1.5 top-1.5 z-10 size-7 border border-linha" />
       <button type="button" onClick={onOpen} draggable={false} aria-label={`Abrir a ficha de ${c.title}`} className="shrink-0">
         <Thumb url={c.coverUrl} tone={tone} label={c.coverUrl ? undefined : FORMAT[c.format]} className="h-[76px] w-[60px] rounded-lg" />
       </button>

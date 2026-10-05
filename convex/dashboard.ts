@@ -48,7 +48,7 @@ export const studioInbox = query({
         .query("contents")
         .withIndex("by_client_status", (q) => q.eq("clientId", client._id).eq("status", "ajuste"))
         .collect();
-      for (const content of adjusting) {
+      for (const content of adjusting.filter((c) => !c.deletedAt)) {
         const last = await ctx.db
           .query("decisions")
           .withIndex("by_content", (q) => q.eq("contentId", content._id))
@@ -150,6 +150,7 @@ export const studioHome = query({
         .withIndex("by_client_date", (q) => q.eq("clientId", client._id))
         .collect();
       for (const c of all) {
+        if (c.deletedAt) continue;
         if (c.status === "aguardando") counts.aguardando++;
         if (c.status === "ajuste") counts.ajuste++;
         if (c.status === "publicado" && c.date.startsWith(month)) counts.postadosMes++;

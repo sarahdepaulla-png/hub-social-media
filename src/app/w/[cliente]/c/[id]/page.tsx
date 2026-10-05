@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useParams, useRouter } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Loading, buttonClass } from "@/components/brand";
 import { StatusMenu } from "@/components/StatusMenu";
+import { TrashButton } from "@/components/Trash";
 import { CaptionPicker } from "@/components/content/CaptionPicker";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { DecisionSheet } from "@/components/content/DecisionSheet";
@@ -19,6 +20,8 @@ type Tab = "legenda" | "comentarios" | "historico" | "briefing";
 
 export default function ConteudoPage() {
   const { cliente, id } = useParams<{ cliente: string; id: string }>();
+  const router = useRouter();
+  const restore = useMutation(api.contents.restore);
   const contentId = id as Id<"contents">;
   const data = useQuery(api.contents.get, { contentId });
   const [tab, setTab] = useState<Tab>("legenda");
@@ -81,7 +84,25 @@ export default function ConteudoPage() {
               {media.length > 1 ? `, ${media.length} cards` : ""}
             </span>
             <h1 className="titulo text-[34px] leading-[0.95] md:text-5xl">{content.title}</h1>
-            <StatusMenu contentId={content._id} status={content.status} editable={viewer.role === "admin"} />
+            {content.deletedAt ? (
+              <div className="flex flex-wrap items-center gap-3 rounded-peca bg-white p-3 text-sm">
+                <strong className="text-st-ajuste-texto">Esta peça está na lixeira.</strong>
+                <button type="button" onClick={() => restore({ contentId: content._id })} className="min-h-10 rounded-full bg-vinho px-4 font-semibold text-white">
+                  Restaurar
+                </button>
+              </div>
+            ) : (
+              <span className="flex flex-wrap items-center gap-4">
+                <StatusMenu contentId={content._id} status={content.status} editable={viewer.role === "admin"} />
+                <TrashButton
+                  contentId={content._id}
+                  title={content.title}
+                  editable={viewer.role === "admin"}
+                  variant="text"
+                  onDone={() => router.push(`/w/${cliente}/calendario`)}
+                />
+              </span>
+            )}
             {(content.objective || content.pillar) && (
               <dl className="mt-1 grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
                 {content.objective && (

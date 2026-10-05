@@ -42,7 +42,8 @@ export async function requireClientAccess(ctx: QueryCtx, clientId: Id<"clients">
 export async function requireContentAccess(ctx: QueryCtx, contentId: Id<"contents">) {
   const viewer = await requireViewer(ctx);
   const content = await ctx.db.get(contentId);
-  if (!content || !canAccessClient(viewer, content.clientId)) {
+  // Peça na lixeira só a admin enxerga (para restaurar).
+  if (!content || !canAccessClient(viewer, content.clientId) || (content.deletedAt && viewer.role !== "admin")) {
     throw new ConvexError("Conteúdo não encontrado.");
   }
   const client = (await ctx.db.get(content.clientId))!;

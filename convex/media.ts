@@ -86,7 +86,7 @@ export const missingCovers = query({
     if (viewer?.role !== "admin") return [];
     const contents = contentId
       ? [await ctx.db.get(contentId)].filter((c): c is Doc<"contents"> => !!c)
-      : (await ctx.db.query("contents").collect()).filter((c) => !c.coverId);
+      : (await ctx.db.query("contents").collect()).filter((c) => !c.coverId && !c.deletedAt);
     const out: { contentId: Doc<"contents">["_id"]; videoUrl: string }[] = [];
     for (const c of contents) {
       if (c.coverId || out.length >= 12) continue;

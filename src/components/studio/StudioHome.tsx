@@ -9,6 +9,7 @@ import type { FunctionReturnType } from "convex/server";
 import { Asterisk, Avatar, SelectionBox, Thumb } from "@/components/brand";
 import { StatusMenu } from "@/components/StatusMenu";
 import { PieceDrawer } from "@/components/PieceDrawer";
+import { TrashButton } from "@/components/Trash";
 import { errorText } from "@/components/content/DecisionSheet";
 import { addDays, longDate, monthName, shortDate, todayISO } from "@/lib/dates";
 import { STATUS, type Status } from "@/lib/labels";
@@ -224,7 +225,10 @@ function LateList({ items, onOpen }: { items: Home["late"]; onOpen: (o: Open) =>
                 {ready ? ". Já saiu? Marque como postado" : ""}
               </span>
             </span>
-            <StatusMenu contentId={c._id} status={c.status} editable short className="text-[11px]" />
+            <span className="flex flex-col items-end gap-1.5">
+              <StatusMenu contentId={c._id} status={c.status} editable short className="text-[11px]" />
+              <TrashButton contentId={c._id} title={c.title} editable className="size-7 border border-linha" />
+            </span>
           </li>
         );
       })}
@@ -317,7 +321,8 @@ function Week({ items, today, onOpen }: { items: Home["week"]; today: string; on
             ) : (
               <ul className="flex flex-col gap-2 max-md:flex-row max-md:overflow-x-auto">
                 {list.map((c, i) => (
-                  <li key={c._id} className="max-md:w-[150px] max-md:shrink-0">
+                  <li key={c._id} className="group/peca relative max-md:w-[150px] max-md:shrink-0">
+                    <TrashButton contentId={c._id} title={c.title} editable reveal className="absolute -left-1 -top-1 z-10 size-6 border border-linha max-md:hidden" />
                     <button
                       type="button"
                       onClick={() => onOpen({ id: c._id, slug: c.client.slug })}
@@ -409,7 +414,8 @@ function ClientCard({ c, onOpen }: { c: Row; onOpen: (o: Open) => void }) {
       {c.strip.length > 0 && (
         <ul className="flex snap-x gap-2 overflow-x-auto pb-1" aria-label={`Conteúdos de ${c.name} no mês`}>
           {c.strip.map((s, i) => (
-            <li key={s._id} className="w-[64px] shrink-0 snap-start">
+            <li key={s._id} className="group/peca relative w-[64px] shrink-0 snap-start pt-1">
+              <TrashButton contentId={s._id} title={s.title} editable reveal className="absolute -right-1 top-0 z-10 size-6 border border-linha" />
               <button type="button" onClick={() => onOpen({ id: s._id, slug: c.slug })} className="group flex w-full flex-col gap-1 text-left" title={s.title}>
                 <span className="relative">
                   <Thumb url={s.coverUrl} tone={i} className="aspect-[4/5] w-full rounded-lg transition-transform duration-150 group-hover:-rotate-2" />

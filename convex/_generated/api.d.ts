@@ -17,6 +17,7 @@ import type * as captions from "../captions.js";
 import type * as clients from "../clients.js";
 import type * as comments from "../comments.js";
 import type * as contents from "../contents.js";
+import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as http from "../http.js";
 import type * as ideas from "../ideas.js";
@@ -51,6 +52,7 @@ import type * as viewer from "../viewer.js";
 "clients": typeof clients,
 "comments": typeof comments,
 "contents": typeof contents,
+"crons": typeof crons,
 "dashboard": typeof dashboard,
 "http": typeof http,
 "ideas": typeof ideas,

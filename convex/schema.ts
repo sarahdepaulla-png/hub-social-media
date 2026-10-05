@@ -101,7 +101,9 @@ export default defineSchema({
     sourceOpportunityId: v.optional(v.id("opportunities")),
     briefingId: v.optional(v.id("briefings")),
     importKey: v.optional(v.string()), // peças criadas pela fila de conteúdo (pasta conteudo/)
+    deletedAt: v.optional(v.number()), // na lixeira desde; some de vez 15 dias depois
   })
+    .index("by_deleted", ["deletedAt"])
     .index("by_import_key", ["importKey"])
     .index("by_client_date", ["clientId", "date"])
     .index("by_client_status", ["clientId", "status"]),
@@ -190,6 +192,9 @@ export default defineSchema({
   })
     .index("by_client", ["clientId"])
     .index("by_status", ["status"]),
+
+  // Chaves da fila de conteúdo apagadas de vez: o próximo deploy não recria.
+  importTombstones: defineTable({ key: v.string() }).index("by_key", ["key"]),
 
   // Biblioteca de datas. Sem clientId = vale para todo cliente dos nichos listados.
   opportunities: defineTable({

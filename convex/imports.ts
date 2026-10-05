@@ -59,6 +59,19 @@ export const apply = internalMutation({
         .withIndex("by_import_key", (q) => q.eq("importKey", it.key))
         .unique();
 
+      const buried = await ctx.db
+        .query("importTombstones")
+        .withIndex("by_key", (q) => q.eq("key", it.key))
+        .first();
+      if (buried && !existing) {
+        report.push(`${it.key}: apagada pela admin, não recriei`);
+        continue;
+      }
+      if (existing?.deletedAt) {
+        report.push(`${it.key}: está na lixeira, não mexi`);
+        continue;
+      }
+
       if (it.remove) {
         if (existing && !LOCKED.includes(existing.status)) {
           for (const c of await ctx.db.query("captions").withIndex("by_content", (q) => q.eq("contentId", existing._id)).collect()) {

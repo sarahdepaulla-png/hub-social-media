@@ -14,7 +14,8 @@ export const forClient = query({
     const contents = await ctx.db
       .query("contents")
       .withIndex("by_client_date", (q) => q.eq("clientId", client._id))
-      .collect();
+      .collect()
+      .then((l) => l.filter((c) => !c.deletedAt));
     const ideas = await ctx.db
       .query("ideas")
       .withIndex("by_client", (q) => q.eq("clientId", client._id))

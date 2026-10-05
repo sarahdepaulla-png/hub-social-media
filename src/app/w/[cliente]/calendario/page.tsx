@@ -10,6 +10,7 @@ import type { FunctionReturnType } from "convex/server";
 import { Asterisk, Loading, Thumb } from "@/components/brand";
 import { useWorkspace } from "@/components/WorkspaceShell";
 import { StatusMenu } from "@/components/StatusMenu";
+import { TrashButton } from "@/components/Trash";
 import { errorText } from "@/components/content/DecisionSheet";
 import { currentMonth, longDate, monthGrid, monthName, shiftMonth, todayISO } from "@/lib/dates";
 import { FORMAT, PLATFORM, STATUS, type Format, type Platform, type Status } from "@/lib/labels";
@@ -37,7 +38,10 @@ function PieceRow({ item, tone, base, admin, onMove }: { item: Card; tone: numbe
           {PLATFORM[item.platform]}, {FORMAT[item.format].toLowerCase()}
           {item.time ? `, ${item.time}` : ""}
         </span>
-        <StatusMenu contentId={item._id} status={item.status} editable={admin} />
+        <span className="flex items-center gap-3">
+          <StatusMenu contentId={item._id} status={item.status} editable={admin} />
+          <TrashButton contentId={item._id} title={item.title} editable={admin} className="border border-linha" />
+        </span>
         {admin && (
           <label className="inline-flex items-center gap-2 text-[13px] font-semibold text-rosa-forte">
             Mudar dia
@@ -403,8 +407,9 @@ function CalendarView() {
                           draggable={admin}
                           onDragStart={() => setDragId(c._id)}
                           onDragEnd={() => setDragId(null)}
-                          className={`flex items-start gap-2 ${dragId === c._id ? "opacity-40" : ""} ${admin ? "cursor-grab" : ""}`}
+                          className={`group/peca relative flex items-start gap-2 ${dragId === c._id ? "opacity-40" : ""} ${admin ? "cursor-grab" : ""}`}
                         >
+                          <TrashButton contentId={c._id} title={c.title} editable={admin} reveal className="absolute -left-1.5 -top-1.5 z-10 size-7" />
                           <Link href={`${base}/c/${c._id}`} draggable={false} className="shrink-0">
                             <Thumb
                               url={c.coverUrl}

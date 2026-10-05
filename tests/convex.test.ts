@@ -512,3 +512,40 @@ describe("página inicial do estúdio", () => {
   });
 });
 
+
+describe("lixeira", () => {
+  test("peça vai para a lixeira, some das telas, volta ao restaurar e some de vez após 15 dias", async () => {
+    const { t, as, admin, liliUser, waiting } = await setup();
+    const id = waiting[0];
+    await expect(as(liliUser).mutation(api.contents.trash, { contentId: id })).rejects.toThrow(/administradora/);
+    await as(admin).mutation(api.contents.trash, { contentId: id });
+
+    const cal = await as(admin).query(api.calendar.month, { slug: "lili", month: "2026-10" });
+    expect(cal.contents.some((c) => c._id === id)).toBe(false);
+    await expect(as(liliUser).query(api.contents.get, { contentId: id })).rejects.toThrow(/não encontrado/);
+    const bin = await as(admin).query(api.contents.trashList, {});
+    expect(bin).toHaveLength(1);
+    expect(bin[0]).toMatchObject({ _id: id, daysLeft: 15, client: { slug: "lili" } });
+
+    await as(admin).mutation(api.contents.restore, { contentId: id });
+    expect((await as(admin).query(api.calendar.month, { slug: "lili", month: "2026-10" })).contents.some((c) => c._id === id)).toBe(true);
+
+    await as(admin).mutation(api.contents.trash, { contentId: id });
+    expect(await t.mutation(internal.contents.purgeExpired, {})).toBe(0); // ainda dentro dos 15 dias
+    await t.run((ctx) => ctx.db.patch(id, { deletedAt: Date.now() - 16 * 86_400_000 }));
+    expect(await t.mutation(internal.contents.purgeExpired, {})).toBe(1);
+    expect(await t.run((ctx) => ctx.db.get(id))).toBeNull();
+  });
+
+  test("peça da fila apagada de vez não volta no próximo deploy", async () => {
+    const { t, as, admin } = await setup();
+    const items = JSON.parse(await (await import("node:fs/promises")).readFile("conteudo/vivi-2026-10.json", "utf8"));
+    await t.mutation(internal.imports.apply, { items });
+    const month = await as(admin).query(api.calendar.month, { slug: "vivi", month: "2026-10" });
+    const first = month.contents.find((c) => c.date === "2026-10-05")!;
+    await as(admin).mutation(api.contents.trash, { contentId: first._id });
+    expect(await t.mutation(internal.imports.apply, { items: [items[0]] })).toContain("vivi-2026-10-o-que-e-dor: está na lixeira, não mexi");
+    await as(admin).mutation(api.contents.remove, { contentId: first._id });
+    expect(await t.mutation(internal.imports.apply, { items: [items[0]] })).toContain("vivi-2026-10-o-que-e-dor: apagada pela admin, não recriei");
+  });
+});

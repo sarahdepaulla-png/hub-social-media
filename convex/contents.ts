@@ -3,7 +3,8 @@ import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireAdmin, requireClientBySlug, requireContentAccess } from "./lib/access";
 import { displayName, logActivity } from "./lib/log";
-import { UNDO_WINDOW_MS } from "./lib/content";
+import { TRASH_MS, UNDO_WINDOW_MS, alive, toCard } from "./lib/content";
+import { internalMutation } from "./_generated/server";
 import { decisionType, format, platform, status } from "./schema";
 
 
@@ -70,7 +71,7 @@ export const get = query({
       .query("contents")
       .withIndex("by_client_status", (q) => q.eq("clientId", client._id).eq("status", "aguardando"))
       .collect();
-    const queue = waiting.filter((c) => c._id !== contentId).sort((a, b) => a.date.localeCompare(b.date));
+    const queue = waiting.filter((c) => c._id !== contentId && alive(c)).sort((a, b) => a.date.localeCompare(b.date));
 
     // O briefing é bastidor do estúdio: na aprovação, a cliente vê só a versão final.
     const brief = content.briefingId && viewer.role === "admin" ? await ctx.db.get(content.briefingId) : null;
@@ -93,6 +94,7 @@ export const get = query({
         externalUrl: content.externalUrl ?? null,
         coverUrl: content.coverId ? await ctx.storage.getUrl(content.coverId) : (content.coverUrl ?? null),
         coverSource: content.coverSource ?? null,
+        deletedAt: content.deletedAt ?? null,
       },
       briefing: brief && {
         _id: brief._id,
@@ -422,27 +424,98 @@ export const newVersion = mutation({
   },
 });
 
+/** Manda para a lixeira. A peça some das telas e fica 15 dias guardada. */
+export const trash = mutation({
+  args: { contentId: v.id("contents") },
+  handler: async (ctx, { contentId }) => {
+    const admin = await requireAdmin(ctx);
+    const content = await ctx.db.get(contentId);
+    if (!content || content.deletedAt) return;
+    await ctx.db.patch(contentId, { deletedAt: Date.now() });
+    await logActivity(ctx, { clientId: content.clientId, contentId, userId: admin._id, kind: "edicao", summary: "Mandou para a lixeira" });
+  },
+});
+
+export const restore = mutation({
+  args: { contentId: v.id("contents") },
+  handler: async (ctx, { contentId }) => {
+    const admin = await requireAdmin(ctx);
+    const content = await ctx.db.get(contentId);
+    if (!content || !content.deletedAt) return;
+    await ctx.db.patch(contentId, { deletedAt: undefined });
+    await logActivity(ctx, { clientId: content.clientId, contentId, userId: admin._id, kind: "edicao", summary: "Restaurou da lixeira" });
+  },
+});
+
+/** O que está na lixeira, com quantos dias faltam para sumir. */
+export const trashList = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const rows = await ctx.db
+      .query("contents")
+      .withIndex("by_deleted", (q) => q.gt("deletedAt", 0))
+      .order("desc")
+      .collect();
+    const out = [];
+    for (const c of rows) {
+      const client = await ctx.db.get(c.clientId);
+      if (!client) continue;
+      const left = Math.max(0, Math.ceil((c.deletedAt! + TRASH_MS - Date.now()) / 86_400_000));
+      out.push({
+        ...(await toCard(ctx, c)),
+        client: { slug: client.slug, name: client.name, accentColor: client.accentColor },
+        deletedAt: c.deletedAt!,
+        daysLeft: left,
+      });
+    }
+    return out;
+  },
+});
+
+/** Todo dia: apaga de vez o que passou 15 dias na lixeira. */
+export const purgeExpired = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const limit = Date.now() - TRASH_MS;
+    const old = await ctx.db
+      .query("contents")
+      .withIndex("by_deleted", (q) => q.gt("deletedAt", 0).lt("deletedAt", limit))
+      .collect();
+    for (const c of old) await purge(ctx, c);
+    return old.length;
+  },
+});
+
+/** Apagar de vez, sem esperar os 15 dias (botão da lixeira). */
 export const remove = mutation({
   args: { contentId: v.id("contents") },
   handler: async (ctx, { contentId }) => {
     await requireAdmin(ctx);
     const content = await ctx.db.get(contentId);
     if (!content) return;
-    const rows: { _id: Id<"media"> | Id<"captions"> | Id<"comments"> | Id<"decisions"> }[] = [
-      ...(await ctx.db.query("media").withIndex("by_content_version", (q) => q.eq("contentId", contentId)).collect()),
-      ...(await ctx.db.query("captions").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),
-      ...(await ctx.db.query("comments").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),
-      ...(await ctx.db.query("decisions").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),
-    ];
-    for (const r of rows) await ctx.db.delete(r._id);
-    // O briefing volta para a esteira se a peça for apagada.
-    if (content.briefingId) {
-      const brief = await ctx.db.get(content.briefingId);
-      if (brief?.contentId === contentId) await ctx.db.patch(brief._id, { status: "novo", contentId: undefined });
-    }
-    if (content.coverId && (content.coverSource === "manual" || content.coverSource === "quadro")) {
-      await ctx.storage.delete(content.coverId);
-    }
-    await ctx.db.delete(contentId);
+    await purge(ctx, content);
   },
 });
+
+async function purge(ctx: MutationCtx, content: Doc<"contents">) {
+  const contentId = content._id;
+  const rows: { _id: Id<"media"> | Id<"captions"> | Id<"comments"> | Id<"decisions"> }[] = [
+    ...(await ctx.db.query("media").withIndex("by_content_version", (q) => q.eq("contentId", contentId)).collect()),
+    ...(await ctx.db.query("captions").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),
+    ...(await ctx.db.query("comments").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),
+    ...(await ctx.db.query("decisions").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),
+  ];
+  for (const r of rows) await ctx.db.delete(r._id);
+  // O briefing volta para a esteira se a peça for apagada.
+  if (content.briefingId) {
+    const brief = await ctx.db.get(content.briefingId);
+    if (brief?.contentId === contentId) await ctx.db.patch(brief._id, { status: "novo", contentId: undefined });
+  }
+  if (content.coverId && (content.coverSource === "manual" || content.coverSource === "quadro")) {
+    await ctx.storage.delete(content.coverId);
+  }
+  // Peça da fila de conteúdo: o próximo deploy não deve recriar.
+  if (content.importKey) await ctx.db.insert("importTombstones", { key: content.importKey });
+  await ctx.db.delete(contentId);
+}

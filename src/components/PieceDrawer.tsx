@@ -7,6 +7,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Loading, buttonClass } from "@/components/brand";
 import { StatusMenu } from "@/components/StatusMenu";
+import { TrashButton } from "@/components/Trash";
 import { CaptionPicker } from "@/components/content/CaptionPicker";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { longDate, stamp } from "@/lib/dates";
@@ -161,6 +162,9 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
             )}
             {current === "historico" && <HistoryList contentId={contentId} />}
           </div>
+        </div>
+        <div className="border-t border-linha pt-3">
+          <TrashButton contentId={contentId} title={content.title} editable variant="text" onDone={() => ref.current?.close()} />
         </div>
       </div>
     );

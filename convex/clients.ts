@@ -26,6 +26,13 @@ export const bySlug = query({
       secondaryColor: client.secondaryColor ?? null,
       ...(await brand(ctx, client)),
       viewerRole: viewer.role!,
+      // Ideias que ainda ninguém do estúdio olhou (só interessa à admin).
+      newIdeas:
+        viewer.role === "admin"
+          ? (await ctx.db.query("ideas").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
+              (i) => i.status === "nova",
+            ).length
+          : 0,
     };
   },
 });
@@ -49,6 +56,9 @@ export const listForStudio = query({
         counts: countByStatus(list),
         strip: await Promise.all(list.map(async (c) => ({ _id: c._id, status: c.status, date: c.date, title: c.title, coverUrl: c.coverId ? await ctx.storage.getUrl(c.coverId) : null }))),
         nextDate: next?.date ?? null,
+        newIdeas: (await ctx.db.query("ideas").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
+          (i) => i.status === "nova",
+        ).length,
       });
     }
     return rows.sort((a, b) => b.counts.ajuste - a.counts.ajuste || b.counts.aguardando - a.counts.aguardando);

@@ -39,11 +39,11 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
   const base = `/w/${slug}`;
   // Na peça, a barra de decisão ocupa a base da tela no lugar da navegação.
   const focused = pathname.startsWith(`${base}/c/`);
-  const tabs = [
+  const tabs: { href: string; label: string; icon: React.ReactNode; active: boolean; badge?: number }[] = [
     { href: base, label: "Início", icon: ICONS.inicio, active: pathname === base },
     { href: `${base}/calendario`, label: "Calendário", icon: ICONS.calendario, active: pathname.startsWith(`${base}/calendario`) || pathname.startsWith(`${base}/c/`) },
     { href: `${base}/datas`, label: "Datas", icon: ICONS.datas, active: pathname.startsWith(`${base}/datas`) },
-    { href: `${base}/ideias`, label: "Ideias", icon: ICONS.ideias, active: pathname.startsWith(`${base}/ideias`) },
+    { href: `${base}/ideias`, label: "Ideias", icon: ICONS.ideias, active: pathname.startsWith(`${base}/ideias`), badge: ws.newIdeas },
   ];
 
   return (
@@ -66,9 +66,14 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
                 key={t.href}
                 href={t.href}
                 aria-current={t.active ? "page" : undefined}
-                className={t.active ? "font-bold shadow-[inset_0_-2px_0_var(--color-vinho)]" : "text-texto-3 hover:text-vinho"}
+                className={`inline-flex items-center gap-1.5 ${t.active ? "font-bold shadow-[inset_0_-2px_0_var(--color-vinho)]" : "text-texto-3 hover:text-vinho"}`}
               >
                 {t.label}
+                {!!t.badge && (
+                  <span className="rounded-full bg-rosa-forte px-1.5 text-xs font-bold leading-5 text-white" aria-label={`${t.badge} novas`}>
+                    {t.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>
@@ -93,11 +98,16 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
               key={t.href}
               href={t.href}
               aria-current={t.active ? "page" : undefined}
-              className={`flex flex-col items-center justify-center gap-1 text-xs ${t.active ? "font-bold text-vinho" : "text-texto-2"}`}
+              className={`relative flex flex-col items-center justify-center gap-1 text-xs ${t.active ? "font-bold text-vinho" : "text-texto-2"}`}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                 {t.icon}
               </svg>
+              {!!t.badge && (
+                <span className="absolute left-1/2 top-2.5 ml-2 min-w-5 rounded-full bg-rosa-forte px-1 text-center text-[11px] font-bold leading-5 text-white" aria-label={`${t.badge} novas`}>
+                  {t.badge}
+                </span>
+              )}
               {t.label}
             </Link>
           ))}

@@ -71,7 +71,7 @@ export default function IdeiasPage() {
       <header className="flex flex-col gap-2">
         <h1 className="titulo text-5xl md:text-7xl">Caixa de Ideias</h1>
         <p className="text-base leading-relaxed text-texto-3">
-          {admin ? `Ideias enviadas por ${ws.name}. Leve as boas para o calendário.` : "Viu algo que gostaria de fazer? Mande aqui. O estúdio transforma em conteúdo."}
+          {admin ? `Ideias enviadas por ${ws.name}.` : "Viu algo que gostaria de fazer? Mande aqui. O estúdio transforma em conteúdo."}
         </p>
       </header>
 

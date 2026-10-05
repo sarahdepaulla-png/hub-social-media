@@ -74,6 +74,12 @@ export default function EstudioPage() {
                     {c.counts.aguardando} aguardando{c.counts.ajuste > 0 ? `, ${c.counts.ajuste} em ajuste` : ""}
                   </span>
                   <span className="hidden text-texto-2 sm:inline">{c.nextDate ? `Próximo: ${shortDate(c.nextDate)}` : "Sem próximas datas"}</span>
+                  {c.newIdeas > 0 && (
+                    <Link href={`/w/${c.slug}/ideias`} className="rounded-full bg-rosa px-3 py-1 font-semibold text-vinho">
+                      {c.newIdeas === 1 ? "1 ideia nova" : `${c.newIdeas} ideias novas`}
+                    </Link>
+                  )}
+                  <Link href={`/w/${c.slug}/ideias`} className="font-semibold text-rosa-forte">Ideias</Link>
                   <Link href={`/w/${c.slug}/calendario`} className="font-semibold text-rosa-forte">Calendário</Link>
                 </span>
               </div>

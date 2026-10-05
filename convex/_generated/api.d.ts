@@ -19,6 +19,7 @@ import type * as contents from "../contents.js";
 import type * as dashboard from "../dashboard.js";
 import type * as http from "../http.js";
 import type * as ideas from "../ideas.js";
+import type * as imports from "../imports.js";
 import type * as invites from "../invites.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_content from "../lib/content.js";
@@ -49,6 +50,7 @@ import type * as viewer from "../viewer.js";
 "dashboard": typeof dashboard,
 "http": typeof http,
 "ideas": typeof ideas,
+"imports": typeof imports,
 "invites": typeof invites,
 "lib/access": typeof lib_access,
 "lib/content": typeof lib_content,

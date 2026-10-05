@@ -31,5 +31,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "convex"]
+  "exclude": ["node_modules", "convex", "tests", "vitest.config.mts"]
 }

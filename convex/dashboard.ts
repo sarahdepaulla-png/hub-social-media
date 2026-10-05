@@ -1,5 +1,5 @@
-import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { ConvexError, v } from "convex/values";
+import { mutation, query } from "./_generated/server";
 import { requireAdmin, requireClientBySlug } from "./lib/access";
 import { contentsInMonth, countByStatus, toCard } from "./lib/content";
 
@@ -115,5 +115,87 @@ export const studioInbox = query({
     }
 
     return items.sort((a, b) => b.at - a.at);
+  },
+});
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function plusDays(iso: string, n: number) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n, 12));
+  return dt.toISOString().slice(0, 10);
+}
+
+/**
+ * Página inicial do estúdio: quem está logada, o que atrasou,
+ * a semana pela frente e os números que pedem atenção.
+ */
+export const studioHome = query({
+  args: { today: v.string() },
+  handler: async (ctx, { today }) => {
+    const me = await requireAdmin(ctx);
+    if (!DATE.test(today)) throw new ConvexError("Data inválida.");
+    const weekEnd = plusDays(today, 6);
+    const month = today.slice(0, 7);
+    const clients = (await ctx.db.query("clients").collect()).filter((c) => c.active);
+
+    const late = [];
+    const week = [];
+    const counts = { late: 0, today: 0, week: 0, aguardando: 0, ajuste: 0, postadosMes: 0 };
+
+    for (const client of clients) {
+      const info = { slug: client.slug, name: client.name, accentColor: client.accentColor };
+      const all = await ctx.db
+        .query("contents")
+        .withIndex("by_client_date", (q) => q.eq("clientId", client._id))
+        .collect();
+      for (const c of all) {
+        if (c.status === "aguardando") counts.aguardando++;
+        if (c.status === "ajuste") counts.ajuste++;
+        if (c.status === "publicado" && c.date.startsWith(month)) counts.postadosMes++;
+        // Atrasado: a data passou e a peça não foi marcada como postada.
+        if (c.date < today && c.status !== "publicado") {
+          const days = Math.round((Date.parse(today) - Date.parse(c.date)) / 86_400_000);
+          late.push({ ...(await toCard(ctx, c)), client: info, daysLate: days });
+        }
+        if (c.date >= today && c.date <= weekEnd) {
+          week.push({ ...(await toCard(ctx, c)), client: info });
+          if (c.date === today) counts.today++;
+        }
+      }
+    }
+    counts.late = late.length;
+    counts.week = week.length;
+    late.sort((a, b) => a.date.localeCompare(b.date));
+    week.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
+
+    return {
+      me: {
+        name: me.name ?? me.email?.split("@")[0] ?? null,
+        photoUrl: me.photoId ? await ctx.storage.getUrl(me.photoId) : null,
+      },
+      counts,
+      late,
+      week,
+    };
+  },
+});
+
+/** Nome e foto da admin na página inicial. */
+export const updateProfile = mutation({
+  args: { name: v.optional(v.string()), photoId: v.optional(v.id("_storage")), removePhoto: v.optional(v.boolean()) },
+  handler: async (ctx, { name, photoId, removePhoto }) => {
+    const me = await requireAdmin(ctx);
+    const patch: { name?: string; photoId?: typeof photoId } = {};
+    if (name !== undefined) {
+      const n = name.trim().slice(0, 60);
+      if (!n) throw new ConvexError("Escreva seu nome.");
+      patch.name = n;
+    }
+    if (photoId || removePhoto) {
+      if (me.photoId) await ctx.storage.delete(me.photoId);
+      patch.photoId = removePhoto ? undefined : photoId;
+    }
+    await ctx.db.patch(me._id, patch);
   },
 });

@@ -496,3 +496,19 @@ describe("briefing de peça existente", () => {
     expect(esteira.briefings.map((b) => b._id)).not.toContain(briefingId);
   });
 });
+
+describe("página inicial do estúdio", () => {
+  test("atrasados, semana e perfil", async () => {
+    const { as, admin, liliUser } = await setup();
+    await expect(as(liliUser).query(api.dashboard.studioHome, { today: "2026-10-15" })).rejects.toThrow(/administradora/);
+    const home = await as(admin).query(api.dashboard.studioHome, { today: "2026-10-15" });
+    expect(home.me.name).toBe("Sarah");
+    expect(home.counts.late).toBe(home.late.length);
+    expect(home.late.every((c) => c.date < "2026-10-15" && c.status !== "publicado" && c.daysLate > 0)).toBe(true);
+    expect(home.week.every((c) => c.date >= "2026-10-15" && c.date <= "2026-10-21")).toBe(true);
+    await as(admin).mutation(api.dashboard.updateProfile, { name: "Sarah de Paula" });
+    expect((await as(admin).query(api.dashboard.studioHome, { today: "2026-10-15" })).me.name).toBe("Sarah de Paula");
+    await expect(as(admin).mutation(api.dashboard.updateProfile, { name: "  " })).rejects.toThrow(/nome/);
+  });
+});
+

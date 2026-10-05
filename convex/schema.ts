@@ -51,6 +51,7 @@ export default defineSchema({
     isAnonymous: v.optional(v.boolean()),
     role: v.optional(role),
     clientId: v.optional(v.id("clients")),
+    photoId: v.optional(v.id("_storage")), // foto da admin na página inicial
   })
     .index("email", ["email"])
     .index("phone", ["phone"])

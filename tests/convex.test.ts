@@ -556,3 +556,17 @@ describe("chave fixa da admin", () => {
     expect(await t.mutation(internal.access.userForToken, { token: "x".repeat(40) })).toBeNull();
   });
 });
+
+describe("convite por e-mail", () => {
+  test("sem Gmail configurado, registra o motivo em vez de quebrar", async () => {
+    const { t, as, admin, liliUser } = await setup();
+    await expect(as(liliUser).query(api.invites.mailStatus, {})).rejects.toThrow(/administradora/);
+    expect((await as(admin).query(api.invites.mailStatus, {})).ready).toBe(false);
+    const inviteId = await as(admin).mutation(api.invites.create, { email: "nova@cliente.com", name: "Nova", role: "cliente", clientSlug: "lili", sendEmail: true });
+    expect(await t.run((ctx) => ctx.db.get(inviteId))).toMatchObject({ emailPending: true });
+    await t.finishAllScheduledFunctions(() => {});
+    const after = await t.run((ctx) => ctx.db.get(inviteId));
+    expect(after).toMatchObject({ emailPending: false });
+    expect(after?.emailError).toMatch(/não configurado/);
+  });
+});

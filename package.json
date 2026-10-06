@@ -17,6 +17,7 @@
     "convex": "^1.46.0",
     "jose": "^6.2.12",
     "next": "16.3.8",
+    "nodemailer": "^7.0.13",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -24,6 +25,7 @@
     "@edge-runtime/vm": "^5.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "convex-test": "^0.0.60",

@@ -94,7 +94,16 @@ export const listAdmin = query({
         ...(await brand(ctx, c)),
         people: invites
           .filter((i) => i.clientId === c._id)
-          .map((i) => ({ _id: i._id, email: i.email, name: i.name ?? null, accepted: !!i.acceptedAt, token: i.token ?? null })),
+          .map((i) => ({
+            _id: i._id,
+            email: i.email,
+            name: i.name ?? null,
+            accepted: !!i.acceptedAt,
+            token: i.token ?? null,
+            emailedAt: i.emailedAt ?? null,
+            emailError: i.emailError ?? null,
+            emailPending: !!i.emailPending,
+          })),
       });
     }
     return out;

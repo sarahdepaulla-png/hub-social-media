@@ -65,6 +65,9 @@ export default defineSchema({
     clientId: v.optional(v.id("clients")),
     acceptedAt: v.optional(v.number()),
     token: v.optional(v.string()), // link de acesso sem e-mail: /acesso/<token>
+    emailedAt: v.optional(v.number()), // último convite enviado por e-mail
+    emailError: v.optional(v.string()),
+    emailPending: v.optional(v.boolean()),
   })
     .index("by_email", ["email"])
     .index("by_token", ["token"]),

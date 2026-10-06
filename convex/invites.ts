@@ -1,17 +1,71 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { ConvexError } from "convex/values";
 import { requireAdmin } from "./lib/access";
 import { role } from "./schema";
+import type { Id } from "./_generated/dataModel";
 import { newToken } from "./access";
 
 const inviteArgs = { email: v.string(), name: v.optional(v.string()), role, clientSlug: v.optional(v.string()) };
 
-/** Admin libera um e-mail para entrar, já ligado a um workspace. */
+/** Admin libera um e-mail para entrar, já ligado a um workspace. Pode já mandar o convite por e-mail. */
 export const create = mutation({
-  args: inviteArgs,
-  handler: async (ctx, args) => {
+  args: { ...inviteArgs, sendEmail: v.optional(v.boolean()) },
+  handler: async (ctx, { sendEmail, ...args }) => {
     await requireAdmin(ctx);
-    return await upsertInvite(ctx, args);
+    const inviteId = await upsertInvite(ctx, args);
+    if (sendEmail) await queueEmail(ctx, inviteId);
+    return inviteId;
+  },
+});
+
+/** Envia (ou reenvia) o convite com o link de acesso para o e-mail da pessoa. */
+export const sendEmail = mutation({
+  args: { inviteId: v.id("invites") },
+  handler: async (ctx, { inviteId }) => {
+    await requireAdmin(ctx);
+    if (!(await ctx.db.get(inviteId))) throw new ConvexError("Acesso não encontrado.");
+    await queueEmail(ctx, inviteId);
+  },
+});
+
+async function queueEmail(ctx: MutationCtx, inviteId: Id<"invites">) {
+  await ctx.db.patch(inviteId, { emailPending: true, emailError: undefined });
+  await ctx.scheduler.runAfter(0, internal.mailer.sendInvite, { inviteId });
+}
+
+export const forEmail = internalQuery({
+  args: { inviteId: v.id("invites") },
+  handler: async (ctx, { inviteId }) => {
+    const invite = await ctx.db.get(inviteId);
+    if (!invite?.token) return null;
+    const client = invite.clientId ? await ctx.db.get(invite.clientId) : null;
+    const admins = (await ctx.db.query("users").collect()).filter((u) => u.role === "admin" && u.name);
+    return {
+      email: invite.email,
+      name: invite.name ?? null,
+      token: invite.token,
+      clientName: client?.name ?? null,
+      adminName: admins[0]?.name ?? null,
+    };
+  },
+});
+
+export const markEmail = internalMutation({
+  args: { inviteId: v.id("invites"), error: v.optional(v.string()) },
+  handler: async (ctx, { inviteId, error }) => {
+    if (!(await ctx.db.get(inviteId))) return;
+    await ctx.db.patch(inviteId, error ? { emailPending: false, emailError: error } : { emailPending: false, emailError: undefined, emailedAt: Date.now() });
+  },
+});
+
+/** O envio por e-mail está ligado? (para a tela avisar antes de tentar) */
+export const mailStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return { ready: !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD), from: process.env.GMAIL_USER ?? null };
   },
 });
 

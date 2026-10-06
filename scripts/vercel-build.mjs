@@ -67,7 +67,7 @@ if (host) {
   if (getEnv("SITE_URL") !== siteUrl) setEnv("SITE_URL", siteUrl);
 }
 
-for (const name of ["ADMIN_EMAILS", "AUTH_RESEND_KEY", "AUTH_EMAIL_FROM"]) {
+for (const name of ["ADMIN_EMAILS", "AUTH_RESEND_KEY", "AUTH_EMAIL_FROM", "GMAIL_USER", "GMAIL_APP_PASSWORD", "MAIL_FROM_NAME"]) {
   const value = process.env[name];
   if (value && getEnv(name) !== value) {
     log(`Atualizando ${name}`);

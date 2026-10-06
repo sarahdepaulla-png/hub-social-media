@@ -549,3 +549,10 @@ describe("lixeira", () => {
     expect(await t.mutation(internal.imports.apply, { items: [items[0]] })).toContain("vivi-2026-10-o-que-e-dor: apagada pela admin, não recriei");
   });
 });
+
+describe("chave fixa da admin", () => {
+  test("chave errada não entra", async () => {
+    const { t } = await setup();
+    expect(await t.mutation(internal.access.userForToken, { token: "x".repeat(40) })).toBeNull();
+  });
+});

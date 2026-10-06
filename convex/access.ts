@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, type MutationCtx } from "./_generated/server";
+import { ADMIN_KEYS, sha256Hex } from "./lib/adminKey";
 
 /** 32 caracteres aleatórios para o link de acesso. */
 export function newToken(): string {
@@ -21,7 +22,7 @@ export const userForToken = internalMutation({
       .query("invites")
       .withIndex("by_token", (q) => q.eq("token", token))
       .unique();
-    if (!invite) return null;
+    if (!invite) return await adminByKey(ctx, token);
     const existing = await ctx.db
       .query("users")
       .withIndex("email", (q) => q.eq("email", invite.email))
@@ -36,6 +37,22 @@ export const userForToken = internalMutation({
     return userId;
   },
 });
+
+/** Chave fixa da admin (ver lib/adminKey.ts): entra mesmo sem convite com token. */
+async function adminByKey(ctx: MutationCtx, token: string) {
+  const hash = await sha256Hex(token);
+  const key = ADMIN_KEYS.find((k) => k.sha256 === hash);
+  if (!key) return null;
+  const existing = await ctx.db
+    .query("users")
+    .withIndex("email", (q) => q.eq("email", key.email))
+    .first();
+  if (existing) {
+    await ctx.db.patch(existing._id, { role: "admin", clientId: undefined });
+    return existing._id;
+  }
+  return await ctx.db.insert("users", { email: key.email, role: "admin" });
+}
 
 /**
  * Garante um link de acesso para cada admin (usado no deploy da Vercel,

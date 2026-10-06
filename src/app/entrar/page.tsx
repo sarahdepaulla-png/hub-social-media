@@ -7,7 +7,7 @@ import { Asterisk, Logo, SelectionBox, buttonClass } from "@/components/brand";
 
 function message(err: unknown, step: "email" | "code") {
   const text = err instanceof Error ? err.message : String(err);
-  if (/acesso/i.test(text)) return "Este e-mail ainda não tem acesso. Fale com o estúdio.";
+  if (/acesso/i.test(text)) return "Este e-mail ainda não tem acesso. Confira se digitou o mesmo e-mail que passou para o estúdio.";
   if (step === "code") return "Código incorreto ou vencido. Confira os 6 números ou peça um novo.";
   return "Não conseguimos enviar o código. Confira o e-mail e tente de novo.";
 }
@@ -69,7 +69,7 @@ function LoginForm() {
         {step === "email" ? (
           <form onSubmit={sendCode} className="flex flex-col gap-5">
             <p className="text-[17px] leading-relaxed text-texto-3">
-              Perdeu o link? Peça um novo ao estúdio. Se o estúdio ativou o acesso por e-mail, você também pode receber um código abaixo.
+              Sem o link? Digite o seu e-mail e receba um código de 6 números para entrar.
             </p>
             <label className="flex flex-col gap-2 text-sm font-semibold">
               Seu e-mail

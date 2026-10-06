@@ -50,6 +50,47 @@ Se o botão não abrir, copie: <a href="${link}" style="color:#c2186b;word-break
   return { subject, text, html };
 }
 
+function gmail() {
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "");
+  if (!user || !pass) return null;
+  return { user, transport: nodemailer.createTransport({ service: "gmail", auth: { user, pass } }) };
+}
+
+export function codeEmail(code: string) {
+  const subject = `Seu código de acesso: ${code}`;
+  const text = `Seu código de acesso ao Hub Social Media é ${code}.\n\nEle vale por 15 minutos. Se não foi você que pediu, pode ignorar este e-mail.`;
+  const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f8ece6;font-family:Helvetica,Arial,sans-serif;color:#5c0f31">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8ece6;padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="background:#ff8dc7;padding:24px 28px">
+<div style="font-size:13px;font-weight:700;letter-spacing:.02em;color:#5c0f31">HUB SOCIAL MEDIA</div>
+<div style="font-size:34px;line-height:1;font-weight:800;letter-spacing:-.04em;color:#ffffff;margin-top:12px">Seu código *</div>
+</td></tr>
+<tr><td style="padding:26px 28px 6px;font-size:16px;line-height:1.5">Digite este código na tela de entrada do Hub:</td></tr>
+<tr><td style="padding:10px 28px 18px"><div style="display:inline-block;background:#f8ece6;border-radius:12px;padding:14px 22px;font-size:38px;font-weight:800;letter-spacing:.18em;color:#5c0f31">${code}</div></td></tr>
+<tr><td style="padding:0 28px 28px;font-size:13px;line-height:1.5;color:#7a4a5e">Ele vale por 15 minutos. Se não foi você que pediu, pode ignorar este e-mail.</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, text, html };
+}
+
+/** Código de 6 números para entrar pelo e-mail (tela Entrar). */
+export const sendCode = internalAction({
+  args: { email: v.string(), code: v.string() },
+  handler: async (_ctx, { email, code }) => {
+    const mail = gmail();
+    if (!mail) throw new Error("E-mail não configurado.");
+    const { subject, text, html } = codeEmail(code);
+    await mail.transport.sendMail({
+      from: { name: process.env.MAIL_FROM_NAME || "Hub Social Media", address: mail.user },
+      to: email,
+      subject,
+      text,
+      html,
+    });
+  },
+});
+
 export const sendInvite = internalAction({
   args: { inviteId: v.id("invites") },
   handler: async (ctx, { inviteId }) => {

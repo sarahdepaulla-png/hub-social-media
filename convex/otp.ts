@@ -1,4 +1,7 @@
 import Resend from "@auth/core/providers/resend";
+import { ConvexError } from "convex/values";
+import type { GenericActionCtx, GenericDataModel } from "convex/server";
+import { internal } from "./_generated/api";
 
 /**
  * Login sem senha: código de 6 dígitos por e-mail.
@@ -19,8 +22,16 @@ export const EmailOTP = Resend({
   async generateVerificationToken() {
     return sixDigits();
   },
-  async sendVerificationRequest({ identifier: email, token, provider }) {
-    // Sem chave do Resend (desenvolvimento local): o código aparece nos logs do Convex.
+  // O Convex Auth passa o ctx como segundo argumento.
+  async sendVerificationRequest({ identifier: email, token, provider }, ctx?: GenericActionCtx<GenericDataModel>) {
+    // Caminho principal: o código sai pelo Gmail da Sarah (senha de app).
+    if (ctx && process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+      const allowed = await ctx.runQuery(internal.invites.canSignIn, { email });
+      if (!allowed) throw new ConvexError("Este e-mail ainda não tem acesso. Fale com o estúdio.");
+      await ctx.runAction(internal.mailer.sendCode, { email, code: token });
+      return;
+    }
+    // Sem e-mail configurado (desenvolvimento local): o código aparece nos logs do Convex.
     if (!provider.apiKey) {
       console.log(`[Hub] Código de acesso para ${email}: ${token}`);
       return;

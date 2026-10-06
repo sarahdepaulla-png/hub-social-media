@@ -570,3 +570,11 @@ describe("convite por e-mail", () => {
     expect(after?.emailError).toMatch(/não configurado/);
   });
 });
+
+describe("código por e-mail", () => {
+  test("só quem tem acesso pode pedir código", async () => {
+    const { t } = await setup();
+    expect(await t.query(internal.invites.canSignIn, { email: "LILI@x.com " })).toBe(true);
+    expect(await t.query(internal.invites.canSignIn, { email: "estranho@x.com" })).toBe(false);
+  });
+});

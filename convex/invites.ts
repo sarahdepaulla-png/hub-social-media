@@ -35,6 +35,26 @@ async function queueEmail(ctx: MutationCtx, inviteId: Id<"invites">) {
   await ctx.scheduler.runAfter(0, internal.mailer.sendInvite, { inviteId });
 }
 
+/** Este e-mail pode entrar? (admin da lista ou alguém com acesso criado) */
+export const canSignIn = internalQuery({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const e = email.trim().toLowerCase();
+    const admins = (process.env.ADMIN_EMAILS ?? "").split(",").map((x) => x.trim().toLowerCase());
+    if (admins.includes(e)) return true;
+    const invite = await ctx.db
+      .query("invites")
+      .withIndex("by_email", (q) => q.eq("email", e))
+      .unique();
+    if (invite) return true;
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", e))
+      .first();
+    return !!user?.role;
+  },
+});
+
 export const forEmail = internalQuery({
   args: { inviteId: v.id("invites") },
   handler: async (ctx, { inviteId }) => {

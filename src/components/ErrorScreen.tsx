@@ -9,10 +9,11 @@ import { Asterisk, buttonClass } from "@/components/brand";
  */
 export function ErrorScreen({ error, reset }: { error: Error & { digest?: string }; reset?: () => void }) {
   const [copied, setCopied] = useState(false);
-  const msg = error?.message ?? "";
+  const data = (error as { data?: unknown } | undefined)?.data;
+  const msg = typeof data === "string" ? data : (error?.message ?? "");
   const session = /Sem acesso|Unauthenticated|auth|token|JWT/i.test(msg);
   const notFound = /não encontrado|não é seu/i.test(msg);
-  const detail = [msg.slice(0, 200), error?.digest ? `ref ${error.digest}` : null].filter(Boolean).join(" · ");
+  const detail = [msg.slice(0, 300), error?.digest ? `ref ${error.digest}` : null].filter(Boolean).join(" · ");
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6 py-10 text-vinho">

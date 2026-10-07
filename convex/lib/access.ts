@@ -53,10 +53,11 @@ export async function requireContentAccess(ctx: QueryCtx, contentId: Id<"content
 /** Resolve o slug da URL e já confere o acesso. */
 export async function requireClientBySlug(ctx: QueryCtx, slug: string) {
   const viewer = await requireViewer(ctx);
+  // first() e não unique(): um endereço repetido por engano não pode derrubar a página.
   const client = await ctx.db
     .query("clients")
     .withIndex("by_slug", (q) => q.eq("slug", slug))
-    .unique();
+    .first();
   if (!client || !canAccessClient(viewer, client._id)) {
     // Mesmo erro para "não existe" e "não é seu": não revela outros clientes.
     throw new ConvexError("Workspace não encontrado.");

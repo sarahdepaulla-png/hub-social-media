@@ -15,6 +15,18 @@ async function brand(ctx: Parameters<typeof requireAdmin>[0], c: { logoId?: Id<"
 export const bySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
+    try {
+      return await workspaceHeader(ctx, slug);
+    } catch (err) {
+      // Mostra o motivo real na tela de erro (erro comum vira "Server Error" sem detalhe).
+      if (err instanceof ConvexError) throw err;
+      console.error("bySlug", slug, err);
+      throw new ConvexError(`Não deu para abrir o workspace: ${err instanceof Error ? err.message : String(err)}`.slice(0, 300));
+    }
+  },
+});
+
+async function workspaceHeader(ctx: Parameters<typeof requireAdmin>[0], slug: string) {
     const { viewer, client } = await requireClientBySlug(ctx, slug);
     return {
       _id: client._id,
@@ -37,8 +49,7 @@ export const bySlug = query({
             ).length
           : 0,
     };
-  },
-});
+}
 
 /** Visão do estúdio: todos os clientes com o mês resumido. */
 export const listForStudio = query({

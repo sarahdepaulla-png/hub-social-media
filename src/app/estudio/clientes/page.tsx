@@ -300,116 +300,7 @@ function Invite({ client, mailReady }: { client: Client; mailReady: boolean }) {
   );
 }
 
-type IgStatus = FunctionReturnType<typeof api.instagram.statusAll>;
-
-/** A admin conecta com o próprio Facebook e liga as contas dos clientes que ela administra. */
-function ConnectMine({ ig }: { ig: IgStatus }) {
-  const createLink = useMutation(api.instagram.createConnectLink);
-  const [error, setError] = useState<string | null>(null);
-  if (!ig.configured) return null;
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-peca bg-white px-5 py-4 text-sm">
-      <span>
-        <strong>Métricas do Instagram.</strong> Se o seu Facebook administra a Página do cliente, conecte por aqui. Senão, gere o link dentro do cliente e mande para ele.
-      </span>
-      <button
-        type="button"
-        onClick={async () => {
-          setError(null);
-          try {
-            window.location.href = await createLink({});
-          } catch (err) {
-            setError(errorText(err));
-          }
-        }}
-        className="min-h-10 rounded-full bg-vinho px-4 text-[13px] font-semibold text-white"
-      >
-        Conectar com o meu Facebook
-      </button>
-      {error && <span role="alert" className="w-full font-semibold text-st-ajuste-texto">{error}</span>}
-    </div>
-  );
-}
-
-/** Conexão do Instagram do cliente: link para a cliente autorizar, status e atualização. */
-function InstagramBox({ client, ig }: { client: Client; ig: IgStatus }) {
-  const createLink = useMutation(api.instagram.createConnectLink);
-  const syncNow = useMutation(api.instagram.syncNow);
-  const disconnect = useMutation(api.instagram.disconnect);
-  const [link, setLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const acc = ig.accounts[client.slug];
-
-  if (!ig.configured) {
-    return <p className="text-sm text-texto-2">Instagram: a conexão ainda não foi configurada (faltam IG_APP_ID e IG_APP_SECRET na Vercel).</p>;
-  }
-
-  const make = async () => {
-    setError(null);
-    try {
-      setLink(await createLink({ clientSlug: client.slug }));
-      setCopied(false);
-    } catch (err) {
-      setError(errorText(err));
-    }
-  };
-  const msg = link ? `Oi${client.name ? `, ${client.name}` : ""}! Para eu acompanhar as métricas do seu Instagram no Hub, toque aqui e entre com o seu Facebook (leva 1 minuto):\n${link}` : "";
-
-  return (
-    <div className="flex flex-col gap-2.5 rounded-xl bg-creme p-4 text-sm">
-      <strong className="text-base">Instagram</strong>
-      {acc ? (
-        <>
-          <span>
-            Conectado: <strong>@{acc.username}</strong>
-            {acc.followers !== null ? `, ${acc.followers.toLocaleString("pt-BR")} seguidores` : ""}
-          </span>
-          <span className={acc.lastError ? "font-semibold text-st-ajuste-texto" : "text-texto-2"}>
-            {acc.lastError
-              ? `Última busca falhou: ${acc.lastError}`
-              : acc.lastSyncAt
-                ? `Métricas atualizadas ${stamp(acc.lastSyncAt)}. Atualiza sozinho de hora em hora.`
-                : "Buscando as primeiras métricas."}
-          </span>
-          <span className="flex flex-wrap gap-2">
-            <Link href={`/w/${client.slug}/relatorio`} className="inline-flex min-h-9 items-center rounded-full bg-vinho px-3.5 text-[13px] font-semibold text-white">Ver relatório</Link>
-            <button type="button" onClick={() => syncNow({ clientSlug: client.slug })} className="min-h-9 rounded-full border border-campo bg-white px-3.5 text-[13px] font-semibold">Atualizar agora</button>
-            <button type="button" onClick={make} className="min-h-9 px-1 text-[13px] font-semibold text-texto-2">Reconectar</button>
-            <button
-              type="button"
-              onClick={() => confirm(`Desconectar o Instagram de ${client.name}? As métricas já salvas continuam.`) && disconnect({ clientSlug: client.slug })}
-              className="min-h-9 px-1 text-[13px] font-semibold text-st-ajuste-texto"
-            >
-              Desconectar
-            </button>
-          </span>
-        </>
-      ) : (
-        <>
-          <span className="text-texto-2">Ainda não conectado. Use &ldquo;Conectar com o meu Facebook&rdquo; no topo, se você administra a Página dela, ou gere o link e mande para a cliente.</span>
-          {!link && (
-            <button type="button" onClick={make} className="min-h-10 self-start rounded-full bg-vinho px-4 text-[13px] font-semibold text-white">Gerar link de conexão</button>
-          )}
-        </>
-      )}
-      {link && (
-        <span className="flex flex-wrap gap-2">
-          <a href={`https://wa.me/?text=${encodeURIComponent(msg)}`} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center rounded-full bg-st-agendado px-3.5 text-[13px] font-semibold text-white">
-            Mandar no WhatsApp
-          </a>
-          <button type="button" onClick={() => navigator.clipboard.writeText(link).then(() => setCopied(true))} className="min-h-9 rounded-full border border-campo bg-white px-3.5 text-[13px] font-semibold">
-            {copied ? "Link copiado" : "Copiar link"}
-          </button>
-          <a href={link} className="inline-flex min-h-9 items-center px-1 text-[13px] font-semibold text-rosa-forte">Abrir aqui</a>
-        </span>
-      )}
-      {error && <span role="alert" className="font-semibold text-st-ajuste-texto">{error}</span>}
-    </div>
-  );
-}
-
-function ClientCard({ client, mailReady, ig }: { client: Client; mailReady: boolean; ig: IgStatus }) {
+function ClientCard({ client, mailReady }: { client: Client; mailReady: boolean }) {
   const update = useMutation(api.clients.update);
   const [open, setOpen] = useState(false);
   const [accent, setAccent] = useState(client.accentColor);
@@ -492,7 +383,6 @@ function ClientCard({ client, mailReady, ig }: { client: Client; mailReady: bool
             </button>
           </form>
           <div className="flex flex-col gap-6">
-            <InstagramBox client={client} ig={ig} />
             <Invite client={client} mailReady={mailReady} />
           </div>
         </div>
@@ -504,8 +394,7 @@ function ClientCard({ client, mailReady, ig }: { client: Client; mailReady: bool
 export default function ClientesPage() {
   const clients = useQuery(api.clients.listAdmin, {});
   const mail = useQuery(api.invites.mailStatus, {});
-  const ig = useQuery(api.instagram.statusAll, {});
-  if (clients === undefined || mail === undefined || ig === undefined) return <Loading />;
+  if (clients === undefined || mail === undefined) return <Loading />;
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
       <h1 className="titulo text-6xl">Clientes e acessos</h1>
@@ -524,11 +413,10 @@ export default function ClientesPage() {
           </ol>
         </details>
       )}
-      <ConnectMine ig={ig} />
       <NewClient />
       <ul className="flex flex-col">
         {clients.map((c) => (
-          <ClientCard key={c._id} client={c} mailReady={mail.ready} ig={ig} />
+          <ClientCard key={c._id} client={c} mailReady={mail.ready} />
         ))}
       </ul>
     </main>

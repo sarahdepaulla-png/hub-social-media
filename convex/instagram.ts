@@ -81,7 +81,10 @@ export const connectInfo = query({
     url.searchParams.set("client_id", appId);
     url.searchParams.set("redirect_uri", redirect);
     url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", SCOPES);
+    // Com uma Configuração do Login do Facebook para Empresas, a Meta usa as permissões dela.
+    const configId = process.env.IG_CONFIG_ID?.trim();
+    if (configId) url.searchParams.set("config_id", configId);
+    else url.searchParams.set("scope", SCOPES);
     url.searchParams.set("state", state);
     const clients = row.clientId
       ? []

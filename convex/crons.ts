@@ -7,6 +7,6 @@ const crons = cronJobs();
 crons.daily("esvaziar lixeira", { hourUTC: 6, minuteUTC: 0 }, internal.contents.purgeExpired, {});
 
 // Instagram: métricas novas de hora em hora (stories somem em 24h).
-crons.hourly("métricas do instagram", { minuteUTC: 17 }, internal.instagram.syncAll, {});
+crons.hourly("metricas do instagram", { minuteUTC: 17 }, internal.instagram.syncAll, {});
 
 export default crons;

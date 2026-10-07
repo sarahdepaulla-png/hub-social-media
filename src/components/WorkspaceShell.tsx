@@ -78,7 +78,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <span className="hidden text-[15px] font-semibold sm:inline">{ws.name}</span>
+            <span className="max-w-[110px] truncate text-sm font-semibold sm:max-w-none sm:text-[15px]">{ws.name}</span>
             <Avatar name={ws.name} color={ws.accentColor} url={ws.photoUrl} />
             <SignOutButton variant="link" />
           </div>

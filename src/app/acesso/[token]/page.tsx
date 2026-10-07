@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useEffect, useRef, useState } from "react";
 import { Asterisk, Logo, buttonClass } from "@/components/brand";
@@ -10,7 +10,6 @@ import { Asterisk, Logo, buttonClass } from "@/components/brand";
 export default function AcessoPage() {
   const { token } = useParams<{ token: string }>();
   const { signIn } = useAuthActions();
-  const router = useRouter();
   const [failed, setFailed] = useState(false);
   const started = useRef(false);
 
@@ -18,9 +17,10 @@ export default function AcessoPage() {
     if (started.current) return;
     started.current = true;
     signIn("link", { token })
-      .then(() => router.replace("/"))
+      // Recarrega a página inteira para o servidor já enxergar a sessão nova.
+      .then(() => window.location.replace("/"))
       .catch(() => setFailed(true));
-  }, [signIn, token, router]);
+  }, [signIn, token]);
 
   return (
     <main className="flex min-h-dvh flex-col">

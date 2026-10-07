@@ -14,7 +14,9 @@ import { logActivity } from "./lib/log";
  */
 
 const GRAPH = "https://graph.facebook.com/v23.0";
-const SCOPES = "instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement,business_management";
+// Sem instagram_manage_insights por enquanto: o app ainda não tem essa permissão.
+// Quando tiver, basta definir IG_SCOPES na Vercel com a lista completa.
+const SCOPES = "instagram_basic,pages_show_list,pages_read_engagement,business_management";
 const DAY = 86_400_000;
 
 function config() {
@@ -81,10 +83,11 @@ export const connectInfo = query({
     url.searchParams.set("client_id", appId);
     url.searchParams.set("redirect_uri", redirect);
     url.searchParams.set("response_type", "code");
-    // Com uma Configuração do Login do Facebook para Empresas, a Meta usa as permissões dela.
+    // Login com a lista de permissões. A Configuração (config_id) só entra se IG_LOGIN=config,
+    // porque nesse app ela leva a uma tela de erro da Meta.
     const configId = process.env.IG_CONFIG_ID?.trim();
-    if (configId) url.searchParams.set("config_id", configId);
-    else url.searchParams.set("scope", SCOPES);
+    if (configId && process.env.IG_LOGIN === "config") url.searchParams.set("config_id", configId);
+    else url.searchParams.set("scope", process.env.IG_SCOPES?.trim() || SCOPES);
     url.searchParams.set("state", state);
     const clients = row.clientId
       ? []

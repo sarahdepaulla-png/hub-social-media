@@ -305,4 +305,17 @@ export default defineSchema({
   })
     .index("by_content", ["contentId"])
     .index("by_client", ["clientId"]),
+  // Perfil da cliente (só o estúdio vê): pastas com links, acessos, arquivos e notas.
+  profileItems: defineTable({
+    clientId: v.id("clients"),
+    folder: v.string(),
+    kind: v.union(v.literal("link"), v.literal("acesso"), v.literal("arquivo"), v.literal("nota")),
+    title: v.string(),
+    url: v.optional(v.string()),
+    login: v.optional(v.string()),
+    secret: v.optional(v.string()),
+    note: v.optional(v.string()),
+    file: v.optional(v.object({ id: v.id("_storage"), name: v.string(), type: v.string() })),
+    updatedAt: v.number(),
+  }).index("by_client", ["clientId"]),
 });

@@ -678,3 +678,39 @@ describe("instagram automático", () => {
     expect(status.accounts.vivi?.username).toBe("vivi.acupuntura");
   });
 });
+
+describe("perfil da cliente", () => {
+  test("só o estúdio vê e guarda links, acessos e notas", async () => {
+    const { as, admin, liliUser } = await setup();
+    await expect(as(liliUser).query(api.profile.get, { slug: "lili" })).rejects.toThrow(/administradora/);
+    await expect(as(liliUser).mutation(api.profile.add, { slug: "lili", folder: "Acessos e senhas", kind: "acesso", title: "Instagram", secret: "x" })).rejects.toThrow(/administradora/);
+
+    await as(admin).mutation(api.profile.add, { slug: "lili", folder: "Acessos e senhas", kind: "acesso", title: "Instagram", login: "lili.fisio", secret: "segredo" });
+    await as(admin).mutation(api.profile.add, { slug: "lili", folder: "Drive e arquivos", kind: "link", title: "", url: "drive.google.com/abc" });
+    await as(admin).mutation(api.profile.add, { slug: "lili", folder: "Contratos", kind: "nota", title: "Renovação", note: "Março" });
+    await expect(as(admin).mutation(api.profile.add, { slug: "lili", folder: "Marca", kind: "link", title: "Sem link" })).rejects.toThrow(/link/);
+
+    const p = await as(admin).query(api.profile.get, { slug: "lili" });
+    expect(p.folders).toEqual(["Drive e arquivos", "Acessos e senhas", "Marca", "Anotações", "Contratos"]);
+    expect(p.items.find((i) => i.kind === "acesso")).toMatchObject({ login: "lili.fisio", secret: "segredo" });
+    expect(p.items.find((i) => i.kind === "link")).toMatchObject({ url: "https://drive.google.com/abc", title: "drive.google.com/abc" });
+
+    await as(admin).mutation(api.profile.renameFolder, { slug: "lili", from: "Contratos", to: "Contrato" });
+    const bia = await as(admin).query(api.profile.get, { slug: "bia" });
+    expect(bia.items).toHaveLength(0);
+    expect((await as(admin).query(api.profile.get, { slug: "lili" })).folders).toContain("Contrato");
+  });
+});
+
+describe("novo conteúdo com briefing", () => {
+  test("briefing escrito na criação fica ligado à peça; vazio não cria", async () => {
+    const { as, admin } = await setup();
+    const base = { clientSlug: "lili", date: "2026-10-22", title: "Postura", platform: "instagram" as const, format: "reels" as const };
+    const withBrief = await as(admin).mutation(api.contents.create, { ...base, briefing: { objective: "Educar", body: "Mostrar 3 erros", links: ["https://x.com/a", ""] } });
+    const a = await as(admin).query(api.contents.get, { contentId: withBrief });
+    expect(a.briefing).toMatchObject({ body: "Mostrar 3 erros", objective: "Educar", links: ["https://x.com/a"] });
+    const empty = await as(admin).mutation(api.contents.create, { ...base, briefing: { body: "  ", links: [] } });
+    expect((await as(admin).query(api.contents.get, { contentId: empty })).briefing).toBeNull();
+    await expect(as(admin).mutation(api.contents.create, { ...base, briefing: { body: "x", links: ["nada"] } })).rejects.toThrow(/https/);
+  });
+});

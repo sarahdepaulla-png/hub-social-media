@@ -28,6 +28,7 @@ const ICONS = {
   ),
   datas: <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z" />,
   ideias: <path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9V16h7v-2.1A6 6 0 0012 3z" />,
+  perfil: <path d="M3.5 6.5h6l2 2h9v11h-17zM3.5 6.5V4.5h6l2 2" />,
 };
 
 export function WorkspaceShell({ slug, children }: { slug: string; children: ReactNode }) {
@@ -44,6 +45,9 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
     { href: `${base}/calendario`, label: "Calendário", icon: ICONS.calendario, active: pathname.startsWith(`${base}/calendario`) || pathname.startsWith(`${base}/c/`) },
     { href: `${base}/datas`, label: "Datas", icon: ICONS.datas, active: pathname.startsWith(`${base}/datas`) },
     { href: `${base}/ideias`, label: "Ideias", icon: ICONS.ideias, active: pathname.startsWith(`${base}/ideias`), badge: ws.newIdeas },
+    ...(ws.viewerRole === "admin"
+      ? [{ href: `${base}/perfil`, label: "Perfil", icon: ICONS.perfil, active: pathname.startsWith(`${base}/perfil`) }]
+      : []),
   ];
 
   return (

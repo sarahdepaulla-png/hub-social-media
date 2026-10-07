@@ -299,10 +299,17 @@ export const create = mutation({
     format,
     sourceIdeaId: v.optional(v.id("ideas")),
     sourceOpportunityId: v.optional(v.id("opportunities")),
+    // Briefing escrito junto, na mesma tela. Vazio = a peça nasce sem briefing.
+    briefing: v.optional(v.object({ objective: v.optional(v.string()), body: v.string(), links: v.array(v.string()) })),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
     const { client } = await requireClientBySlug(ctx, args.clientSlug);
+    const brief = args.briefing && args.briefing.body.trim() ? args.briefing : null;
+    const briefLinks = (brief?.links ?? []).map((l) => l.trim()).filter(Boolean).slice(0, 10);
+    for (const l of briefLinks) {
+      if (!/^https?:\/\/\S+$/i.test(l)) throw new ConvexError(`Link precisa começar com https:// (${l.slice(0, 40)})`);
+    }
     const contentId = await ctx.db.insert("contents", {
       clientId: client._id,
       date: args.date,
@@ -314,6 +321,22 @@ export const create = mutation({
       sourceIdeaId: args.sourceIdeaId,
       sourceOpportunityId: args.sourceOpportunityId,
     });
+    if (brief) {
+      const briefingId = await ctx.db.insert("briefings", {
+        clientId: client._id,
+        authorId: admin._id,
+        status: "em_criacao",
+        contentId,
+        title: args.title.trim().slice(0, 160) || "Sem título",
+        platform: args.platform,
+        format: args.format,
+        desiredDate: args.date,
+        objective: brief.objective?.trim() || undefined,
+        body: brief.body.trim().slice(0, 6000),
+        links: briefLinks,
+      });
+      await ctx.db.patch(contentId, { briefingId });
+    }
     let origin = "";
     if (args.sourceIdeaId) {
       const idea = await ctx.db.get(args.sourceIdeaId);

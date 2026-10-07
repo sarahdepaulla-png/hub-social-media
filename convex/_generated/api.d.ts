@@ -36,6 +36,7 @@ import type * as opportunities from "../opportunities.js";
 import type * as otp from "../otp.js";
 import type * as pautas from "../pautas.js";
 import type * as previews from "../previews.js";
+import type * as profile from "../profile.js";
 import type * as seed from "../seed.js";
 import type * as viewer from "../viewer.js";
 
@@ -75,6 +76,7 @@ import type * as viewer from "../viewer.js";
 "otp": typeof otp,
 "pautas": typeof pautas,
 "previews": typeof previews,
+"profile": typeof profile,
 "seed": typeof seed,
 "viewer": typeof viewer,
   }>;

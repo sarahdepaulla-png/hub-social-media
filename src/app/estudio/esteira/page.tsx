@@ -38,6 +38,35 @@ function ClientLabel({ c }: { c: { name: string; accentColor: string } }) {
   );
 }
 
+type PautaItem = FunctionReturnType<typeof api.pautas.forStudio>[number];
+const PAUTA_FMT: Record<string, { label: string; color: string }> = {
+  reels: { label: "Reels", color: "#C2186B" },
+  stories: { label: "Stories", color: "#8A63D2" },
+  carrossel: { label: "Carrossel", color: "#0F7A6E" },
+  imagem: { label: "Post", color: "#F0A030" },
+  video: { label: "Vídeo", color: "#5C0F31" },
+};
+
+function PautaCard({ p }: { p: PautaItem }) {
+  const f = p.format ? PAUTA_FMT[p.format] : null;
+  return (
+    <li className="flex flex-col gap-2 rounded-xl bg-white p-3">
+      <span className="flex items-center justify-between gap-2">
+        <ClientLabel c={p.client} />
+        {p.status === "nova" && <span className="rounded-full bg-st-aguardando px-2 text-[11px] font-bold text-white">nova</span>}
+      </span>
+      <Link href={`/w/${p.client.slug}/ideias`} className="text-[15px] font-bold leading-tight hover:underline">
+        {p.title}
+      </Link>
+      <span className="flex flex-wrap items-center gap-1.5 text-xs text-texto-2">
+        {f && <span className="rounded-full px-2 py-0.5 font-bold text-white" style={{ background: f.color }}>{f.label}</span>}
+        <span>{p.month ? monthName(p.month) : "Sem pressa"}</span>
+        {p.files.length > 0 && <span>· {p.files.length} {p.files.length === 1 ? "anexo" : "anexos"}</span>}
+      </span>
+    </li>
+  );
+}
+
 function BriefCard({ b }: { b: Brief }) {
   return (
     <li className="flex flex-col gap-2 rounded-xl border-[1.5px] border-dashed border-campo bg-white p-3">
@@ -88,6 +117,7 @@ function Esteira() {
   const params = useSearchParams();
   const month = /^\d{4}-\d{2}$/.test(params.get("mes") ?? "") ? params.get("mes")! : currentMonth();
   const data = useQuery(api.briefings.pipeline, { month });
+  const pautas = useQuery(api.pautas.forStudio, {});
   const setStatus = useMutation(api.contents.setStatus);
   const [only, setOnly] = useState<string>("");
   const [dragId, setDragId] = useState<string | null>(null);
@@ -100,8 +130,9 @@ function Esteira() {
     return {
       briefings: data.briefings.filter((b) => !only || b.client.slug === only),
       contents: data.contents.filter((c) => !only || c.client.slug === only),
+      pautas: (pautas ?? []).filter((p) => !only || p.client.slug === only),
     };
-  }, [data, only]);
+  }, [data, pautas, only]);
 
   if (data === undefined || visible === null) return <Loading />;
 
@@ -182,6 +213,7 @@ function Esteira() {
 
       {/* Atalhos para as etapas no celular, onde as colunas rolam de lado */}
       <nav aria-label="Etapas" className="flex gap-4 overflow-x-auto px-6 text-sm lg:hidden">
+        <a href="#etapa-pautas" className="min-h-9 shrink-0 content-center font-semibold text-rosa-forte">Pautas {visible.pautas.length}</a>
         <a href="#etapa-briefing" className="min-h-9 shrink-0 content-center font-semibold text-rosa-forte">Briefing {visible.briefings.length}</a>
         {byStage.map((s) => (
           <a key={s.id} href={`#etapa-${s.id}`} className="min-h-9 shrink-0 content-center font-semibold text-rosa-forte">
@@ -193,6 +225,21 @@ function Esteira() {
       {error && <p role="alert" className="px-6 text-sm font-semibold text-st-ajuste-texto">{error}</p>}
 
       <div className="flex snap-x snap-mandatory scroll-px-6 gap-3 overflow-x-auto px-6 pb-4 lg:snap-none">
+        <section id="etapa-pautas" aria-labelledby="t-pautas" className={`${column} bg-[#E3F1EF]`}>
+          <h2 id="t-pautas" className="flex items-baseline justify-between px-1 text-[17px] font-extrabold tracking-[-0.03em]">
+            Pautas da cliente <span className="text-sm font-semibold text-texto-2">{visible.pautas.length}</span>
+          </h2>
+          {visible.pautas.length === 0 ? (
+            <p className="px-1 text-sm text-texto-2">Nenhuma pauta esperando.</p>
+          ) : (
+            <ul className="flex flex-col gap-2.5">
+              {visible.pautas.map((p) => (
+                <PautaCard key={p._id} p={p} />
+              ))}
+            </ul>
+          )}
+        </section>
+
         <section id="etapa-briefing" aria-labelledby="t-briefing" className={`${column} bg-rosa/45`}>
           <h2 id="t-briefing" className="flex items-baseline justify-between px-1 text-[17px] font-extrabold tracking-[-0.03em]">
             Briefing <span className="text-sm font-semibold text-texto-2">{visible.briefings.length}</span>

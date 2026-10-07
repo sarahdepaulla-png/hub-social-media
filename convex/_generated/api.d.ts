@@ -33,6 +33,7 @@ import type * as mailer from "../mailer.js";
 import type * as media from "../media.js";
 import type * as opportunities from "../opportunities.js";
 import type * as otp from "../otp.js";
+import type * as pautas from "../pautas.js";
 import type * as previews from "../previews.js";
 import type * as seed from "../seed.js";
 import type * as viewer from "../viewer.js";
@@ -70,6 +71,7 @@ import type * as viewer from "../viewer.js";
 "media": typeof media,
 "opportunities": typeof opportunities,
 "otp": typeof otp,
+"pautas": typeof pautas,
 "previews": typeof previews,
 "seed": typeof seed,
 "viewer": typeof viewer,

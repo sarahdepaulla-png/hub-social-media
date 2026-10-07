@@ -31,7 +31,7 @@ export const studioInbox = query({
     const clients = await ctx.db.query("clients").collect();
     const byId = new Map<string, (typeof clients)[number]>(clients.map((c) => [c._id, c]));
     const items: {
-      kind: "ajuste" | "ideias" | "briefing";
+      kind: "ajuste" | "ideias" | "briefing" | "pautas";
       briefingId?: string;
       clientSlug: string;
       clientName: string;
@@ -86,6 +86,29 @@ export const studioInbox = query({
         title: list.length === 1 ? "1 ideia nova" : `${list.length} ideias novas`,
         detail: list.map((i) => i.title).join(", "),
         at: Math.max(...list.map((i) => i._creationTime)),
+        contentId: null,
+        coverUrl: null,
+      });
+    }
+
+    // Pautas novas que a cliente colocou no banco, agrupadas por cliente.
+    const newPautas = await ctx.db
+      .query("pautas")
+      .withIndex("by_status", (q) => q.eq("status", "nova"))
+      .collect();
+    const pautasBy = new Map<string, typeof newPautas>();
+    for (const p of newPautas) pautasBy.set(p.clientId, [...(pautasBy.get(p.clientId) ?? []), p]);
+    for (const [clientId, list] of pautasBy) {
+      const client = byId.get(clientId);
+      if (!client) continue;
+      items.push({
+        kind: "pautas",
+        clientSlug: client.slug,
+        clientName: client.name,
+        accentColor: client.accentColor,
+        title: list.length === 1 ? "1 pauta nova" : `${list.length} pautas novas`,
+        detail: list.map((p) => p.title).join(", "),
+        at: Math.max(...list.map((p) => p._creationTime)),
         contentId: null,
         coverUrl: null,
       });

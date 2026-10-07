@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { Suspense, useMemo, useRef, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { PautasBoard } from "@/components/pautas/PautasBoard";
 import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import type { Id } from "@convex/_generated/dataModel";
@@ -456,7 +458,17 @@ function IdeaCard({ idea, admin, base }: { idea: Idea; admin: boolean; base: str
 }
 
 export default function IdeiasPage() {
+  return (
+    <Suspense>
+      <IdeiasView />
+    </Suspense>
+  );
+}
+
+function IdeiasView() {
   const ws = useWorkspace();
+  const router = useRouter();
+  const tab = useSearchParams().get("ver") === "referencias" ? "referencias" : "pautas";
   const ideas = useQuery(api.ideas.list, { slug: ws.slug });
   const admin = ws.viewerRole === "admin";
   const [filter, setFilter] = useState<Filter>("todas");
@@ -484,15 +496,40 @@ export default function IdeiasPage() {
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-7 px-4 pb-14 pt-4 md:px-6">
       <header className="flex flex-col gap-3">
         <h1 className="titulo flex items-center gap-3 text-5xl md:text-7xl">
-          Ideias e referências <Asterisk size={40} color="var(--color-rosa)" />
+          Ideias <Asterisk size={40} color="var(--color-rosa)" />
         </h1>
+        <div role="tablist" aria-label="Tipo de ideia" className="grid grid-cols-2 rounded-full bg-white p-1 sm:inline-grid sm:self-start">
+          {([
+            ["pautas", "Minhas pautas"],
+            ["referencias", "Referências"],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => router.replace(id === "pautas" ? `/w/${ws.slug}/ideias` : `/w/${ws.slug}/ideias?ver=referencias`, { scroll: false })}
+              className={`min-h-11 rounded-full px-5 text-sm font-semibold ${tab === id ? "bg-vinho text-white" : "text-texto-3"}`}
+            >
+              {id === "pautas" && admin ? "Pautas da cliente" : label}
+            </button>
+          ))}
+        </div>
         <p className="max-w-2xl text-base leading-relaxed text-texto-3">
-          {admin
-            ? `Mural de ${ws.name}. Cole links de referência e anote como adaptar.`
-            : "Viu algo que gostaria de fazer? Cole o link aqui e conte o que gostou. O estúdio adapta para você."}
+          {tab === "pautas"
+            ? admin
+              ? `O que ${ws.name} quer falar: tema, formato, mês, como imagina e anexos. Leve as boas para o calendário.`
+              : "Anote aqui o que você quer falar: o tema, o formato, o mês e como imagina. Pode anexar fotos e vídeos."
+            : admin
+              ? `Mural de ${ws.name}. Cole links de referência e anote como adaptar.`
+              : "Viu algo de outra pessoa que gostaria de fazer? Cole o link aqui e conte o que gostou."}
         </p>
       </header>
 
+      {tab === "pautas" ? (
+        <PautasBoard slug={ws.slug} admin={admin} />
+      ) : (
+      <>
       <Composer slug={ws.slug} admin={admin} />
 
       {ideas === undefined ? (
@@ -528,6 +565,8 @@ export default function IdeiasPage() {
             </ul>
           )}
         </>
+      )}
+      </>
       )}
     </main>
   );

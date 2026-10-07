@@ -515,6 +515,14 @@ async function purge(ctx: MutationCtx, content: Doc<"contents">) {
   if (content.coverId && (content.coverSource === "manual" || content.coverSource === "quadro")) {
     await ctx.storage.delete(content.coverId);
   }
+  // Pauta que virou esta peça volta para o banco.
+  const pautas = await ctx.db
+    .query("pautas")
+    .withIndex("by_client", (q) => q.eq("clientId", content.clientId))
+    .collect();
+  for (const p of pautas.filter((p) => p.contentId === contentId)) {
+    await ctx.db.patch(p._id, { status: "vista", contentId: undefined });
+  }
   // Peça da fila de conteúdo: o próximo deploy não deve recriar.
   if (content.importKey) await ctx.db.insert("importTombstones", { key: content.importKey });
   await ctx.db.delete(contentId);

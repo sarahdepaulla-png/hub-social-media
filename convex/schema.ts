@@ -170,6 +170,25 @@ export default defineSchema({
     likedBy: v.optional(v.array(v.id("users"))),
   }).index("by_client", ["clientId"]),
 
+  // Banco de pautas: o que a cliente quer falar, com formato, mês e anexos.
+  pautas: defineTable({
+    clientId: v.id("clients"),
+    authorId: v.id("users"),
+    title: v.string(),
+    format: v.optional(format),
+    month: v.optional(v.string()), // AAAA-MM; vazio = sem pressa
+    notes: v.optional(v.string()), // como eu imagino
+    link: v.optional(v.string()),
+    files: v.optional(
+      v.array(v.object({ id: v.id("_storage"), name: v.string(), type: v.string() })),
+    ),
+    status: v.union(v.literal("nova"), v.literal("vista"), v.literal("calendario"), v.literal("guardada")),
+    studioNote: v.optional(v.string()),
+    contentId: v.optional(v.id("contents")),
+  })
+    .index("by_client", ["clientId"])
+    .index("by_status", ["status"]),
+
   // Conversa em cada cartão do mural de ideias.
   ideaComments: defineTable({
     ideaId: v.id("ideas"),

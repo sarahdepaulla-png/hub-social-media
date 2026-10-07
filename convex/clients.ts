@@ -31,6 +31,9 @@ export const bySlug = query({
         viewer.role === "admin"
           ? (await ctx.db.query("ideas").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
               (i) => i.status === "nova",
+            ).length +
+            (await ctx.db.query("pautas").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
+              (p) => p.status === "nova",
             ).length
           : 0,
     };
@@ -58,6 +61,9 @@ export const listForStudio = query({
         nextDate: next?.date ?? null,
         newIdeas: (await ctx.db.query("ideas").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
           (i) => i.status === "nova",
+        ).length,
+        newPautas: (await ctx.db.query("pautas").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
+          (p) => p.status === "nova",
         ).length,
         newBriefings: (await ctx.db.query("briefings").withIndex("by_client", (q) => q.eq("clientId", client._id)).collect()).filter(
           (b) => b.status === "novo",

@@ -252,7 +252,9 @@ function InboxList({ items, onOpen }: { items: Inbox; onOpen: (o: Open) => void 
                 ? `/w/${item.clientSlug}/c/${item.contentId}`
                 : item.briefingId
                   ? `/w/${item.clientSlug}/briefing/${item.briefingId}`
-                  : `/w/${item.clientSlug}/ideias`
+                  : item.kind === "pautas"
+                    ? `/w/${item.clientSlug}/ideias`
+                    : `/w/${item.clientSlug}/ideias?ver=referencias`
             }
             onClick={(e) => {
               if (!item.contentId) return;
@@ -267,16 +269,22 @@ function InboxList({ items, onOpen }: { items: Inbox; onOpen: (o: Open) => void 
               <span
                 aria-hidden="true"
                 className={`flex h-[70px] w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${
-                  item.kind === "briefing" ? "bg-vinho text-white" : "bg-rosa text-vinho"
+                  item.kind === "briefing" ? "bg-vinho text-white" : item.kind === "pautas" ? "bg-st-agendado text-white" : "bg-rosa text-vinho"
                 }`}
               >
                 <span className="size-2.5 rounded-full" style={{ background: item.accentColor }} />
-                {item.kind === "briefing" ? "Brief" : "Ideia"}
+                {item.kind === "briefing" ? "Brief" : item.kind === "pautas" ? "Pauta" : "Ideia"}
               </span>
             )}
             <span className="flex min-w-0 flex-1 flex-col gap-1">
               <span className="text-xs font-semibold text-texto-2">
-                {item.kind === "ajuste" ? `${item.clientName} pediu ajuste` : item.kind === "briefing" ? `${item.clientName} mandou um briefing` : item.clientName}
+                {item.kind === "ajuste"
+                  ? `${item.clientName} pediu ajuste`
+                  : item.kind === "briefing"
+                    ? `${item.clientName} mandou um briefing`
+                    : item.kind === "pautas"
+                      ? `${item.clientName} anotou no banco de pautas`
+                      : item.clientName}
               </span>
               <strong className="truncate text-[15px] leading-tight">{item.title}</strong>
               {item.detail && <span className="truncate text-sm text-texto-2">{item.detail}</span>}
@@ -383,8 +391,13 @@ function ClientCard({ c, onOpen }: { c: Row; onOpen: (o: Open) => void }) {
               {plural(c.newBriefings, "briefing", "briefings")}
             </Link>
           )}
+          {c.newPautas > 0 && (
+            <Link href={`/w/${c.slug}/ideias`} className="whitespace-nowrap rounded-full bg-st-agendado px-2.5 py-1 text-xs font-semibold text-white">
+              {c.newPautas === 1 ? "1 pauta nova" : `${c.newPautas} pautas novas`}
+            </Link>
+          )}
           {c.newIdeas > 0 && (
-            <Link href={`/w/${c.slug}/ideias`} className="whitespace-nowrap rounded-full bg-rosa px-2.5 py-1 text-xs font-semibold text-vinho">
+            <Link href={`/w/${c.slug}/ideias?ver=referencias`} className="whitespace-nowrap rounded-full bg-rosa px-2.5 py-1 text-xs font-semibold text-vinho">
               {c.newIdeas === 1 ? "1 ideia nova" : `${c.newIdeas} ideias novas`}
             </Link>
           )}
@@ -431,7 +444,8 @@ function ClientCard({ c, onOpen }: { c: Row; onOpen: (o: Open) => void }) {
       <div className="flex flex-wrap gap-x-5 border-t border-linha pt-3 text-sm font-semibold text-rosa-forte">
         <Link href={`/w/${c.slug}`} className="min-h-10 content-center">Início</Link>
         <Link href={`/w/${c.slug}/calendario`} className="min-h-10 content-center">Calendário</Link>
-        <Link href={`/w/${c.slug}/ideias`} className="min-h-10 content-center">Ideias</Link>
+        <Link href={`/w/${c.slug}/ideias`} className="min-h-10 content-center">Pautas</Link>
+        <Link href={`/w/${c.slug}/ideias?ver=referencias`} className="min-h-10 content-center">Referências</Link>
         <Link href={`/w/${c.slug}/briefing/novo`} className="min-h-10 content-center">Briefing</Link>
       </div>
     </li>

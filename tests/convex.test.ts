@@ -578,3 +578,33 @@ describe("código por e-mail", () => {
     expect(await t.query(internal.invites.canSignIn, { email: "estranho@x.com" })).toBe(false);
   });
 });
+
+describe("banco de pautas", () => {
+  test("cliente anota, estúdio vê e leva ao calendário com briefing", async () => {
+    const { as, admin, liliUser, biaUser } = await setup();
+    const id = await as(liliUser).mutation(api.pautas.create, { slug: "lili", title: "Rotina de alongamento", format: "reels", month: "2026-11", notes: "Gancho: 3 erros" });
+    await expect(as(biaUser).mutation(api.pautas.create, { slug: "lili", title: "x" })).rejects.toThrow(/não encontrado/);
+    await expect(as(liliUser).mutation(api.pautas.create, { slug: "lili", title: "  " })).rejects.toThrow(/tema/);
+    await as(liliUser).mutation(api.pautas.update, { pautaId: id, format: "stories" });
+
+    let inbox = await as(admin).query(api.dashboard.studioInbox, {});
+    expect(inbox.some((i) => i.kind === "pautas" && i.clientSlug === "lili")).toBe(true);
+    expect((await as(admin).query(api.pautas.forStudio, {})).map((p) => p._id)).toContain(id);
+
+    await as(admin).mutation(api.pautas.markSeen, { slug: "lili" });
+    inbox = await as(admin).query(api.dashboard.studioInbox, {});
+    expect(inbox.some((i) => i.kind === "pautas")).toBe(false);
+
+    await expect(as(liliUser).mutation(api.pautas.toCalendar, { pautaId: id, date: "2026-11-03", platform: "instagram", format: "reels" })).rejects.toThrow(/administradora/);
+    const contentId = await as(admin).mutation(api.pautas.toCalendar, { pautaId: id, date: "2026-11-03", platform: "instagram", format: "reels" });
+    const [p] = await as(liliUser).query(api.pautas.list, { slug: "lili" });
+    expect(p).toMatchObject({ status: "calendario", canEdit: false, content: { _id: contentId, status: "producao" } });
+    const piece = await as(admin).query(api.contents.get, { contentId });
+    expect(piece.briefing?.body).toContain("Gancho: 3 erros");
+    await expect(as(liliUser).mutation(api.pautas.update, { pautaId: id, title: "Outro" })).rejects.toThrow(/calendário/);
+
+    await as(admin).mutation(api.contents.remove, { contentId });
+    const [back] = await as(liliUser).query(api.pautas.list, { slug: "lili" });
+    expect(back).toMatchObject({ status: "vista", content: null });
+  });
+});

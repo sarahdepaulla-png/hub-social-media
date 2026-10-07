@@ -608,3 +608,73 @@ describe("banco de pautas", () => {
     expect(back).toMatchObject({ status: "vista", content: null });
   });
 });
+
+describe("instagram automático", () => {
+  test("conecta, busca posts com métricas, liga à peça e monta o relatório", async () => {
+    const { t, as, admin, liliUser } = await setup();
+    process.env.IG_APP_ID = "app";
+    process.env.IG_APP_SECRET = "segredo";
+    process.env.SITE_URL = "https://hub.test";
+    // Peça aprovada do dia 20 que deve virar "postado" sozinha.
+    const contentId = await t.run(async (ctx) => {
+      const lili = (await ctx.db.query("clients").withIndex("by_slug", (q) => q.eq("slug", "lili")).first())!;
+      return await ctx.db.insert("contents", { clientId: lili._id, date: "2026-10-20", platform: "instagram", format: "reels", title: "Reel do dia 20", status: "aprovado", version: 1 });
+    });
+
+    const link = await as(admin).mutation(api.instagram.createConnectLink, { clientSlug: "lili" });
+    const state = new URL(link).searchParams.get("s")!;
+    const info = await t.query(api.instagram.connectInfo, { state });
+    expect(info.ok && info.authUrl).toContain("facebook.com/v23.0/dialog/oauth");
+
+    const replies: [RegExp, unknown][] = [
+      [/fb_exchange_token/, { access_token: "longo" }],
+      [/oauth\/access_token/, { access_token: "curto" }],
+      [/\/me\/accounts/, { data: [{ name: "Lili Fisio", access_token: "pagina", instagram_business_account: { id: "99", username: "lili.fisio", followers_count: 1200 } }] }],
+      [/\/99\/media/, { data: [
+        { id: "m1", media_type: "VIDEO", media_product_type: "REELS", permalink: "https://instagram.com/reel/1", timestamp: "2026-10-20T15:00:00+0000", like_count: 10, comments_count: 2 },
+        { id: "m2", media_type: "CAROUSEL_ALBUM", media_product_type: "FEED", permalink: "https://instagram.com/p/2", timestamp: "2026-10-21T15:00:00+0000", like_count: 5, comments_count: 1 },
+      ] }],
+      [/\/99\/stories/, { data: [] }],
+      [/m1\/insights/, { data: [{ name: "reach", values: [{ value: 900 }] }, { name: "views", values: [{ value: 1500 }] }, { name: "saved", values: [{ value: 30 }] }, { name: "shares", values: [{ value: 12 }] }, { name: "total_interactions", values: [{ value: 54 }] }] }],
+      [/m2\/insights/, { data: [{ name: "reach", values: [{ value: 300 }] }, { name: "total_interactions", values: [{ value: 9 }] }] }],
+      [/\/99\?/, { username: "lili.fisio", followers_count: 1200 }],
+    ];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const hit = replies.find(([re]) => re.test(url));
+      return new Response(JSON.stringify(hit ? hit[1] : { error: { message: `sem mock: ${url}` } }), { status: hit ? 200 : 400 });
+    }) as typeof fetch;
+    try {
+      const r = await t.action(api.instagram.finishConnect, { state, code: "abc" });
+      expect(r.connected).toBe("lili.fisio");
+      await t.finishAllScheduledFunctions(() => {});
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+
+    const piece = await as(admin).query(api.contents.get, { contentId });
+    expect(piece.content).toMatchObject({ status: "publicado", externalUrl: "https://instagram.com/reel/1" });
+
+    await expect(as(liliUser).query(api.instagram.report, { slug: "lili", from: "2026-10-19", to: "2026-10-25" })).rejects.toThrow(/estúdio/);
+    const rep = await as(admin).query(api.instagram.report, { slug: "lili", from: "2026-10-19", to: "2026-10-25" });
+    expect(rep.account?.username).toBe("lili.fisio");
+    expect(rep.totals).toMatchObject({ posts: 2, reach: 1200, views: 1500, saved: 30 });
+    expect(rep.top?.[0]).toMatchObject({ format: "Reels", reach: 900, contentId });
+    const week = await as(admin).query(api.instagram.weekSummary, { from: "2026-10-19", to: "2026-10-25" });
+    expect(week[0]).toMatchObject({ slug: "lili", current: { reach: 1200 } });
+    // Link usado não serve de novo.
+    expect((await t.query(api.instagram.connectInfo, { state })).ok).toBe(false);
+
+    // Admin conecta com o próprio Facebook e escolhe qual conta é de qual cliente.
+    const adminLink = await as(admin).mutation(api.instagram.createConnectLink, {});
+    const s2 = new URL(adminLink).searchParams.get("s")!;
+    await t.mutation(internal.instagram.saveCandidates, { state: s2, candidates: [{ igUserId: "77", username: "vivi.acupuntura", pageName: "Vivi", token: "p2" }] });
+    const info2 = await t.query(api.instagram.connectInfo, { state: s2 });
+    expect(info2.ok && info2.candidates.map((c) => c.username)).toEqual(["vivi.acupuntura"]);
+    await expect(as(liliUser).mutation(api.instagram.assignAccounts, { state: s2, pairs: [{ igUserId: "77", clientSlug: "vivi" }] })).rejects.toThrow(/administradora/);
+    expect(await as(admin).mutation(api.instagram.assignAccounts, { state: s2, pairs: [{ igUserId: "77", clientSlug: "vivi" }] })).toEqual(["vivi.acupuntura"]);
+    const status = await as(admin).query(api.instagram.statusAll, {});
+    expect(status.accounts.vivi?.username).toBe("vivi.acupuntura");
+  });
+});

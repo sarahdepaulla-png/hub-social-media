@@ -215,6 +215,72 @@ export default defineSchema({
     .index("by_client", ["clientId"])
     .index("by_status", ["status"]),
 
+  // Instagram conectado de cada cliente (API do Instagram, app em modo de desenvolvimento).
+  igAccounts: defineTable({
+    clientId: v.id("clients"),
+    igUserId: v.string(),
+    username: v.string(),
+    pageName: v.optional(v.string()),
+    accountType: v.optional(v.string()),
+    pictureUrl: v.optional(v.string()),
+    followers: v.optional(v.number()),
+    token: v.string(),
+    tokenExpiresAt: v.number(),
+    connectedAt: v.number(),
+    lastSyncAt: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+  }).index("by_client", ["clientId"]),
+
+  // Link de conexão (vale 7 dias). Sem clientId = a admin conectando com o próprio Facebook.
+  igConnectStates: defineTable({
+    state: v.string(),
+    clientId: v.optional(v.id("clients")),
+    expiresAt: v.number(),
+    // Contas achadas no login, esperando a escolha de qual cliente é qual.
+    candidates: v.optional(
+      v.array(
+        v.object({
+          igUserId: v.string(),
+          username: v.string(),
+          pageName: v.string(),
+          pictureUrl: v.optional(v.string()),
+          followers: v.optional(v.number()),
+          token: v.string(),
+        }),
+      ),
+    ),
+  }).index("by_state", ["state"]),
+
+  // Cada post/reel/story com as métricas mais recentes.
+  igPosts: defineTable({
+    clientId: v.id("clients"),
+    mediaId: v.string(),
+    permalink: v.optional(v.string()),
+    caption: v.optional(v.string()),
+    mediaType: v.string(), // IMAGE, VIDEO, CAROUSEL_ALBUM
+    productType: v.optional(v.string()), // FEED, REELS, STORY
+    timestamp: v.number(),
+    thumbnailUrl: v.optional(v.string()),
+    reach: v.optional(v.number()),
+    views: v.optional(v.number()),
+    likes: v.optional(v.number()),
+    comments: v.optional(v.number()),
+    saved: v.optional(v.number()),
+    shares: v.optional(v.number()),
+    interactions: v.optional(v.number()),
+    insightsAt: v.optional(v.number()),
+    contentId: v.optional(v.id("contents")),
+  })
+    .index("by_media", ["mediaId"])
+    .index("by_client_time", ["clientId", "timestamp"]),
+
+  // Seguidores por dia, para medir crescimento.
+  igFollowers: defineTable({
+    clientId: v.id("clients"),
+    date: v.string(), // AAAA-MM-DD
+    followers: v.number(),
+  }).index("by_client_date", ["clientId", "date"]),
+
   // Chaves da fila de conteúdo apagadas de vez: o próximo deploy não recria.
   importTombstones: defineTable({ key: v.string() }).index("by_key", ["key"]),
 

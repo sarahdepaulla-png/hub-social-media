@@ -13,7 +13,8 @@ const isLogin = createRouteMatcher(["/entrar"]);
 export default convexAuthNextjsMiddleware(
   async (request, { convexAuth }) => {
     // O link de acesso funciona mesmo com outra sessão aberta no aparelho.
-    if (request.nextUrl.pathname.startsWith("/acesso/")) return;
+    // Link de acesso e conexão do Instagram funcionam sem login.
+    if (request.nextUrl.pathname.startsWith("/acesso/") || request.nextUrl.pathname.startsWith("/instagram/")) return;
     const authed = await convexAuth.isAuthenticated();
     if (!isLogin(request) && !authed) {
       const url = new URL("/entrar", request.url);

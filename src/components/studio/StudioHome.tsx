@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -452,6 +452,45 @@ function ClientCard({ c, onOpen }: { c: Row; onOpen: (o: Open) => void }) {
   );
 }
 
+/* ---------- Instagram da semana ---------- */
+
+function InstagramWeek({ today }: { today: string }) {
+  const rows = useQuery(api.instagram.weekSummary, { from: addDays(today, -6), to: today });
+  if (!rows || rows.length === 0) return null;
+  const nf = (n: number | null) => (n === null ? "–" : n.toLocaleString("pt-BR"));
+  return (
+    <section className="flex flex-col gap-4">
+      <SectionTitle aside={<span className="text-sm text-texto-2">últimos 7 dias</span>}>Instagram da semana</SectionTitle>
+      <ul className="grid gap-3 md:grid-cols-2">
+        {rows.map((r) => {
+          const d = r.previous.reach ? (r.current.reach - r.previous.reach) / r.previous.reach : null;
+          return (
+            <li key={r.slug}>
+              <Link href={`/w/${r.slug}/relatorio`} className="flex items-center gap-4 rounded-peca bg-white p-4 hover:bg-[#FFF6FA]">
+                <span className="h-[72px] w-14 shrink-0 overflow-hidden rounded-lg bg-thumb">
+                  {r.best?.thumbnailUrl && <img src={r.best.thumbnailUrl} alt="" className="size-full object-cover" />}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <ClientDot c={r} />
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <strong className="text-2xl font-extrabold tracking-[-0.04em]">{nf(r.current.reach)}</strong>
+                    <span className="text-sm text-texto-2">de alcance, {r.current.posts} {r.current.posts === 1 ? "post" : "posts"}</span>
+                  </span>
+                  <span className="truncate text-xs text-texto-2">
+                    {d === null ? "sem semana anterior para comparar" : `${d >= 0 ? "▲" : "▼"} ${Math.abs(Math.round(d * 100))}% vs. semana anterior`}
+                    {r.best?.caption ? `. Destaque: ${r.best.caption.split("\n")[0]}` : ""}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-semibold text-rosa-forte">Relatório</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 /* ---------- Página ---------- */
 
 export function StudioHome({ home, clients, inbox, greeting, time, today }: { home: Home; clients: Row[]; inbox: Inbox; greeting: string; time: string; today: string }) {
@@ -551,6 +590,8 @@ export function StudioHome({ home, clients, inbox, greeting, time, today }: { ho
             <InboxList items={inbox} onOpen={setOpen} />
           </section>
         </div>
+
+        <InstagramWeek today={today} />
 
         <section id="semana" className="flex scroll-mt-6 flex-col gap-4">
           <SectionTitle aside={<Link href="/estudio/esteira" className="min-h-11 content-center text-[15px] font-semibold text-rosa-forte">Ver na esteira</Link>}>

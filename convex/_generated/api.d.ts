@@ -22,6 +22,7 @@ import type * as dashboard from "../dashboard.js";
 import type * as http from "../http.js";
 import type * as ideas from "../ideas.js";
 import type * as imports from "../imports.js";
+import type * as instagram from "../instagram.js";
 import type * as invites from "../invites.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_adminKey from "../lib/adminKey.js";
@@ -60,6 +61,7 @@ import type * as viewer from "../viewer.js";
 "http": typeof http,
 "ideas": typeof ideas,
 "imports": typeof imports,
+"instagram": typeof instagram,
 "invites": typeof invites,
 "lib/access": typeof lib_access,
 "lib/adminKey": typeof lib_adminKey,

@@ -28,6 +28,7 @@ const ICONS = {
   ),
   datas: <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z" />,
   ideias: <path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9V16h7v-2.1A6 6 0 0012 3z" />,
+  relatorio: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
 };
 
 export function WorkspaceShell({ slug, children }: { slug: string; children: ReactNode }) {
@@ -44,6 +45,9 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
     { href: `${base}/calendario`, label: "Calendário", icon: ICONS.calendario, active: pathname.startsWith(`${base}/calendario`) || pathname.startsWith(`${base}/c/`) },
     { href: `${base}/datas`, label: "Datas", icon: ICONS.datas, active: pathname.startsWith(`${base}/datas`) },
     { href: `${base}/ideias`, label: "Ideias", icon: ICONS.ideias, active: pathname.startsWith(`${base}/ideias`), badge: ws.newIdeas },
+    ...(ws.viewerRole === "admin"
+      ? [{ href: `${base}/relatorio`, label: "Relatório", icon: ICONS.relatorio, active: pathname.startsWith(`${base}/relatorio`) }]
+      : []),
   ];
 
   return (
@@ -89,7 +93,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
         <nav
           aria-label="Navegação principal"
           hidden={focused}
-          className="fixed inset-x-0 bottom-0 z-20 grid h-[76px] grid-cols-4 border-t border-linha bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
+          className={`fixed inset-x-0 bottom-0 z-20 grid h-[76px] ${tabs.length > 4 ? "grid-cols-5" : "grid-cols-4"} border-t border-linha bg-white pb-[env(safe-area-inset-bottom)] md:hidden`}
         >
           {tabs.map((t) => (
             <Link

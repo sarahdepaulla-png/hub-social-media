@@ -54,7 +54,7 @@ export default function ConteudoPage() {
         <span className="flex items-center gap-3 pr-3 md:pr-0">
           {waiting && queue.remaining > 0 && <span className="text-[13px] text-texto-2">+{queue.remaining} esperando você</span>}
           <span className="rounded-full border border-campo px-2.5 py-0.5 text-xs font-semibold">v{content.version}</span>
-          {viewer.role === "admin" && (
+          {viewer.canEdit && (
             <Link href={`${base}/c/${content._id}/editar`} className="min-h-9 rounded-full bg-vinho px-4 text-sm font-semibold leading-9 text-white">
               Editar
             </Link>

@@ -714,3 +714,38 @@ describe("novo conteúdo com briefing", () => {
     await expect(as(admin).mutation(api.contents.create, { ...base, briefing: { body: "x", links: ["nada"] } })).rejects.toThrow(/https/);
   });
 });
+
+describe("edição pela equipe da cliente", () => {
+  test("só com a edição liberada, e só nas peças dela", async () => {
+    const { t, as, admin, liliUser, biaUser, waiting, biaContent, lili } = await setup();
+    const save = (who: Id<"users">, contentId: Id<"contents">) =>
+      as(who).mutation(api.captions.save, { contentId, items: [{ text: "Legenda da equipe" }] });
+
+    await expect(save(liliUser, waiting[0])).rejects.toThrow(/administradora/);
+    expect((await as(liliUser).query(api.contents.get, { contentId: waiting[0] })).viewer.canEdit).toBe(false);
+
+    await expect(as(liliUser).mutation(api.clients.setClientCanEdit, { clientId: lili, value: true })).rejects.toThrow(/administradora/);
+    await as(admin).mutation(api.clients.setClientCanEdit, { clientId: lili, value: true });
+
+    await save(liliUser, waiting[0]);
+    const view = await as(liliUser).query(api.contents.get, { contentId: waiting[0] });
+    expect(view.viewer.canEdit).toBe(true);
+    expect(view.captions.map((c) => c.text)).toContain("Legenda da equipe");
+    await as(liliUser).mutation(api.contents.update, { contentId: waiting[0], title: "Novo título" });
+    await as(liliUser).mutation(api.media.add, { contentId: waiting[0], kind: "link", url: "https://drive.google.com/x" });
+    expect(await as(liliUser).mutation(api.media.generateUploadUrl, {})).toBeTruthy();
+
+    // Status continua com a admin; peça de outra cliente continua fechada.
+    await expect(as(liliUser).mutation(api.contents.setStatus, { contentId: waiting[0], status: "publicado" })).rejects.toThrow(/administradora/);
+    await expect(save(liliUser, biaContent)).rejects.toThrow(/não encontrado/);
+    await expect(save(biaUser, biaContent)).rejects.toThrow(/administradora/);
+    await expect(as(biaUser).mutation(api.media.generateUploadUrl, {})).rejects.toThrow(/administradora/);
+
+    // Ajuste de deploy roda uma vez só: desligar depois vale.
+    expect(await t.mutation(internal.clients.applyOnce, { key: "k1", slug: "bia", clientCanEdit: true })).toBe("aplicado");
+    await save(biaUser, biaContent);
+    await as(admin).mutation(api.clients.setClientCanEdit, { clientId: (await as(admin).query(api.clients.bySlug, { slug: "bia" }))._id, value: false });
+    expect(await t.mutation(internal.clients.applyOnce, { key: "k1", slug: "bia", clientCanEdit: true })).toBe("já aplicado");
+    await expect(save(biaUser, biaContent)).rejects.toThrow(/administradora/);
+  });
+});

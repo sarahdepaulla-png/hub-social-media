@@ -50,6 +50,19 @@ export async function requireContentAccess(ctx: QueryCtx, contentId: Id<"content
   return { viewer, content, client };
 }
 
+/** A pessoa pode editar esta peça? Admin sempre; cliente só com a edição liberada. */
+export function canEditContent(viewer: Doc<"users">, client: Doc<"clients">) {
+  return viewer.role === "admin" || (viewer.clientId === client._id && client.clientCanEdit === true);
+}
+
+/** Para mutações do editor: admin, ou equipe da cliente com edição liberada. */
+export async function requireContentEditor(ctx: QueryCtx, contentId: Id<"contents">) {
+  const { viewer, content, client } = await requireContentAccess(ctx, contentId);
+  if (!canEditContent(viewer, client)) throw new ConvexError("Só a administradora pode fazer isso.");
+  if (content.deletedAt) throw new ConvexError("Esta peça está na lixeira.");
+  return { viewer, content, client };
+}
+
 /** Resolve o slug da URL e já confere o acesso. */
 export async function requireClientBySlug(ctx: QueryCtx, slug: string) {
   const viewer = await requireViewer(ctx);

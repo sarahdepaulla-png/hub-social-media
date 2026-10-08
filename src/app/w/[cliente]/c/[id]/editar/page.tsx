@@ -27,9 +27,10 @@ export default function EditarPage() {
   const [pending, setPending] = useState(false);
 
   if (data === undefined) return <Loading />;
-  if (data.viewer.role !== "admin") {
-    return <p className="px-6 py-16 text-lg">Só a administradora edita conteúdos.</p>;
+  if (!data.viewer.canEdit) {
+    return <p className="px-6 py-16 text-lg">A edição desta peça fica com o estúdio.</p>;
   }
+  const admin = data.viewer.role === "admin";
   const { content, media, captions, comments, client } = data;
   const base = `/w/${cliente}`;
 
@@ -61,6 +62,7 @@ export default function EditarPage() {
             <span className="rounded-full border border-campo px-2.5 py-0.5 text-xs font-semibold">versão {content.version}</span>
           </span>
         </div>
+        {admin ? (
         <div className="flex flex-wrap items-center gap-2.5">
           <label className="flex items-center gap-2 text-sm font-semibold">
             Status
@@ -91,6 +93,11 @@ export default function EditarPage() {
             </button>
           )}
         </div>
+        ) : (
+          <Link href={`${base}/c/${content._id}`} className={buttonClass.primary}>
+            Pronto
+          </Link>
+        )}
         {error && <p role="alert" className="w-full text-sm font-semibold text-st-ajuste-texto">{error}</p>}
       </div>
 

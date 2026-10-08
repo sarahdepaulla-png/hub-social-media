@@ -94,6 +94,12 @@ if (existsSync("conteudo")) {
 }
 
 log("Conferindo dados iniciais");
+// Ajustes de uma vez só (cada chave roda uma única vez; dá para desfazer depois pela tela).
+for (const once of [{ key: "edicao-entalpia-2026-10", slug: "entalpia", clientCanEdit: true }]) {
+  const r = convex(["run", "clients:applyOnce", JSON.stringify(once)], { quiet: true });
+  log(`Ajuste ${once.key}: ${r.ok ? r.out : `falhou (${r.err.slice(0, 200)})`}`);
+}
+
 const seed = convex(["run", "seed:run"], { quiet: true });
 console.log(seed.ok ? `[hub] ${seed.out}` : `[hub] Seed não rodou: ${seed.err}`);
 

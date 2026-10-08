@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requireAdmin, requireClientBySlug, requireContentAccess } from "./lib/access";
+import { canEditContent, requireAdmin, requireClientBySlug, requireContentAccess, requireContentEditor } from "./lib/access";
 import { displayName, logActivity } from "./lib/log";
 import { TRASH_MS, UNDO_WINDOW_MS, alive, toCard } from "./lib/content";
 import { internalMutation } from "./_generated/server";
@@ -78,7 +78,7 @@ export const get = query({
     const briefAuthor = brief ? await ctx.db.get(brief.authorId) : null;
 
     return {
-      viewer: { _id: viewer._id, role: viewer.role! },
+      viewer: { _id: viewer._id, role: viewer.role!, canEdit: canEditContent(viewer, client) },
       client: { slug: client.slug, name: client.name, accentColor: client.accentColor },
       content: {
         _id: content._id,
@@ -364,9 +364,7 @@ export const create = mutation({
 export const update = mutation({
   args: { contentId: v.id("contents"), ...editable },
   handler: async (ctx, { contentId, ...patch }) => {
-    const admin = await requireAdmin(ctx);
-    const content = await ctx.db.get(contentId);
-    if (!content) throw new ConvexError("Conteúdo não encontrado.");
+    const { viewer: admin, content } = await requireContentEditor(ctx, contentId);
     const changed = Object.entries(patch).filter(
       ([k, val]) => val !== undefined && content[k as keyof typeof content] !== val,
     );

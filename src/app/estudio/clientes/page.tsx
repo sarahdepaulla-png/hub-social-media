@@ -302,6 +302,7 @@ function Invite({ client, mailReady }: { client: Client; mailReady: boolean }) {
 
 function ClientCard({ client, mailReady }: { client: Client; mailReady: boolean }) {
   const update = useMutation(api.clients.update);
+  const setCanEdit = useMutation(api.clients.setClientCanEdit);
   const [open, setOpen] = useState(false);
   const [accent, setAccent] = useState(client.accentColor);
   const [secondary, setSecondary] = useState(client.secondaryColor ?? "");
@@ -340,6 +341,7 @@ function ClientCard({ client, mailReady }: { client: Client; mailReady: boolean 
             </strong>
             <span className="text-[13px] text-texto-2">
               /w/{client.slug}, {client.people.length} {client.people.length === 1 ? "acesso" : "acessos"}
+              {client.clientCanEdit && ", equipe edita as peças"}
             </span>
           </span>
         </span>
@@ -383,6 +385,18 @@ function ClientCard({ client, mailReady }: { client: Client; mailReady: boolean 
             </button>
           </form>
           <div className="flex flex-col gap-6">
+            <label className="flex items-start gap-3 rounded-peca bg-white p-4 text-sm">
+              <input
+                type="checkbox"
+                checked={client.clientCanEdit}
+                onChange={(e) => setCanEdit({ clientId: client._id, value: e.target.checked })}
+                className="mt-0.5 size-[18px] shrink-0 accent-rosa-forte"
+              />
+              <span className="flex flex-col gap-0.5">
+                <strong>A equipe de {client.name} pode editar as peças</strong>
+                <span className="text-texto-2">Escrever legenda, subir foto e vídeo, trocar a capa e os dados. Status e envio para aprovação continuam com você.</span>
+              </span>
+            </label>
             <Invite client={client} mailReady={mailReady} />
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireClientBySlug } from "./lib/access";
 import { contentsInMonth, countByStatus } from "./lib/content";
 import type { Id } from "./_generated/dataModel";
@@ -38,6 +38,9 @@ async function workspaceHeader(ctx: Parameters<typeof requireAdmin>[0], slug: st
       secondaryColor: client.secondaryColor ?? null,
       ...(await brand(ctx, client)),
       viewerRole: viewer.role!,
+      // A equipe da cliente pode editar peças (legenda, mídia, capa).
+      canEdit: viewer.role === "admin" || client.clientCanEdit === true,
+      clientCanEdit: client.clientCanEdit === true,
       // Ideias que ainda ninguém do estúdio olhou (só interessa à admin).
       newIdeas:
         viewer.role === "admin"
@@ -104,6 +107,7 @@ export const listAdmin = query({
         slug: c.slug,
         name: c.name,
         description: c.description ?? null,
+        clientCanEdit: c.clientCanEdit === true,
         niches: c.niches,
         accentColor: c.accentColor,
         secondaryColor: c.secondaryColor ?? null,
@@ -178,6 +182,29 @@ export const update = mutation({
       secondaryColor: args.secondaryColor || undefined,
       ...(args.active === undefined ? {} : { active: args.active }),
     });
+  },
+});
+
+/** Libera ou fecha a edição de peças para a equipe da cliente. */
+export const setClientCanEdit = mutation({
+  args: { clientId: v.id("clients"), value: v.boolean() },
+  handler: async (ctx, { clientId, value }) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(clientId, { clientCanEdit: value });
+  },
+});
+
+/** Ajuste aplicado uma vez só no deploy (marca pela chave, então desligar depois vale). */
+export const applyOnce = internalMutation({
+  args: { key: v.string(), slug: v.string(), clientCanEdit: v.boolean() },
+  handler: async (ctx, { key, slug, clientCanEdit }) => {
+    const done = await ctx.db.query("importTombstones").withIndex("by_key", (q) => q.eq("key", key)).first();
+    if (done) return "já aplicado";
+    const client = await ctx.db.query("clients").withIndex("by_slug", (q) => q.eq("slug", slug)).first();
+    if (!client) return "cliente não existe";
+    await ctx.db.patch(client._id, { clientCanEdit });
+    await ctx.db.insert("importTombstones", { key });
+    return "aplicado";
   },
 });
 

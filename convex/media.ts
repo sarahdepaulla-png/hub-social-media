@@ -1,14 +1,16 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
-import { getViewer, requireAdmin } from "./lib/access";
+import type { Doc } from "./_generated/dataModel";
+import { canEditContent, getViewer, requireContentEditor, requireViewer } from "./lib/access";
 import { logActivity } from "./lib/log";
 
 /** URL temporária para o navegador subir um arquivo direto no storage. */
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    const viewer = await requireViewer(ctx);
+    const client = viewer.clientId ? await ctx.db.get(viewer.clientId) : null;
+    if (viewer.role !== "admin" && !(client && canEditContent(viewer, client))) throw new ConvexError("Só a administradora pode fazer isso.");
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -48,8 +50,7 @@ async function refreshCover(ctx: MutationCtx, content: Doc<"contents">) {
 export const setCover = mutation({
   args: { contentId: v.id("contents"), storageId: v.id("_storage"), source: v.union(v.literal("manual"), v.literal("quadro")) },
   handler: async (ctx, { contentId, storageId, source }) => {
-    const admin = await requireAdmin(ctx);
-    const content = await loadContent(ctx, contentId);
+    const { viewer: admin, content } = await requireContentEditor(ctx, contentId);
     // Quadro automático não passa por cima de imagem nem de capa manual.
     if (source === "quadro" && (content.coverSource === "imagem" || content.coverSource === "manual")) {
       await ctx.storage.delete(storageId);
@@ -69,8 +70,7 @@ export const setCover = mutation({
 export const resetCover = mutation({
   args: { contentId: v.id("contents") },
   handler: async (ctx, { contentId }) => {
-    await requireAdmin(ctx);
-    const content = await loadContent(ctx, contentId);
+    const { content } = await requireContentEditor(ctx, contentId);
     if (content.coverSource !== "manual") return;
     if (content.coverId) await ctx.storage.delete(content.coverId);
     await ctx.db.patch(contentId, { coverId: undefined, coverSource: undefined });
@@ -99,12 +99,6 @@ export const missingCovers = query({
   },
 });
 
-async function loadContent(ctx: MutationCtx, contentId: Id<"contents">) {
-  const content = await ctx.db.get(contentId);
-  if (!content) throw new ConvexError("Conteúdo não encontrado.");
-  return content;
-}
-
 export const add = mutation({
   args: {
     contentId: v.id("contents"),
@@ -114,8 +108,7 @@ export const add = mutation({
     alt: v.optional(v.string()),
   },
   handler: async (ctx, { contentId, kind, storageId, url, alt }) => {
-    const admin = await requireAdmin(ctx);
-    const content = await loadContent(ctx, contentId);
+    const { viewer: admin, content } = await requireContentEditor(ctx, contentId);
     if (!storageId && !url) throw new ConvexError("Envie um arquivo ou cole um link.");
     const list = await currentMedia(ctx, content);
     const order = (list.at(-1)?.order ?? 0) + 1;
@@ -134,10 +127,9 @@ export const add = mutation({
 export const remove = mutation({
   args: { mediaId: v.id("media") },
   handler: async (ctx, { mediaId }) => {
-    const admin = await requireAdmin(ctx);
     const media = await ctx.db.get(mediaId);
     if (!media) return;
-    const content = await loadContent(ctx, media.contentId);
+    const { viewer: admin, content } = await requireContentEditor(ctx, media.contentId);
     if (media.version !== content.version) throw new ConvexError("Versões antigas ficam guardadas e não podem ser editadas.");
     await ctx.db.delete(mediaId);
     // O mesmo arquivo pode estar em versões antigas (copiado). Só apaga se ninguém mais usa.
@@ -165,10 +157,9 @@ export const remove = mutation({
 export const move = mutation({
   args: { mediaId: v.id("media"), direction: v.union(v.literal(-1), v.literal(1)) },
   handler: async (ctx, { mediaId, direction }) => {
-    await requireAdmin(ctx);
     const media = await ctx.db.get(mediaId);
     if (!media) return;
-    const content = await loadContent(ctx, media.contentId);
+    const { content } = await requireContentEditor(ctx, media.contentId);
     const list = await currentMedia(ctx, content);
     const i = list.findIndex((m) => m._id === mediaId);
     const j = i + direction;

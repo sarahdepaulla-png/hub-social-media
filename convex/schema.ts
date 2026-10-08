@@ -82,6 +82,8 @@ export default defineSchema({
     logoId: v.optional(v.id("_storage")),
     photoId: v.optional(v.id("_storage")),
     active: v.boolean(),
+    // A equipe da cliente pode editar as peças (legenda, mídia, capa, dados).
+    clientCanEdit: v.optional(v.boolean()),
   }).index("by_slug", ["slug"]),
 
   contents: defineTable({

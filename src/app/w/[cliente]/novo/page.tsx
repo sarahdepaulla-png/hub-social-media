@@ -1,12 +1,13 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Suspense, useState, type FormEvent } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { buttonClass } from "@/components/brand";
 import { Step } from "@/components/briefing/BriefingForm";
+import { TaskFields } from "@/components/Task";
 import { errorText } from "@/components/content/DecisionSheet";
 import { useWorkspace } from "@/components/WorkspaceShell";
 import { todayISO } from "@/lib/dates";
@@ -24,6 +25,7 @@ function NovoForm() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [links, setLinks] = useState<string[]>([""]);
+  const team = useQuery(api.team.list, ws.viewerRole === "admin" ? {} : "skip");
 
   if (ws.viewerRole !== "admin") return <p className="px-6 py-16 text-lg">Só a administradora cria conteúdos.</p>;
 
@@ -41,6 +43,8 @@ function NovoForm() {
         format: d.get("format") as Format,
         sourceIdeaId: (params.get("ideia") as Id<"ideas"> | null) ?? undefined,
         sourceOpportunityId: (params.get("oportunidade") as Id<"opportunities"> | null) ?? undefined,
+        owner: String(d.get("owner") ?? "").trim() || undefined,
+        dueDate: String(d.get("dueDate") ?? "").trim() || undefined,
         briefing: {
           objective: String(d.get("objective") ?? "").trim() || undefined,
           body: String(d.get("body") ?? ""),
@@ -89,6 +93,7 @@ function NovoForm() {
               </select>
             </label>
           </div>
+          <TaskFields team={team ?? []} id="novo" />
         </Step>
 
         <Step n={2} title="Briefing" hint="Fica na ficha da peça, só para o estúdio. Se deixar em branco, dá para escrever depois.">

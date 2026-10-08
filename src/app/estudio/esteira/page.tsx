@@ -11,6 +11,7 @@ import { Loading, Thumb } from "@/components/brand";
 import { StatusMenu } from "@/components/StatusMenu";
 import { PieceDrawer } from "@/components/PieceDrawer";
 import { TrashButton } from "@/components/Trash";
+import { DueBadge, OwnerBadge, ownerColor } from "@/components/Task";
 import { errorText } from "@/components/content/DecisionSheet";
 import { currentMonth, monthName, shiftMonth, shortDate } from "@/lib/dates";
 import { FORMAT, type Status } from "@/lib/labels";
@@ -74,6 +75,12 @@ function BriefCard({ b }: { b: Brief }) {
       <Link href={`/w/${b.client.slug}/briefing/${b._id}`} className="text-[15px] font-bold leading-tight hover:underline">
         {b.title}
       </Link>
+      {(b.owner || b.dueDate) && (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <OwnerBadge owner={b.owner} />
+          <DueBadge due={b.dueDate} />
+        </span>
+      )}
       <span className="text-xs text-texto-2">
         {b.desiredDate ? `Para ${shortDate(b.desiredDate)}` : "Sem data"}
         {b.format ? `. ${FORMAT[b.format]}` : ""}. {b.authorIsStudio ? "Do estúdio" : `Pedido por ${b.authorName}`}
@@ -106,6 +113,12 @@ function PieceCard({ c, tone, onDrag, onOpen }: { c: Piece; tone: number; onDrag
           {shortDate(c.date)}. {FORMAT[c.format]}
           {c.fromBriefing ? ". Do briefing" : ""}
         </span>
+        {(c.owner || c.dueDate) && (
+          <span className="flex flex-wrap items-center gap-1.5">
+            <OwnerBadge owner={c.owner} />
+            <DueBadge due={c.dueDate} done={["aprovado", "agendado", "publicado"].includes(c.status)} />
+          </span>
+        )}
         <StatusMenu contentId={c._id as Id<"contents">} status={c.status} editable short className="text-[11px]" />
       </span>
     </li>
@@ -120,6 +133,7 @@ function Esteira() {
   const pautas = useQuery(api.pautas.forStudio, {});
   const setStatus = useMutation(api.contents.setStatus);
   const [only, setOnly] = useState<string>("");
+  const [who, setWho] = useState<string>("");
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -128,11 +142,12 @@ function Esteira() {
   const visible = useMemo(() => {
     if (!data) return null;
     return {
-      briefings: data.briefings.filter((b) => !only || b.client.slug === only),
-      contents: data.contents.filter((c) => !only || c.client.slug === only),
-      pautas: (pautas ?? []).filter((p) => !only || p.client.slug === only),
+      briefings: data.briefings.filter((b) => (!only || b.client.slug === only) && (!who || (who === "-" ? !b.owner : b.owner === who))),
+      contents: data.contents.filter((c) => (!only || c.client.slug === only) && (!who || (who === "-" ? !c.owner : c.owner === who))),
+      // Pautas ainda não têm responsável: somem quando o filtro de pessoa está ligado.
+      pautas: who ? [] : (pautas ?? []).filter((p) => !only || p.client.slug === only),
     };
-  }, [data, pautas, only]);
+  }, [data, pautas, only, who]);
 
   if (data === undefined || visible === null) return <Loading />;
 
@@ -151,7 +166,12 @@ function Esteira() {
     }
   };
 
-  const byStage = STAGES.map((s) => ({ ...s, items: visible.contents.filter((c) => s.statuses.includes(c.status)) }));
+  // Nas etapas em andamento, o prazo mais perto vem primeiro.
+  const byDue = (x: Piece, y: Piece) => (x.dueDate ?? "9").localeCompare(y.dueDate ?? "9") || x.date.localeCompare(y.date);
+  const byStage = STAGES.map((s) => {
+    const items = visible.contents.filter((c) => s.statuses.includes(c.status));
+    return { ...s, items: s.id === "criacao" || s.id === "ajuste" || s.id === "aprovacao" ? [...items].sort(byDue) : items };
+  });
   const newFor = only || (data.clients.length === 1 ? data.clients[0].slug : "");
 
   return (
@@ -207,6 +227,24 @@ function Esteira() {
           >
             {c.slug && <span aria-hidden="true" className="size-2 rounded-full" style={{ background: c.accentColor }} />}
             {c.name}
+          </button>
+        ))}
+      </div>
+
+      <div role="group" aria-label="Filtrar por responsável" className="-mt-2 flex items-center gap-2 overflow-x-auto px-6 pb-1">
+        <span className="shrink-0 text-sm font-semibold text-texto-2">Com quem</span>
+        {[{ id: "", label: "Todo mundo" }, ...data.team.map((t) => ({ id: t, label: t })), { id: "-", label: "Sem responsável" }].map((o) => (
+          <button
+            key={o.id || "todos"}
+            type="button"
+            aria-pressed={who === o.id}
+            onClick={() => setWho(o.id)}
+            className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3.5 text-[13px] font-semibold ${
+              who === o.id ? "border-vinho bg-vinho text-white" : "border-campo bg-white text-vinho"
+            }`}
+          >
+            {o.id && o.id !== "-" && <span aria-hidden="true" className="size-2 rounded-full" style={{ background: ownerColor(o.id) }} />}
+            {o.label}
           </button>
         ))}
       </div>

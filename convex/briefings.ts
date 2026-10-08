@@ -5,6 +5,7 @@ import { format, platform } from "./schema";
 import { requireAdmin, requireClientAccess, requireClientBySlug } from "./lib/access";
 import { contentsInMonth, toCard } from "./lib/content";
 import { displayName, logActivity } from "./lib/log";
+import { TEAM, cleanOwner } from "./lib/team";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -13,6 +14,8 @@ const fields = {
   platform: v.optional(platform),
   format: v.optional(format),
   desiredDate: v.optional(v.string()),
+  dueDate: v.optional(v.string()),
+  owner: v.optional(v.string()),
   objective: v.optional(v.string()),
   body: v.string(),
   links: v.array(v.string()),
@@ -23,6 +26,8 @@ type Fields = {
   platform?: Doc<"briefings">["platform"];
   format?: Doc<"briefings">["format"];
   desiredDate?: string;
+  dueDate?: string;
+  owner?: string;
   objective?: string;
   body: string;
   links: string[];
@@ -36,6 +41,8 @@ function clean(f: Fields) {
   if (!body) throw new ConvexError("Escreva o briefing.");
   const desiredDate = f.desiredDate?.trim() || undefined;
   if (desiredDate && !DATE.test(desiredDate)) throw new ConvexError("Data inválida.");
+  const dueDate = f.dueDate?.trim() || undefined;
+  if (dueDate && !DATE.test(dueDate)) throw new ConvexError("Prazo inválido.");
   const links = f.links.map((l) => l.trim()).filter(Boolean);
   if (links.length > 10) throw new ConvexError("Até 10 links por briefing.");
   for (const l of links) {
@@ -46,6 +53,8 @@ function clean(f: Fields) {
     platform: f.platform,
     format: f.format,
     desiredDate,
+    dueDate,
+    owner: cleanOwner(f.owner),
     objective: f.objective?.trim() || undefined,
     body: body.slice(0, 6000),
     links,
@@ -61,6 +70,9 @@ async function shape(ctx: QueryCtx, b: Doc<"briefings">, viewer: Doc<"users">) {
     platform: b.platform ?? null,
     format: b.format ?? null,
     desiredDate: b.desiredDate ?? null,
+    // Prazo é combinado interno do estúdio.
+    dueDate: viewer.role === "admin" ? (b.dueDate ?? null) : null,
+    owner: viewer.role === "admin" ? (b.owner ?? null) : null,
     objective: b.objective ?? null,
     body: b.body,
     links: b.links,
@@ -115,6 +127,10 @@ export const create = mutation({
   handler: async (ctx, { slug, ...f }) => {
     const { viewer, client } = await requireClientBySlug(ctx, slug);
     const data = clean(f);
+    if (viewer.role !== "admin") {
+      data.dueDate = undefined;
+      data.owner = undefined;
+    }
     const briefingId = await ctx.db.insert("briefings", {
       clientId: client._id,
       authorId: viewer._id,
@@ -133,7 +149,15 @@ export const update = mutation({
     if (viewer.role !== "admin" && (b.authorId !== viewer._id || b.status !== "novo")) {
       throw new ConvexError("Este briefing já está com o estúdio. Mande o que mudou pelos comentários da peça.");
     }
-    await ctx.db.patch(briefingId, clean(f));
+    const data = clean(f);
+    // Quem não é admin não vê o prazo: mantém o que já estava.
+    if (viewer.role !== "admin") {
+      data.dueDate = b.dueDate;
+      data.owner = b.owner;
+    }
+    await ctx.db.patch(briefingId, data);
+    // A peça que nasceu deste briefing acompanha prazo e responsável.
+    if (viewer.role === "admin" && b.contentId) await ctx.db.patch(b.contentId, { dueDate: data.dueDate, owner: data.owner });
   },
 });
 
@@ -154,7 +178,12 @@ export const attach = mutation({
       contentId,
       ...clean(f),
     });
-    await ctx.db.patch(contentId, { briefingId });
+    const saved = (await ctx.db.get(briefingId))!;
+    await ctx.db.patch(contentId, {
+      briefingId,
+      dueDate: saved.dueDate ?? content.dueDate,
+      owner: saved.owner ?? content.owner,
+    });
     return briefingId;
   },
 });
@@ -178,6 +207,8 @@ export const start = mutation({
       status: "producao",
       version: 1,
       briefingId,
+      dueDate: b.dueDate,
+      owner: b.owner,
     });
     await ctx.db.patch(briefingId, { status: "em_criacao", contentId });
     await logActivity(ctx, { clientId: b.clientId, contentId, userId: admin._id, kind: "criacao", summary: `Criou o conteúdo a partir do briefing "${b.title}"` });
@@ -231,16 +262,23 @@ export const pipeline = query({
     for (const b of open.filter((b) => byId.has(b.clientId))) {
       briefings.push({ ...(await shape(ctx, b, viewer)), client: client(b.clientId) });
     }
-    briefings.sort((a, b) => (a.desiredDate ?? "9").localeCompare(b.desiredDate ?? "9") || a.at - b.at);
+    briefings.sort((a, b) => (a.dueDate ?? a.desiredDate ?? "9").localeCompare(b.dueDate ?? b.desiredDate ?? "9") || a.at - b.at);
 
     const contents = [];
     for (const c of clients) {
       for (const item of await contentsInMonth(ctx, c._id, month)) {
-        contents.push({ ...(await toCard(ctx, item)), client: client(c._id), fromBriefing: !!item.briefingId });
+        contents.push({
+          ...(await toCard(ctx, item)),
+          client: client(c._id),
+          fromBriefing: !!item.briefingId,
+          dueDate: item.dueDate ?? null,
+          owner: item.owner ?? null,
+        });
       }
     }
     contents.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
 
-    return { clients: clients.map((c) => client(c._id)), briefings, contents };
+    const team = [...new Set([...TEAM, ...briefings.map((b) => b.owner), ...contents.map((c) => c.owner)].filter((o): o is string => !!o))];
+    return { clients: clients.map((c) => client(c._id)), briefings, contents, team };
   },
 });

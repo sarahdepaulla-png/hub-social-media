@@ -105,6 +105,9 @@ export default defineSchema({
     sourceIdeaId: v.optional(v.id("ideas")),
     sourceOpportunityId: v.optional(v.id("opportunities")),
     briefingId: v.optional(v.id("briefings")),
+    // Gestão interna do estúdio: com quem está e até quando.
+    owner: v.optional(v.string()),
+    dueDate: v.optional(v.string()), // AAAA-MM-DD
     importKey: v.optional(v.string()), // peças criadas pela fila de conteúdo (pasta conteudo/)
     deletedAt: v.optional(v.number()), // na lixeira desde; some de vez 15 dias depois
   })
@@ -208,6 +211,8 @@ export default defineSchema({
     platform: v.optional(platform),
     format: v.optional(format),
     desiredDate: v.optional(v.string()), // AAAA-MM-DD
+    dueDate: v.optional(v.string()), // prazo do estúdio para entregar (AAAA-MM-DD); só a admin vê
+    owner: v.optional(v.string()), // com quem está a demanda (Sarita, Mai, Leo...)
     objective: v.optional(v.string()),
     body: v.string(), // o briefing em si
     links: v.array(v.string()),

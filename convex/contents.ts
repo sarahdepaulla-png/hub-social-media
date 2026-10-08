@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { cleanDue, cleanOwner } from "./lib/team";
 import { canEditContent, requireAdmin, requireClientBySlug, requireContentAccess, requireContentEditor } from "./lib/access";
 import { displayName, logActivity } from "./lib/log";
 import { TRASH_MS, UNDO_WINDOW_MS, alive, toCard } from "./lib/content";
@@ -95,6 +96,9 @@ export const get = query({
         coverUrl: content.coverId ? await ctx.storage.getUrl(content.coverId) : (content.coverUrl ?? null),
         coverSource: content.coverSource ?? null,
         deletedAt: content.deletedAt ?? null,
+        // Gestão interna: só a admin vê.
+        dueDate: viewer.role === "admin" ? (content.dueDate ?? null) : null,
+        owner: viewer.role === "admin" ? (content.owner ?? null) : null,
       },
       briefing: brief && {
         _id: brief._id,
@@ -301,11 +305,20 @@ export const create = mutation({
     sourceOpportunityId: v.optional(v.id("opportunities")),
     // Briefing escrito junto, na mesma tela. Vazio = a peça nasce sem briefing.
     briefing: v.optional(v.object({ objective: v.optional(v.string()), body: v.string(), links: v.array(v.string()) })),
+    owner: v.optional(v.string()),
+    dueDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
     const { client } = await requireClientBySlug(ctx, args.clientSlug);
     const brief = args.briefing && args.briefing.body.trim() ? args.briefing : null;
+    let due: string | undefined;
+    try {
+      due = cleanDue(args.dueDate);
+    } catch {
+      throw new ConvexError("Prazo inválido.");
+    }
+    const owner = cleanOwner(args.owner);
     const briefLinks = (brief?.links ?? []).map((l) => l.trim()).filter(Boolean).slice(0, 10);
     for (const l of briefLinks) {
       if (!/^https?:\/\/\S+$/i.test(l)) throw new ConvexError(`Link precisa começar com https:// (${l.slice(0, 40)})`);
@@ -320,6 +333,8 @@ export const create = mutation({
       version: 1,
       sourceIdeaId: args.sourceIdeaId,
       sourceOpportunityId: args.sourceOpportunityId,
+      dueDate: due,
+      owner,
     });
     if (brief) {
       const briefingId = await ctx.db.insert("briefings", {
@@ -332,6 +347,8 @@ export const create = mutation({
         format: args.format,
         desiredDate: args.date,
         objective: brief.objective?.trim() || undefined,
+        dueDate: due,
+        owner,
         body: brief.body.trim().slice(0, 6000),
         links: briefLinks,
       });
@@ -379,6 +396,25 @@ export const update = mutation({
       before: Object.fromEntries(changed.map(([k]) => [k, content[k as keyof typeof content]])),
       after: Object.fromEntries(changed),
     });
+  },
+});
+
+/** Responsável e prazo da peça (e do briefing ligado a ela). */
+export const setTask = mutation({
+  args: { contentId: v.id("contents"), owner: v.optional(v.string()), dueDate: v.optional(v.string()) },
+  handler: async (ctx, { contentId, owner, dueDate }) => {
+    await requireAdmin(ctx);
+    const content = await ctx.db.get(contentId);
+    if (!content) throw new ConvexError("Conteúdo não encontrado.");
+    let due: string | undefined;
+    try {
+      due = cleanDue(dueDate);
+    } catch {
+      throw new ConvexError("Prazo inválido.");
+    }
+    const patch = { owner: cleanOwner(owner), dueDate: due };
+    await ctx.db.patch(contentId, patch);
+    if (content.briefingId && (await ctx.db.get(content.briefingId))) await ctx.db.patch(content.briefingId, patch);
   },
 });
 

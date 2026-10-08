@@ -30,6 +30,7 @@ import type * as lib_content from "../lib/content.js";
 import type * as lib_log from "../lib/log.js";
 import type * as lib_opportunities from "../lib/opportunities.js";
 import type * as lib_preview from "../lib/preview.js";
+import type * as lib_team from "../lib/team.js";
 import type * as mailer from "../mailer.js";
 import type * as media from "../media.js";
 import type * as opportunities from "../opportunities.js";
@@ -38,6 +39,7 @@ import type * as pautas from "../pautas.js";
 import type * as previews from "../previews.js";
 import type * as profile from "../profile.js";
 import type * as seed from "../seed.js";
+import type * as team from "../team.js";
 import type * as viewer from "../viewer.js";
 
   /**
@@ -70,6 +72,7 @@ import type * as viewer from "../viewer.js";
 "lib/log": typeof lib_log,
 "lib/opportunities": typeof lib_opportunities,
 "lib/preview": typeof lib_preview,
+"lib/team": typeof lib_team,
 "mailer": typeof mailer,
 "media": typeof media,
 "opportunities": typeof opportunities,
@@ -78,6 +81,7 @@ import type * as viewer from "../viewer.js";
 "previews": typeof previews,
 "profile": typeof profile,
 "seed": typeof seed,
+"team": typeof team,
 "viewer": typeof viewer,
   }>;
   export declare const api: FilterApi<typeof fullApi, FunctionReference<any, "public">>;

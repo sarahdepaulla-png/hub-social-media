@@ -10,6 +10,7 @@ import { Loading, SelectionBox, StatusTag, buttonClass } from "@/components/bran
 import { BriefingForm, Step, field } from "@/components/briefing/BriefingForm";
 import { errorText } from "@/components/content/DecisionSheet";
 import { useWorkspace } from "@/components/WorkspaceShell";
+import { DueBadge, OwnerBadge } from "@/components/Task";
 import { longDate, stamp, todayISO } from "@/lib/dates";
 import { BRIEF_STATUS, FORMAT, PLATFORM, type Format, type Platform } from "@/lib/labels";
 
@@ -85,6 +86,7 @@ function BriefingView() {
   const params = useSearchParams();
   const router = useRouter();
   const b = useQuery(api.briefings.get, { briefingId });
+  const team = useQuery(api.team.list, ws.viewerRole === "admin" ? {} : "skip");
   const update = useMutation(api.briefings.update);
   const archive = useMutation(api.briefings.archive);
   const remove = useMutation(api.briefings.remove);
@@ -119,6 +121,12 @@ function BriefingView() {
         <span className="text-sm text-texto-2">
           Briefing aberto por {b.authorName}, {stamp(b.at)}
         </span>
+        {admin && (b.owner || b.dueDate) && (
+          <span className="flex flex-wrap items-center gap-2">
+            <OwnerBadge owner={b.owner} />
+            <DueBadge due={b.dueDate} done={b.content?.status === "publicado" || b.content?.status === "aprovado" || b.content?.status === "agendado"} />
+          </span>
+        )}
         {params.get("enviado") && !admin && b.status === "novo" && (
           <SelectionBox className="ml-1.5 mt-2 self-start px-3.5 py-2.5 text-base">Enviado. O estúdio já recebeu.</SelectionBox>
         )}
@@ -140,11 +148,14 @@ function BriefingView() {
 
       {editing ? (
         <BriefingForm
+          team={admin ? (team ?? []) : undefined}
           initial={{
             title: b.title,
             platform: b.platform ?? undefined,
             format: b.format ?? undefined,
             desiredDate: b.desiredDate ?? undefined,
+            dueDate: b.dueDate ?? undefined,
+            owner: b.owner ?? undefined,
             objective: b.objective ?? undefined,
             body: b.body,
             links: b.links,

@@ -3,6 +3,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { buttonClass } from "@/components/brand";
 import { errorText } from "@/components/content/DecisionSheet";
+import { TaskFields } from "@/components/Task";
 import { FORMAT, PLATFORM, type Format, type Platform } from "@/lib/labels";
 
 export const field = "min-h-12 w-full border-[1.5px] border-campo bg-white px-3 text-base font-normal text-vinho";
@@ -12,6 +13,8 @@ export type BriefingValues = {
   platform?: Platform;
   format?: Format;
   desiredDate?: string;
+  dueDate?: string;
+  owner?: string;
   objective?: string;
   body: string;
   links: string[];
@@ -44,7 +47,10 @@ export function BriefingForm({
   pendingLabel,
   onSubmit,
   onCancel,
+  team,
 }: {
+  /** Só para a admin: mostra "com quem está" e prazo. */
+  team?: string[];
   initial?: Partial<BriefingValues>;
   submitLabel: string;
   pendingLabel: string;
@@ -67,6 +73,7 @@ export function BriefingForm({
         platform: (text("platform") as Platform | undefined) ?? undefined,
         format: (text("format") as Format | undefined) ?? undefined,
         desiredDate: text("desiredDate"),
+        ...(team ? { dueDate: text("dueDate"), owner: text("owner") } : {}),
         objective: text("objective"),
         body: String(d.get("body") ?? ""),
         links: links.map((l) => l.trim()).filter(Boolean),
@@ -108,6 +115,7 @@ export function BriefingForm({
             <input name="desiredDate" type="date" defaultValue={initial?.desiredDate ?? ""} className={field} />
           </label>
         </div>
+        {team && <TaskFields team={team} owner={initial?.owner} dueDate={initial?.dueDate} id="briefing" />}
       </Step>
 
       <Step n={2} title="Briefing" hint="O que precisa ser dito, para quem, em que tom e o que não pode faltar (ou o que evitar).">

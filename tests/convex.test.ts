@@ -749,3 +749,37 @@ describe("edição pela equipe da cliente", () => {
     await expect(save(biaUser, biaContent)).rejects.toThrow(/administradora/);
   });
 });
+
+describe("responsável e prazo", () => {
+  test("ficam no briefing e na peça, só para o estúdio", async () => {
+    const { as, admin, liliUser } = await setup();
+    // Cliente não consegue definir prazo nem responsável.
+    const fromClient = await as(liliUser).mutation(api.briefings.create, { slug: "lili", title: "Pedido", body: "Algo", links: [], owner: "Mai", dueDate: "2026-10-10" });
+    expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: null, dueDate: null });
+
+    await as(admin).mutation(api.briefings.update, { briefingId: fromClient, title: "Pedido", body: "Algo", links: [], owner: "mai", dueDate: "2026-10-10" });
+    expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: "Mai", dueDate: "2026-10-10" });
+    expect(await as(liliUser).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: null, dueDate: null });
+    // Cliente edita o texto e não apaga o que o estúdio definiu.
+    await as(liliUser).mutation(api.briefings.update, { briefingId: fromClient, title: "Pedido 2", body: "Algo", links: [] });
+    expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: "Mai", dueDate: "2026-10-10" });
+
+    // Começar a criação leva para a peça.
+    const contentId = await as(admin).mutation(api.briefings.start, { briefingId: fromClient, date: "2026-10-14", platform: "instagram", format: "reels" });
+    expect((await as(admin).query(api.contents.get, { contentId })).content).toMatchObject({ owner: "Mai", dueDate: "2026-10-10" });
+
+    // Trocar na ficha atualiza peça e briefing.
+    await as(admin).mutation(api.contents.setTask, { contentId, owner: "Leo", dueDate: "2026-10-12" });
+    expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: "Leo", dueDate: "2026-10-12" });
+    await expect(as(liliUser).mutation(api.contents.setTask, { contentId, owner: "Eu" })).rejects.toThrow(/administradora/);
+    await expect(as(admin).mutation(api.contents.setTask, { contentId, dueDate: "amanhã" })).rejects.toThrow(/Prazo/);
+
+    // Novo conteúdo com responsável e prazo direto.
+    const direct = await as(admin).mutation(api.contents.create, { clientSlug: "lili", date: "2026-10-20", title: "X", platform: "instagram", format: "carrossel", owner: "Sarita", dueDate: "2026-10-16" });
+    const pipe = await as(admin).query(api.briefings.pipeline, { month: "2026-10" });
+    expect(pipe.contents.find((c) => c._id === direct)).toMatchObject({ owner: "Sarita", dueDate: "2026-10-16" });
+    expect(pipe.team.slice(0, 3)).toEqual(["Sarita", "Mai", "Leo"]);
+    expect((await as(liliUser).query(api.contents.get, { contentId: direct })).content).toMatchObject({ owner: null, dueDate: null });
+    expect(await as(admin).query(api.team.list, {})).toEqual(["Sarita", "Mai", "Leo"]);
+  });
+});

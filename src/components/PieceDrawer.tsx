@@ -1,19 +1,68 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "convex/react";
-import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Loading, buttonClass } from "@/components/brand";
 import { StatusMenu } from "@/components/StatusMenu";
+import { DueBadge, OwnerBadge, TaskFields } from "@/components/Task";
 import { TrashButton } from "@/components/Trash";
 import { CaptionPicker } from "@/components/content/CaptionPicker";
+import { errorText } from "@/components/content/DecisionSheet";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { longDate, stamp } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
 
 type Tab = "briefing" | "legenda" | "ajustes" | "historico";
+
+/** Com quem está e prazo: mostra os selos e abre a edição num toque. */
+function TaskEditor({ contentId, owner, dueDate, done }: { contentId: Id<"contents">; owner: string | null; dueDate: string | null; done: boolean }) {
+  const team = useQuery(api.team.list, {});
+  const setTask = useMutation(api.contents.setTask);
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!open) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <OwnerBadge owner={owner} />
+        <DueBadge due={dueDate} done={done} />
+        <button type="button" onClick={() => setOpen(true)} className="min-h-9 text-[13px] font-semibold text-rosa-forte">
+          {owner || dueDate ? "Mudar responsável ou prazo" : "Definir responsável e prazo"}
+        </button>
+      </div>
+    );
+  }
+
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const d = new FormData(e.currentTarget);
+    setError(null);
+    try {
+      await setTask({
+        contentId,
+        owner: String(d.get("owner") ?? "").trim() || undefined,
+        dueDate: String(d.get("dueDate") ?? "").trim() || undefined,
+      });
+      setOpen(false);
+    } catch (err) {
+      setError(errorText(err));
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-2">
+      <TaskFields team={team ?? []} owner={owner} dueDate={dueDate} id="ficha" />
+      {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" className={`${buttonClass.primary} min-h-10 px-4 text-sm`}>Salvar</button>
+        <button type="button" onClick={() => setOpen(false)} className="min-h-10 px-3 text-sm font-semibold text-texto-2">Cancelar</button>
+      </div>
+    </form>
+  );
+}
 
 /**
  * Ficha da peça para o estúdio: briefing, legendas, ajustes e histórico num
@@ -55,6 +104,13 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
             {content.time ? `, ${content.time}` : ""}. {PLATFORM[content.platform]}, {FORMAT[content.format].toLowerCase()}
           </span>
           <StatusMenu contentId={contentId} status={content.status} editable />
+          <TaskEditor
+            key={`${content.owner}-${content.dueDate}`}
+            contentId={contentId}
+            owner={content.owner}
+            dueDate={content.dueDate}
+            done={["aprovado", "agendado", "publicado"].includes(content.status)}
+          />
         </header>
 
         {media.length === 0 ? (

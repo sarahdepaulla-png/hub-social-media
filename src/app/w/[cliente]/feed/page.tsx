@@ -102,7 +102,7 @@ export default function FeedPage() {
       <header className="flex flex-col gap-2">
         <h1 className="titulo text-5xl md:text-6xl">Feed</h1>
         <p className="text-base text-texto-2">
-          {canManage ? "Toque no + para colocar o próximo post e veja como fica o perfil. Toque num post para mudar o tipo, a ordem ou tirar." : "Uma prévia de como o seu perfil vai ficar com os próximos posts."}
+          {canManage ? "Toque no + ou copie uma imagem e aperte Ctrl+V para colocar o próximo post. Toque num post para mudar o tipo, a ordem ou tirar." : "Uma prévia de como o seu perfil vai ficar com os próximos posts."}
         </p>
       </header>
 
@@ -266,12 +266,61 @@ function AddTile({ slug }: { slug: string }) {
     }
   };
 
-  const choose = (list: FileList | null) => {
+  const choose = (list: FileList | File[] | null) => {
     const files = Array.from(list ?? []).filter((f) => isImageFile(f) || isVideoFile(f));
     if (!files.length) return;
     // Várias fotos (sem vídeo): pergunta se é um carrossel ou posts separados.
     if (files.length > 1 && files.every(isImageFile)) setPicked(files);
     else void send(files, false);
+  };
+
+  // Ctrl+V em qualquer lugar da página: a imagem copiada entra no topo do feed.
+  const chooseRef = useRef(choose);
+  useEffect(() => {
+    chooseRef.current = choose;
+  });
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.closest("input, textarea, [contenteditable]") || target.closest("dialog"))) return;
+      const files = Array.from(e.clipboardData?.files ?? []);
+      if (!files.length) return;
+      e.preventDefault();
+      chooseRef.current(files.map((f, i) => (f.name && f.name !== "image.png" ? f : new File([f], `colado-${Date.now()}-${i}.png`, { type: f.type || "image/png" }))));
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!e.dataTransfer?.files.length) return;
+      e.preventDefault();
+      chooseRef.current(e.dataTransfer.files);
+    };
+    const onDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes("Files")) e.preventDefault();
+    };
+    window.addEventListener("paste", onPaste);
+    window.addEventListener("drop", onDrop);
+    window.addEventListener("dragover", onDragOver);
+    return () => {
+      window.removeEventListener("paste", onPaste);
+      window.removeEventListener("drop", onDrop);
+      window.removeEventListener("dragover", onDragOver);
+    };
+  }, []);
+
+  /** Botão "Colar": lê a imagem copiada (o navegador pede permissão na primeira vez). */
+  const pasteFromButton = async () => {
+    setError(null);
+    try {
+      const items = await navigator.clipboard.read();
+      const files: File[] = [];
+      for (const [i, item] of items.entries()) {
+        const type = item.types.find((t) => t.startsWith("image/"));
+        if (type) files.push(new File([await item.getType(type)], `colado-${Date.now()}-${i}.${type.split("/")[1] || "png"}`, { type }));
+      }
+      if (files.length) choose(files);
+      else setError("Não tem imagem copiada. Copie a imagem e tente de novo.");
+    } catch {
+      setError("O navegador não deixou colar por aqui. Use Ctrl+V na página.");
+    }
   };
 
   return (
@@ -290,6 +339,15 @@ function AddTile({ slug }: { slug: string }) {
         )}
         <input ref={input} type="file" multiple accept="image/*,video/*" className="sr-only" onChange={(e) => choose(e.target.files)} />
       </label>
+      {!progress && (
+        <button
+          type="button"
+          onClick={() => void pasteFromButton()}
+          className="absolute inset-x-2 bottom-2 min-h-8 rounded-full bg-white text-[12px] font-semibold text-[#0095F6] shadow-[0_1px_3px_rgba(0,0,0,0.15)] hover:bg-[#F0F8FF]"
+        >
+          Colar
+        </button>
+      )}
       {error && <span role="alert" className="absolute inset-x-1 bottom-1 rounded bg-white/95 p-1 text-[11px] font-semibold text-st-ajuste-texto">{error}</span>}
       {picked && (
         <Sheet title={`${picked.length} fotos escolhidas`} onClose={() => setPicked(null)}>

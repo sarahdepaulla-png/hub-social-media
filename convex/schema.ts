@@ -358,5 +358,9 @@ export default defineSchema({
     kind: v.optional(v.union(v.literal("post"), v.literal("carrossel"), v.literal("reels"))),
     extraIds: v.optional(v.array(v.id("_storage"))), // demais cards do carrossel
     isVideo: v.optional(v.boolean()),
+    // Enquadramento na grade: zoom (1 = original) e ponto focal em % (50/50 = centro).
+    zoom: v.optional(v.number()),
+    focusX: v.optional(v.number()),
+    focusY: v.optional(v.number()),
   }).index("by_client", ["clientId"]),
 });

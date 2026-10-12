@@ -864,6 +864,16 @@ describe("prévia do feed", () => {
     await as(admin).mutation(api.feed.removePost, { postId: posts[2]._id });
     expect((await as(admin).query(api.feed.get, { slug: "lili" })).posts).toHaveLength(2);
 
+    // Arrastar: nova ordem inteira; enquadramento com limites.
+    const two = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    await as(admin).mutation(api.feed.reorder, { slug: "lili", ids: [two[1]._id, two[0]._id] });
+    await expect(as(liliUser).mutation(api.feed.reorder, { slug: "lili", ids: [two[0]._id] })).rejects.toThrow(/administradora/);
+    await as(admin).mutation(api.feed.setFrame, { postId: two[0]._id, zoom: 9, focusX: -5, focusY: 30 });
+    const after = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    expect(after.map((p) => p._id)).toEqual([two[1]._id, two[0]._id]);
+    expect(after[1]).toMatchObject({ zoom: 3, focusX: 0, focusY: 30 });
+    expect(after[0]).toMatchObject({ zoom: 1, focusX: 50, focusY: 50 });
+
     // Editar perfil.
     await as(admin).mutation(api.feed.updateProfile, { slug: "lili", handle: "https://instagram.com/liliexplica/", name: "Lili Explica", bio: "Fisio", link: "", posts: "", followers: "12,3 mil", following: "512" });
     const prof = (await as(liliUser).query(api.feed.get, { slug: "lili" })).profile;

@@ -51,6 +51,9 @@ export const get = query({
           _id: p._id,
           kind: p.kind ?? "post",
           isVideo: p.isVideo === true,
+          zoom: p.zoom ?? 1,
+          focusX: p.focusX ?? 50,
+          focusY: p.focusY ?? 50,
           url: await ctx.storage.getUrl(p.storageId),
           extras: await Promise.all((p.extraIds ?? []).map((id) => ctx.storage.getUrl(id))),
         })),
@@ -144,6 +147,32 @@ export const movePost = mutation({
     if (i < 0 || j < 0 || j >= list.length) return;
     [list[i], list[j]] = [list[j], list[i]];
     await renumber(ctx, list.map((p) => p._id));
+  },
+});
+
+/** Nova ordem depois de arrastar: a lista inteira, de cima para baixo. */
+export const reorder = mutation({
+  args: { slug: v.string(), ids: v.array(v.id("feedPosts")) },
+  handler: async (ctx, { slug, ids }) => {
+    await requireAdmin(ctx);
+    const { client } = await requireClientBySlug(ctx, slug);
+    const current = await ordered(ctx, client._id);
+    const known = new Set(current.map((p) => p._id));
+    const next = ids.filter((id) => known.has(id));
+    // O que não veio na lista (alguém acrescentou no meio tempo) vai para o fim.
+    for (const p of current) if (!next.includes(p._id)) next.push(p._id);
+    await renumber(ctx, next);
+  },
+});
+
+/** Enquadramento da imagem na grade. */
+export const setFrame = mutation({
+  args: { postId: v.id("feedPosts"), zoom: v.number(), focusX: v.number(), focusY: v.number() },
+  handler: async (ctx, { postId, zoom, focusX, focusY }) => {
+    await requireAdmin(ctx);
+    if (!(await ctx.db.get(postId))) return;
+    const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
+    await ctx.db.patch(postId, { zoom: clamp(zoom, 1, 3), focusX: clamp(focusX, 0, 100), focusY: clamp(focusY, 0, 100) });
   },
 });
 

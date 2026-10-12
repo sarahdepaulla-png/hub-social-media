@@ -2,6 +2,19 @@
 
 import Link from "next/link";
 import { useAction, useMutation, useQuery } from "convex/react";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@convex/_generated/api";
@@ -19,6 +32,7 @@ type Profile = Feed["profile"];
 type Kind = "post" | "carrossel" | "reels";
 
 const KIND_LABEL: Record<Kind, string> = { post: "Post", carrossel: "Carrossel", reels: "Reels" };
+const SIZES = [340, 400, 470, 560, 680];
 const isVideoFile = (f: File) => f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(f.name);
 const isImageFile = (f: File) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name);
 
@@ -49,12 +63,18 @@ function KindIcon({ kind }: { kind: Kind }) {
 }
 
 /** Imagem ou primeiro quadro do vídeo. */
-function Media({ url, video, className = "size-full object-cover" }: { url: string | null; video: boolean; className?: string }) {
+type Frame = { zoom: number; focusX: number; focusY: number };
+
+/** Imagem ou primeiro quadro do vídeo, com o enquadramento escolhido. */
+function Media({ url, video, frame, className = "size-full object-cover" }: { url: string | null; video: boolean; frame?: Frame; className?: string }) {
   if (!url) return null;
+  const style = frame
+    ? { objectPosition: `${frame.focusX}% ${frame.focusY}%`, transform: frame.zoom !== 1 ? `scale(${frame.zoom})` : undefined, transformOrigin: `${frame.focusX}% ${frame.focusY}%` }
+    : undefined;
   return video ? (
-    <video src={`${url}#t=0.1`} muted playsInline preload="metadata" className={className} />
+    <video src={`${url}#t=0.1`} muted playsInline preload="metadata" draggable={false} className={className} style={style} />
   ) : (
-    <img src={url} alt="" className={className} />
+    <img src={url} alt="" draggable={false} className={className} style={style} />
   );
 }
 
@@ -91,6 +111,7 @@ export default function FeedPage() {
   const [clean, setClean] = useState(false);
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState<Post | null>(null);
+  const [size, setSize] = useState(2);
 
   if (data === undefined) return <Loading />;
   const { profile, posts, pieces, canManage, showPlanned } = data;
@@ -102,12 +123,17 @@ export default function FeedPage() {
       <header className="flex flex-col gap-2">
         <h1 className="titulo text-5xl md:text-6xl">Feed</h1>
         <p className="text-base text-texto-2">
-          {canManage ? "Toque no +, cole o link do post ou copie uma imagem e aperte Ctrl+V para colocar o próximo post. Toque num post para mudar o tipo, a ordem ou tirar." : "Uma prévia de como o seu perfil vai ficar com os próximos posts."}
+          {canManage ? "Use o + azul, cole o link do post ou aperte Ctrl+V com uma imagem copiada. Arraste os posts para mudar a ordem; toque num post para enquadrar, mudar o tipo ou tirar." : "Uma prévia de como o seu perfil vai ficar com os próximos posts."}
         </p>
       </header>
 
       <div className="flex flex-wrap gap-2">
         <Toggle on={clean} onClick={() => setClean((c) => !c)}>Ver limpo, como no Instagram</Toggle>
+        <span className="inline-flex items-center rounded-full border-[1.5px] border-campo bg-white" role="group" aria-label="Tamanho da prévia">
+          <button type="button" onClick={() => setSize((n) => Math.max(0, n - 1))} disabled={size === 0} aria-label="Diminuir a prévia" className="flex size-10 items-center justify-center rounded-full text-lg font-bold disabled:opacity-30">−</button>
+          <span className="px-1 text-sm font-semibold">Tamanho</span>
+          <button type="button" onClick={() => setSize((n) => Math.min(SIZES.length - 1, n + 1))} disabled={size === SIZES.length - 1} aria-label="Aumentar a prévia" className="flex size-10 items-center justify-center rounded-full text-lg font-bold disabled:opacity-30">+</button>
+        </span>
         {canManage && (
           <Toggle on={showPlanned} onClick={() => void setShowPlanned({ slug: ws.slug, value: !showPlanned })}>
             Mostrar peças do calendário
@@ -115,25 +141,34 @@ export default function FeedPage() {
         )}
       </div>
 
-      <section aria-label={`Prévia do perfil @${profile.handle}`} className="mx-auto w-full max-w-[470px] overflow-hidden rounded-[28px] border border-[#DBDBDB] bg-white text-black shadow-[0_10px_40px_rgba(92,15,49,0.10)]">
+      <section
+        aria-label={`Prévia do perfil @${profile.handle}`}
+        style={{ maxWidth: SIZES[size] }}
+        className="mx-auto w-full overflow-hidden rounded-[28px] border border-[#DBDBDB] bg-white text-black shadow-[0_10px_40px_rgba(92,15,49,0.10)]">
         <ProfileHeader profile={profile} count={counted} canManage={canManage} onEdit={() => setEditing(true)} />
 
-        {canManage && <LinkBar slug={ws.slug} />}
-        <ol className="grid grid-cols-3 gap-[2px]">
-          {canManage && <AddTile slug={ws.slug} />}
-          {pieces.map((p) => (
-            <PieceTile key={p._id} p={p} slug={ws.slug} clean={clean} accent={profile.accentColor} />
-          ))}
-          {posts.map((p) => (
-            <li key={p._id} className="relative aspect-[3/4] overflow-hidden bg-[#EFEFEF]">
-              <button type="button" onClick={() => setOpen(p)} className="block size-full" aria-label={`Abrir ${KIND_LABEL[p.kind].toLowerCase()}`}>
-                <Media url={p.url} video={p.isVideo} />
-                <KindIcon kind={p.kind} />
-              </button>
-            </li>
-          ))}
-          {!canManage && counted === 0 && <li className="col-span-3 px-6 py-14 text-center text-[14px] text-[#737373]">Ainda não tem posts na prévia.</li>}
-        </ol>
+        {canManage && (
+          <div className="flex items-start gap-2 border-t border-[#EFEFEF] px-3 py-2.5">
+            <AddButtons slug={ws.slug} />
+            <LinkBar slug={ws.slug} />
+          </div>
+        )}
+        {counted > 0 && (
+          <PostGrid
+            slug={ws.slug}
+            posts={posts}
+            canManage={canManage}
+            onOpen={setOpen}
+            before={pieces.map((p) => (
+              <PieceTile key={p._id} p={p} slug={ws.slug} clean={clean} accent={profile.accentColor} />
+            ))}
+          />
+        )}
+        {counted === 0 && (
+          <p className="px-6 py-14 text-center text-[14px] text-[#737373]">
+            {canManage ? "Toque no + azul, cole um link ou aperte Ctrl+V com uma imagem copiada." : "Ainda não tem posts na prévia."}
+          </p>
+        )}
 
         {canManage && <AddOlder slug={ws.slug} />}
       </section>
@@ -141,6 +176,81 @@ export default function FeedPage() {
       {editing && <EditProfile slug={ws.slug} clientId={data.clientId} profile={profile} onClose={() => setEditing(false)} />}
       {current && <PostSheet post={current} index={posts.indexOf(current)} total={posts.length} canManage={canManage} onClose={() => setOpen(null)} />}
     </main>
+  );
+}
+
+/** Grade de posts: arrasta para mudar a ordem (segura um instante no celular). */
+function PostGrid({ slug, posts, canManage, onOpen, before }: { slug: string; posts: Post[]; canManage: boolean; onOpen: (p: Post) => void; before: ReactNode }) {
+  const reorder = useMutation(api.feed.reorder);
+  const [order, setOrder] = useState<Id<"feedPosts">[] | null>(null);
+  const [active, setActive] = useState<Id<"feedPosts"> | null>(null);
+  const serverIds = posts.map((p) => p._id);
+  // A ordem arrastada vale até o servidor confirmar (ou mudar a lista).
+  const ids = order && order.length === serverIds.length && order.every((id) => serverIds.includes(id)) ? order : serverIds;
+  const byId = new Map(posts.map((p) => [p._id, p]));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const end = (e: DragEndEvent) => {
+    setActive(null);
+    if (!e.over || e.active.id === e.over.id) return;
+    const from = ids.indexOf(e.active.id as Id<"feedPosts">);
+    const to = ids.indexOf(e.over.id as Id<"feedPosts">);
+    if (from < 0 || to < 0) return;
+    const next = arrayMove(ids, from, to);
+    setOrder(next);
+    void reorder({ slug, ids: next }).catch(() => setOrder(null));
+  };
+
+  const dragged = active ? byId.get(active) : null;
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={(e) => setActive(e.active.id as Id<"feedPosts">)}
+      onDragCancel={() => setActive(null)}
+      onDragEnd={end}
+    >
+      <SortableContext items={ids} strategy={rectSortingStrategy}>
+        <ol className="grid grid-cols-3 gap-[2px]">
+          {before}
+          {ids.map((id) => {
+            const p = byId.get(id);
+            return p ? <SortablePost key={id} post={p} canManage={canManage} onOpen={onOpen} /> : null;
+          })}
+        </ol>
+      </SortableContext>
+      <DragOverlay dropAnimation={{ duration: 160, easing: "ease-out" }}>
+        {dragged ? (
+          <div className="relative aspect-[3/4] w-full scale-105 overflow-hidden rounded-sm bg-[#EFEFEF] shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+            <Media url={dragged.url} video={dragged.isVideo} frame={dragged} />
+            <KindIcon kind={dragged.kind} />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+function SortablePost({ post, canManage, onOpen }: { post: Post; canManage: boolean; onOpen: (p: Post) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: post._id, disabled: !canManage });
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1 }}
+      className={`relative aspect-[3/4] overflow-hidden bg-[#EFEFEF] ${canManage ? "cursor-grab touch-manipulation select-none active:cursor-grabbing" : ""}`}
+      {...attributes}
+      {...listeners}
+      aria-roledescription={canManage ? "post arrastável" : undefined}
+    >
+      <button type="button" onClick={() => onOpen(post)} className="block size-full" aria-label={`Abrir ${KIND_LABEL[post.kind].toLowerCase()}`}>
+        <Media url={post.url} video={post.isVideo} frame={post} />
+        <KindIcon kind={post.kind} />
+      </button>
+    </li>
   );
 }
 
@@ -240,8 +350,8 @@ function useUpload() {
   };
 }
 
-/** O "+" do começo da grade: o próximo post entra no topo do feed. */
-function AddTile({ slug }: { slug: string }) {
+/** Botões "+" e "Colar": o próximo post entra no topo do feed. */
+function AddButtons({ slug }: { slug: string }) {
   const addPosts = useMutation(api.feed.addPosts);
   const upload = useUpload();
   const input = useRef<HTMLInputElement>(null);
@@ -333,31 +443,25 @@ function AddTile({ slug }: { slug: string }) {
   };
 
   return (
-    <li className="relative aspect-[3/4]">
-      <label className={`flex size-full cursor-pointer flex-col items-center justify-center gap-1.5 border-2 border-dashed border-[#C7C7C7] bg-[#FAFAFA] text-[#737373] hover:border-[#0095F6] hover:text-[#0095F6] ${progress ? "pointer-events-none" : ""}`}>
-        {progress ? (
-          <span className="text-[13px] font-semibold">Enviando {progress}</span>
-        ) : (
-          <>
-            <svg viewBox="0 0 24 24" className="size-9 fill-none stroke-current stroke-[1.6]" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 7.5v9M7.5 12h9" />
-            </svg>
-            <span className="text-[13px] font-semibold">Adicionar</span>
-          </>
-        )}
+    <div className="relative flex shrink-0 items-center gap-1.5">
+      <label
+        title="Adicionar fotos ou vídeo no topo"
+        className={`flex size-10 cursor-pointer items-center justify-center rounded-full bg-[#0095F6] text-white hover:bg-[#1877F2] ${progress ? "pointer-events-none opacity-60" : ""}`}
+      >
+        <span className="sr-only">Adicionar fotos ou vídeo</span>
+        <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-[2.4]" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
         <input ref={input} type="file" multiple accept="image/*,video/*" className="sr-only" onChange={(e) => choose(e.target.files)} />
       </label>
-      {!progress && (
-        <button
-          type="button"
-          onClick={() => void pasteFromButton()}
-          className="absolute inset-x-2 bottom-2 min-h-8 rounded-full bg-white text-[12px] font-semibold text-[#0095F6] shadow-[0_1px_3px_rgba(0,0,0,0.15)] hover:bg-[#F0F8FF]"
-        >
-          Colar
-        </button>
-      )}
-      {error && <span role="alert" className="absolute inset-x-1 bottom-1 rounded bg-white/95 p-1 text-[11px] font-semibold text-st-ajuste-texto">{error}</span>}
+      <button
+        type="button"
+        onClick={() => void pasteFromButton()}
+        disabled={!!progress}
+        title="Colar a imagem copiada"
+        className="min-h-10 rounded-full border border-[#DBDBDB] bg-white px-3 text-[13px] font-semibold hover:bg-[#FAFAFA] disabled:opacity-50"
+      >
+        {progress ? `Enviando ${progress}` : "Colar"}
+      </button>
+      {error && <span role="alert" className="absolute left-0 top-full z-10 mt-1 w-64 rounded-lg bg-white p-2 text-[12px] font-semibold text-st-ajuste-texto shadow-md">{error}</span>}
       {picked && (
         <Sheet title={`${picked.length} fotos escolhidas`} onClose={() => setPicked(null)}>
           <p className="text-[15px]">Como elas entram no feed?</p>
@@ -369,7 +473,7 @@ function AddTile({ slug }: { slug: string }) {
           </button>
         </Sheet>
       )}
-    </li>
+    </div>
   );
 }
 
@@ -414,7 +518,7 @@ function LinkBar({ slug }: { slug: string }) {
         e.preventDefault();
         void send(url);
       }}
-      className="flex flex-col gap-1.5 border-t border-[#EFEFEF] px-3 py-3"
+      className="flex min-w-0 flex-1 flex-col gap-1"
     >
       <div className="flex gap-2">
         <label className="sr-only" htmlFor="feed-link">Link do post</label>
@@ -422,7 +526,7 @@ function LinkBar({ slug }: { slug: string }) {
           id="feed-link"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Cole o link do post (Instagram, TikTok, Drive...)"
+          placeholder="Ou cole o link do post"
           inputMode="url"
           className="min-h-10 min-w-0 flex-1 rounded-lg border border-[#DBDBDB] bg-[#FAFAFA] px-3 text-[14px] text-black"
         />
@@ -528,6 +632,7 @@ function PostSheet({ post, index, total, canManage, onClose }: { post: Post; ind
 
       {canManage && (
         <>
+          <FrameEditor key={post._id} post={post} />
           <div className="flex flex-col gap-2">
             <span className="text-sm font-semibold">Tipo</span>
             <div role="radiogroup" aria-label="Tipo do post" className="grid grid-cols-3 gap-2">
@@ -564,6 +669,64 @@ function PostSheet({ post, index, total, canManage, onClose }: { post: Post; ind
         </>
       )}
     </Sheet>
+  );
+}
+
+/** Enquadrar na grade: arrasta a imagem e usa − e + para o zoom. Salva sozinho. */
+function FrameEditor({ post }: { post: Post }) {
+  const setFrame = useMutation(api.feed.setFrame);
+  const [f, setF] = useState<Frame>({ zoom: post.zoom, focusX: post.focusX, focusY: post.focusY });
+  const drag = useRef<{ x: number; y: number; start: Frame; w: number; h: number } | null>(null);
+  const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+  const save = (next: Frame) => {
+    setF(next);
+    void setFrame({ postId: post._id, ...next });
+  };
+  const zoomBy = (d: number) => save({ ...f, zoom: Math.round(clamp(f.zoom + d, 1, 3) * 100) / 100 });
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-semibold">Enquadrar na grade</span>
+      <div className="flex items-center gap-4">
+        <div
+          className="relative aspect-[3/4] w-32 shrink-0 cursor-move touch-none overflow-hidden rounded-md bg-[#EFEFEF] outline outline-2 outline-[#0095F6]"
+          onPointerDown={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            e.currentTarget.setPointerCapture(e.pointerId);
+            drag.current = { x: e.clientX, y: e.clientY, start: f, w: r.width, h: r.height };
+          }}
+          onPointerMove={(e) => {
+            const d = drag.current;
+            if (!d) return;
+            // Arrastar para a direita mostra mais da esquerda (o foco anda ao contrário).
+            const k = 120 / d.start.zoom;
+            setF({
+              ...d.start,
+              focusX: clamp(d.start.focusX - ((e.clientX - d.x) / d.w) * k, 0, 100),
+              focusY: clamp(d.start.focusY - ((e.clientY - d.y) / d.h) * k, 0, 100),
+            });
+          }}
+          onPointerUp={() => {
+            if (drag.current) save(f);
+            drag.current = null;
+          }}
+          aria-label="Arraste para enquadrar a imagem"
+        >
+          <Media url={post.url} video={post.isVideo} frame={f} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2" role="group" aria-label="Zoom">
+            <button type="button" onClick={() => zoomBy(-0.1)} disabled={f.zoom <= 1} aria-label="Menos zoom" className="flex size-11 items-center justify-center rounded-full bg-creme text-xl font-bold disabled:opacity-30">−</button>
+            <span className="w-12 text-center text-sm font-semibold">{Math.round(f.zoom * 100)}%</span>
+            <button type="button" onClick={() => zoomBy(0.1)} disabled={f.zoom >= 3} aria-label="Mais zoom" className="flex size-11 items-center justify-center rounded-full bg-creme text-xl font-bold disabled:opacity-30">+</button>
+          </div>
+          <button type="button" onClick={() => save({ zoom: 1, focusX: 50, focusY: 50 })} className="min-h-10 self-start text-sm font-semibold text-rosa-forte">
+            Voltar ao original
+          </button>
+          <span className="text-xs text-texto-2">Arraste a imagem para escolher o recorte.</span>
+        </div>
+      </div>
+    </div>
   );
 }
 

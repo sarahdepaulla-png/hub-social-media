@@ -837,3 +837,39 @@ describe("aviso de aprovação", () => {
     expect(many.subject).toBe("2 conteúdos para aprovar, Lili");
   });
 });
+
+describe("prévia do feed", () => {
+  test("peças planejadas em cima, sem stories nem ideias; prints embaixo e só a admin mexe", async () => {
+    const { t, as, admin, liliUser, lili } = await setup();
+    const feed = await as(liliUser).query(api.feed.get, { slug: "lili" });
+    expect(feed.canManage).toBe(false);
+    expect(feed.pieces.every((p) => p.format !== "stories" && p.status !== "ideia")).toBe(true);
+    const dates = feed.pieces.map((p) => p.date);
+    expect([...dates].sort().reverse()).toEqual(dates);
+
+    const ids = await t.run(async (ctx) => {
+      const a = await ctx.storage.store(new Blob(["a"]));
+      const b = await ctx.storage.store(new Blob(["b"]));
+      return [a, b];
+    });
+    await expect(as(liliUser).mutation(api.feed.addPosts, { slug: "lili", storageIds: ids })).rejects.toThrow(/administradora/);
+    await as(admin).mutation(api.feed.addPosts, { slug: "lili", storageIds: ids });
+    let posts = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    expect(posts).toHaveLength(2);
+    await as(admin).mutation(api.feed.movePost, { postId: posts[1]._id, direction: -1 });
+    await as(admin).mutation(api.feed.setKind, { postId: posts[0]._id, kind: "reels" });
+    const moved = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    expect(moved.map((p) => p._id)).toEqual([posts[1]._id, posts[0]._id]);
+    expect(moved[1].kind).toBe("reels");
+    await as(admin).mutation(api.feed.removePost, { postId: moved[0]._id });
+    posts = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    expect(posts).toHaveLength(1);
+
+    await as(admin).mutation(api.feed.setHandle, { slug: "lili", handle: "https://instagram.com/liliexplica/" });
+    expect((await as(liliUser).query(api.feed.get, { slug: "lili" })).client.handle).toBe("liliexplica");
+    await expect(as(admin).mutation(api.feed.setHandle, { slug: "lili", handle: "não vale" })).rejects.toThrow(/Instagram/);
+    // Outra cliente não vê.
+    expect(lili).toBeTruthy();
+    await expect(as(liliUser).query(api.feed.get, { slug: "bia" })).rejects.toThrow(/não encontrado/);
+  });
+});

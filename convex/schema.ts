@@ -87,6 +87,7 @@ export default defineSchema({
     // Avisos de conteúdo para aprovação.
     whatsapp: v.optional(v.string()), // só números, com DDI (5511999999999)
     notifyApproval: v.optional(v.boolean()), // e-mail automático; vazio = ligado
+    instagram: v.optional(v.string()), // @ do perfil, para a prévia do feed
   }).index("by_slug", ["slug"]),
 
   contents: defineTable({
@@ -336,5 +337,12 @@ export default defineSchema({
     sentAt: v.optional(v.number()),
     sentTo: v.optional(v.array(v.string())),
     error: v.optional(v.string()),
+  }).index("by_client", ["clientId"]),
+  // Posts que já estão no perfil (prints subidos pelo estúdio) para a prévia do feed.
+  feedPosts: defineTable({
+    clientId: v.id("clients"),
+    storageId: v.id("_storage"),
+    position: v.number(), // 1 = mais recente, logo abaixo das peças planejadas
+    kind: v.optional(v.union(v.literal("post"), v.literal("carrossel"), v.literal("reels"))),
   }).index("by_client", ["clientId"]),
 });

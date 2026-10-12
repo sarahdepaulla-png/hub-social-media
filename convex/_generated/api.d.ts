@@ -19,6 +19,7 @@ import type * as comments from "../comments.js";
 import type * as contents from "../contents.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
+import type * as feed from "../feed.js";
 import type * as http from "../http.js";
 import type * as ideas from "../ideas.js";
 import type * as imports from "../imports.js";
@@ -63,6 +64,7 @@ import type * as viewer from "../viewer.js";
 "contents": typeof contents,
 "crons": typeof crons,
 "dashboard": typeof dashboard,
+"feed": typeof feed,
 "http": typeof http,
 "ideas": typeof ideas,
 "imports": typeof imports,

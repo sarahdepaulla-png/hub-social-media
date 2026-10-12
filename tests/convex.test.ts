@@ -839,37 +839,42 @@ describe("aviso de aprovação", () => {
 });
 
 describe("prévia do feed", () => {
-  test("peças planejadas em cima, sem stories nem ideias; prints embaixo e só a admin mexe", async () => {
-    const { t, as, admin, liliUser, lili } = await setup();
-    const feed = await as(liliUser).query(api.feed.get, { slug: "lili" });
-    expect(feed.canManage).toBe(false);
-    expect(feed.pieces.every((p) => p.format !== "stories" && p.status !== "ideia")).toBe(true);
-    const dates = feed.pieces.map((p) => p.date);
-    expect([...dates].sort().reverse()).toEqual(dates);
+  test("+ põe no topo, carrossel e reels, perfil editável e só a admin mexe", async () => {
+    const { t, as, admin, liliUser } = await setup();
+    const empty = await as(liliUser).query(api.feed.get, { slug: "lili" });
+    expect(empty).toMatchObject({ canManage: false, showPlanned: false, pieces: [], posts: [] });
 
-    const ids = await t.run(async (ctx) => {
-      const a = await ctx.storage.store(new Blob(["a"]));
-      const b = await ctx.storage.store(new Blob(["b"]));
-      return [a, b];
-    });
-    await expect(as(liliUser).mutation(api.feed.addPosts, { slug: "lili", storageIds: ids })).rejects.toThrow(/administradora/);
-    await as(admin).mutation(api.feed.addPosts, { slug: "lili", storageIds: ids });
+    const files = await t.run(async (ctx) => Promise.all(["a", "b", "c", "d", "v"].map((x) => ctx.storage.store(new Blob([x])))));
+    const [a, b, c, d, vid] = files;
+    await expect(as(liliUser).mutation(api.feed.addPosts, { slug: "lili", where: "topo", items: [{ storageIds: [a], isVideo: false }] })).rejects.toThrow(/administradora/);
+
+    // Posts antigos no fim, depois o próximo post (carrossel) e um reels no topo.
+    await as(admin).mutation(api.feed.addPosts, { slug: "lili", where: "fim", items: [{ storageIds: [a], isVideo: false }] });
+    await as(admin).mutation(api.feed.addPosts, { slug: "lili", where: "topo", items: [{ storageIds: [b, c, d], isVideo: false }] });
+    await as(admin).mutation(api.feed.addPosts, { slug: "lili", where: "topo", items: [{ storageIds: [vid], isVideo: true }] });
     let posts = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
-    expect(posts).toHaveLength(2);
-    await as(admin).mutation(api.feed.movePost, { postId: posts[1]._id, direction: -1 });
-    await as(admin).mutation(api.feed.setKind, { postId: posts[0]._id, kind: "reels" });
-    const moved = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
-    expect(moved.map((p) => p._id)).toEqual([posts[1]._id, posts[0]._id]);
-    expect(moved[1].kind).toBe("reels");
-    await as(admin).mutation(api.feed.removePost, { postId: moved[0]._id });
-    posts = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
-    expect(posts).toHaveLength(1);
+    expect(posts.map((p) => p.kind)).toEqual(["reels", "carrossel", "post"]);
+    expect(posts[0].isVideo).toBe(true);
+    expect(posts[1].extras).toHaveLength(2);
 
-    await as(admin).mutation(api.feed.setHandle, { slug: "lili", handle: "https://instagram.com/liliexplica/" });
-    expect((await as(liliUser).query(api.feed.get, { slug: "lili" })).client.handle).toBe("liliexplica");
-    await expect(as(admin).mutation(api.feed.setHandle, { slug: "lili", handle: "não vale" })).rejects.toThrow(/Instagram/);
-    // Outra cliente não vê.
-    expect(lili).toBeTruthy();
+    await as(admin).mutation(api.feed.movePost, { postId: posts[2]._id, direction: -1 });
+    await as(admin).mutation(api.feed.setKind, { postId: posts[2]._id, kind: "carrossel" });
+    posts = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    expect(posts.map((p) => p.kind)).toEqual(["reels", "carrossel", "carrossel"]);
+    await as(admin).mutation(api.feed.removePost, { postId: posts[2]._id });
+    expect((await as(admin).query(api.feed.get, { slug: "lili" })).posts).toHaveLength(2);
+
+    // Editar perfil.
+    await as(admin).mutation(api.feed.updateProfile, { slug: "lili", handle: "https://instagram.com/liliexplica/", name: "Lili Explica", bio: "Fisio", link: "", posts: "", followers: "12,3 mil", following: "512" });
+    const prof = (await as(liliUser).query(api.feed.get, { slug: "lili" })).profile;
+    expect(prof).toMatchObject({ handle: "liliexplica", name: "Lili Explica", bio: "Fisio", followers: "12,3 mil", following: "512", posts: "" });
+    await expect(as(admin).mutation(api.feed.updateProfile, { slug: "lili", handle: "não vale", name: "", bio: "", link: "", posts: "", followers: "", following: "" })).rejects.toThrow(/Instagram/);
+
+    // Peças do calendário no topo, sem stories, ideias nem publicadas.
+    await as(admin).mutation(api.feed.setShowPlanned, { slug: "lili", value: true });
+    const planned = (await as(liliUser).query(api.feed.get, { slug: "lili" })).pieces;
+    expect(planned.length).toBeGreaterThan(0);
+    expect(planned.every((p) => p.format !== "stories" && !["ideia", "publicado"].includes(p.status))).toBe(true);
     await expect(as(liliUser).query(api.feed.get, { slug: "bia" })).rejects.toThrow(/não encontrado/);
   });
 });

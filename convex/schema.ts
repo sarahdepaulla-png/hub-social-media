@@ -88,6 +88,18 @@ export default defineSchema({
     whatsapp: v.optional(v.string()), // só números, com DDI (5511999999999)
     notifyApproval: v.optional(v.boolean()), // e-mail automático; vazio = ligado
     instagram: v.optional(v.string()), // @ do perfil, para a prévia do feed
+    // Cabeçalho da prévia do feed (editável, como no "Editar perfil" do Instagram).
+    igProfile: v.optional(
+      v.object({
+        name: v.optional(v.string()),
+        bio: v.optional(v.string()),
+        link: v.optional(v.string()),
+        posts: v.optional(v.string()), // vazio = conta sozinho
+        followers: v.optional(v.string()),
+        following: v.optional(v.string()),
+      }),
+    ),
+    feedShowPlanned: v.optional(v.boolean()), // mostra as peças do calendário no topo da prévia
   }).index("by_slug", ["slug"]),
 
   contents: defineTable({
@@ -342,7 +354,9 @@ export default defineSchema({
   feedPosts: defineTable({
     clientId: v.id("clients"),
     storageId: v.id("_storage"),
-    position: v.number(), // 1 = mais recente, logo abaixo das peças planejadas
+    position: v.number(), // 1 = mais recente (topo do feed)
     kind: v.optional(v.union(v.literal("post"), v.literal("carrossel"), v.literal("reels"))),
+    extraIds: v.optional(v.array(v.id("_storage"))), // demais cards do carrossel
+    isVideo: v.optional(v.boolean()),
   }).index("by_client", ["clientId"]),
 });

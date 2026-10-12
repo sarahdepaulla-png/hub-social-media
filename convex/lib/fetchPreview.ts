@@ -59,3 +59,23 @@ export async function downloadImage(image: string): Promise<Blob | null> {
   const blob = await res.blob();
   return blob.size > 0 && blob.size <= MAX_PREVIEW_IMAGE ? blob : null;
 }
+
+/**
+ * Capa limpa de um post do Instagram: a página de incorporar traz a imagem
+ * original, sem o botão de play que vem desenhado na imagem de prévia dos reels.
+ */
+export async function instagramCleanCover(link: string): Promise<string | null> {
+  const code = link.match(/instagram\.com\/(?:[\w.]+\/)?(?:p|reel|reels|tv)\/([A-Za-z0-9_-]+)/)?.[1];
+  if (!code) return null;
+  try {
+    const html = await fetchText(`https://www.instagram.com/p/${code}/embed/`);
+    if (!html) return null;
+    const src =
+      html.match(/class="EmbeddedMediaImage"[^>]*?src="([^"]+)"/)?.[1] ??
+      html.match(/<img[^>]+src="([^"]+)"[^>]*class="EmbeddedMediaImage"/)?.[1] ??
+      null;
+    return src ? src.replace(/&amp;/g, "&") : null;
+  } catch {
+    return null;
+  }
+}

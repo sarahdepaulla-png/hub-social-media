@@ -13,6 +13,7 @@ import { CaptionPicker } from "@/components/content/CaptionPicker";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { DecisionSheet } from "@/components/content/DecisionSheet";
 import { MediaViewer, PostBar } from "@/components/content/MediaViewer";
+import { FeedPreview, type Highlight } from "@/components/feed/FeedPreview";
 import { longDate, stamp } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
 
@@ -36,6 +37,17 @@ export default function ConteudoPage() {
   const waiting = content.status === "aguardando";
   const chosen = captions.find((c) => c.chosen);
   const rootComments = comments.length;
+  // Prévia no feed: só para post do Instagram que aparece na grade (stories não entra).
+  const firstVisual = media.find((m) => m.kind !== "link" && m.url);
+  const highlight: Highlight | null =
+    content.platform === "instagram" && content.format !== "stories" && !content.deletedAt
+      ? {
+          title: content.title,
+          url: content.coverUrl ?? firstVisual?.url ?? null,
+          video: !content.coverUrl && firstVisual?.kind === "video",
+          kind: content.format === "carrossel" ? "carrossel" : content.format === "reels" || content.format === "video" ? "reels" : "post",
+        }
+      : null;
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "legenda", label: captions.length > 1 ? `Legendas ${captions.length}` : "Legenda" },
@@ -184,6 +196,18 @@ export default function ConteudoPage() {
           </div>
         </div>
       </div>
+
+      {highlight && (
+        <section aria-labelledby="no-feed" className="mt-12 flex flex-col gap-4 border-t border-linha px-4 pt-8 md:px-0">
+          <div className="flex flex-col gap-1">
+            <h2 id="no-feed" className="titulo text-[34px] leading-[0.95] md:text-5xl">Como fica no feed</h2>
+            <p className="text-[15px] text-texto-2">
+              A peça aparece em azul, no topo. Veja no celular ou no computador, arraste os posts para testar outra ordem e baixe a imagem se quiser.
+            </p>
+          </div>
+          <FeedPreview slug={cliente} highlight={highlight} />
+        </section>
+      )}
 
       {waiting && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-linha bg-white px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 md:static md:mt-10 md:border-0 md:bg-transparent md:px-0">

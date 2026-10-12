@@ -842,11 +842,13 @@ describe("prévia do feed", () => {
   test("+ põe no topo, carrossel e reels, perfil editável e só a admin mexe", async () => {
     const { t, as, admin, liliUser } = await setup();
     const empty = await as(liliUser).query(api.feed.get, { slug: "lili" });
-    expect(empty).toMatchObject({ canManage: false, showPlanned: false, pieces: [], posts: [] });
+    expect(empty).toMatchObject({ canManage: true, isAdmin: false, showPlanned: false, pieces: [], posts: [] });
 
     const files = await t.run(async (ctx) => Promise.all(["a", "b", "c", "d", "v"].map((x) => ctx.storage.store(new Blob([x])))));
     const [a, b, c, d, vid] = files;
-    await expect(as(liliUser).mutation(api.feed.addPosts, { slug: "lili", where: "topo", items: [{ storageIds: [a], isVideo: false }] })).rejects.toThrow(/administradora/);
+    // A cliente monta a prévia do próprio feed, mas não a de outra cliente.
+    await expect(as(liliUser).mutation(api.feed.addPosts, { slug: "bia", where: "topo", items: [{ storageIds: [a], isVideo: false }] })).rejects.toThrow(/não encontrado/);
+    await expect(as(liliUser).mutation(api.feed.setShowPlanned, { slug: "lili", value: true })).rejects.toThrow(/administradora/);
 
     // Posts antigos no fim, depois o próximo post (carrossel) e um reels no topo.
     await as(admin).mutation(api.feed.addPosts, { slug: "lili", where: "fim", items: [{ storageIds: [a], isVideo: false }] });
@@ -867,7 +869,7 @@ describe("prévia do feed", () => {
     // Arrastar: nova ordem inteira; enquadramento com limites.
     const two = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
     await as(admin).mutation(api.feed.reorder, { slug: "lili", ids: [two[1]._id, two[0]._id] });
-    await expect(as(liliUser).mutation(api.feed.reorder, { slug: "lili", ids: [two[0]._id] })).rejects.toThrow(/administradora/);
+    await as(liliUser).mutation(api.feed.reorder, { slug: "lili", ids: [two[1]._id, two[0]._id] });
     await as(admin).mutation(api.feed.setFrame, { postId: two[0]._id, zoom: 9, focusX: -5, focusY: 30 });
     const after = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
     expect(after.map((p) => p._id)).toEqual([two[1]._id, two[0]._id]);
@@ -921,7 +923,7 @@ describe("feed por link", () => {
       return new Response("", { status: 404 });
     }) as typeof fetch;
     try {
-      await expect(as(liliUser).action(api.feed.addFromLink, { slug: "lili", url: "https://www.instagram.com/reel/ABC123/" })).rejects.toThrow(/administradora/);
+      await expect(as(liliUser).action(api.feed.addFromLink, { slug: "bia", url: "https://www.instagram.com/reel/ABC123/" })).rejects.toThrow(/não é seu/);
       expect(await as(admin).action(api.feed.addFromLink, { slug: "lili", url: "instagram.com/reel/ABC123/?igsh=x" })).toEqual({ kind: "reels" });
       expect(seen).toContain("https://scontent.cdninstagram.com/capa.jpg?a=1&b=2");
       const posts = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;

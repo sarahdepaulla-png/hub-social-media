@@ -2,9 +2,9 @@ import { ConvexError, v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { getViewer, requireAdmin, requireClientBySlug } from "./lib/access";
+import { getViewer, requireAdmin, requireClientAccess, requireClientBySlug, requireViewer } from "./lib/access";
 import { alive } from "./lib/content";
-import { downloadImage, findPreview } from "./lib/fetchPreview";
+import { downloadImage, findPreview, instagramCleanCover } from "./lib/fetchPreview";
 import { platformOf } from "./lib/preview";
 
 /**
@@ -77,7 +77,9 @@ export const get = query({
       showPlanned,
       pieces,
       posts,
-      canManage: viewer.role === "admin",
+      // A equipe da cliente também monta a prévia; calendário segue com a admin.
+      canManage: true,
+      isAdmin: viewer.role === "admin",
     };
   },
 });
@@ -95,7 +97,7 @@ async function renumber(ctx: MutationCtx, ids: Id<"feedPosts">[]) {
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    await requireViewer(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -112,7 +114,6 @@ export const addPosts = mutation({
     items: v.array(v.object({ storageIds: v.array(v.id("_storage")), isVideo: v.boolean() })),
   },
   handler: async (ctx, { slug, where, items }) => {
-    await requireAdmin(ctx);
     const { client } = await requireClientBySlug(ctx, slug);
     const current = await ordered(ctx, client._id);
     if (current.length + items.length > 90) throw new ConvexError("Até 90 posts na prévia. Tire alguns antigos antes.");
@@ -140,9 +141,9 @@ export const addPosts = mutation({
 export const movePost = mutation({
   args: { postId: v.id("feedPosts"), direction: v.union(v.literal(-1), v.literal(1)) },
   handler: async (ctx, { postId, direction }) => {
-    await requireAdmin(ctx);
     const post = await ctx.db.get(postId);
     if (!post) return;
+    await requireClientAccess(ctx, post.clientId);
     const list = await ordered(ctx, post.clientId);
     const i = list.findIndex((p) => p._id === postId);
     const j = i + direction;
@@ -156,7 +157,6 @@ export const movePost = mutation({
 export const reorder = mutation({
   args: { slug: v.string(), ids: v.array(v.id("feedPosts")) },
   handler: async (ctx, { slug, ids }) => {
-    await requireAdmin(ctx);
     const { client } = await requireClientBySlug(ctx, slug);
     const current = await ordered(ctx, client._id);
     const known = new Set(current.map((p) => p._id));
@@ -171,8 +171,9 @@ export const reorder = mutation({
 export const setFrame = mutation({
   args: { postId: v.id("feedPosts"), zoom: v.number(), focusX: v.number(), focusY: v.number() },
   handler: async (ctx, { postId, zoom, focusX, focusY }) => {
-    await requireAdmin(ctx);
-    if (!(await ctx.db.get(postId))) return;
+    const post = await ctx.db.get(postId);
+    if (!post) return;
+    await requireClientAccess(ctx, post.clientId);
     const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
     await ctx.db.patch(postId, { zoom: clamp(zoom, 1, 3), focusX: clamp(focusX, 0, 100), focusY: clamp(focusY, 0, 100) });
   },
@@ -182,9 +183,9 @@ export const setFrame = mutation({
 export const setPinned = mutation({
   args: { postId: v.id("feedPosts"), pinned: v.boolean() },
   handler: async (ctx, { postId, pinned }) => {
-    await requireAdmin(ctx);
     const post = await ctx.db.get(postId);
     if (!post) return;
+    await requireClientAccess(ctx, post.clientId);
     if (pinned && !post.pinnedAt) {
       const count = (await ordered(ctx, post.clientId)).filter((p) => p.pinnedAt).length;
       if (count >= 3) throw new ConvexError("Já tem 3 posts fixados. Desafixe um antes.");
@@ -196,17 +197,19 @@ export const setPinned = mutation({
 export const setKind = mutation({
   args: { postId: v.id("feedPosts"), kind: kindV },
   handler: async (ctx, { postId, kind }) => {
-    await requireAdmin(ctx);
-    if (await ctx.db.get(postId)) await ctx.db.patch(postId, { kind });
+    const post = await ctx.db.get(postId);
+    if (!post) return;
+    await requireClientAccess(ctx, post.clientId);
+    await ctx.db.patch(postId, { kind });
   },
 });
 
 export const removePost = mutation({
   args: { postId: v.id("feedPosts") },
   handler: async (ctx, { postId }) => {
-    await requireAdmin(ctx);
     const post = await ctx.db.get(postId);
     if (!post) return;
+    await requireClientAccess(ctx, post.clientId);
     await ctx.db.delete(postId);
     for (const id of [post.storageId, ...(post.extraIds ?? [])]) await ctx.storage.delete(id);
     await renumber(ctx, (await ordered(ctx, post.clientId)).map((p) => p._id));
@@ -228,7 +231,6 @@ export const updateProfile = mutation({
     following: v.string(),
   },
   handler: async (ctx, { slug, handle, ...p }) => {
-    await requireAdmin(ctx);
     const { client } = await requireClientBySlug(ctx, slug);
     const h = handle.trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/[/?].*$/, "");
     if (h && !/^[A-Za-z0-9._]{1,30}$/.test(h)) throw new ConvexError("Esse @ não parece do Instagram.");
@@ -282,8 +284,7 @@ function driveThumb(link: string) {
 export const addFromLink = action({
   args: { slug: v.string(), url: v.string() },
   handler: async (ctx, { slug, url }): Promise<{ kind: "post" | "reels" }> => {
-    const viewer = await ctx.runQuery(internal.feed.viewerRole, {});
-    if (viewer !== "admin") throw new ConvexError("Só a administradora pode fazer isso.");
+    if (!(await ctx.runQuery(internal.feed.canEditFeed, { slug }))) throw new ConvexError("Este feed não é seu.");
     const raw = url.trim();
     const link = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
     try {
@@ -292,8 +293,16 @@ export const addFromLink = action({
       throw new ConvexError("Esse link não parece válido.");
     }
     let image = driveThumb(link) ?? (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(link) ? link : null);
-    if (!image) image = (await findPreview(link).catch(() => ({ image: null }))).image;
-    const blob = image ? await downloadImage(image) : null;
+    // Instagram: primeiro a capa limpa; se não vier, a mesma prévia das Ideias.
+    let blob: Blob | null = null;
+    if (!image && platformOf(link) === "instagram") {
+      const clean = await instagramCleanCover(link);
+      if (clean) blob = await downloadImage(clean);
+    }
+    if (!blob) {
+      if (!image) image = (await findPreview(link).catch(() => ({ image: null }))).image;
+      blob = image ? await downloadImage(image) : null;
+    }
     if (!blob) {
       throw new ConvexError(
         platformOf(link) === "instagram"
@@ -308,9 +317,17 @@ export const addFromLink = action({
   },
 });
 
-export const viewerRole = internalQuery({
-  args: {},
-  handler: async (ctx) => (await getViewer(ctx))?.role ?? null,
+export const canEditFeed = internalQuery({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const viewer = await getViewer(ctx);
+    if (!viewer?.role) return false;
+    const client = await ctx.db
+      .query("clients")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    return !!client && (viewer.role === "admin" || viewer.clientId === client._id);
+  },
 });
 
 export const insertStored = internalMutation({

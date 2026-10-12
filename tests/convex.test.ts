@@ -878,3 +878,35 @@ describe("prévia do feed", () => {
     await expect(as(liliUser).query(api.feed.get, { slug: "bia" })).rejects.toThrow(/não encontrado/);
   });
 });
+
+describe("feed por link", () => {
+  test("busca a capa do post do Instagram e põe no topo; cliente não usa", async () => {
+    const { as, admin, liliUser } = await setup();
+    const realFetch = globalThis.fetch;
+    const seen: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const u = String(input);
+      seen.push(u);
+      if (u.includes("/embed/captioned/")) {
+        return new Response('<img class="EmbeddedMediaImage" alt="" src="https://scontent.cdninstagram.com/capa.jpg?a=1&amp;b=2">', { status: 200 });
+      }
+      if (u.startsWith("https://scontent.cdninstagram.com/capa.jpg")) {
+        return new Response(new Blob(["jpg"], { type: "image/jpeg" }), { status: 200, headers: { "content-type": "image/jpeg" } });
+      }
+      return new Response("", { status: 404 });
+    }) as typeof fetch;
+    try {
+      await expect(as(liliUser).action(api.feed.addFromLink, { slug: "lili", url: "https://www.instagram.com/reel/ABC123/" })).rejects.toThrow(/administradora/);
+      expect(await as(admin).action(api.feed.addFromLink, { slug: "lili", url: "instagram.com/reel/ABC123/?igsh=x" })).toEqual({ kind: "reels" });
+      expect(seen).toContain("https://www.instagram.com/p/ABC123/embed/captioned/");
+      expect(seen).toContain("https://scontent.cdninstagram.com/capa.jpg?a=1&b=2");
+      const posts = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+      expect(posts).toHaveLength(1);
+      expect(posts[0].kind).toBe("reels");
+      await expect(as(admin).action(api.feed.addFromLink, { slug: "lili", url: "https://www.instagram.com/lili/" })).rejects.toThrow(/\/p\//);
+      await expect(as(admin).action(api.feed.addFromLink, { slug: "lili", url: "https://site-sem-capa.com/x" })).rejects.toThrow(/Ctrl\+V/);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});

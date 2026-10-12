@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@convex/_generated/api";
@@ -102,7 +102,7 @@ export default function FeedPage() {
       <header className="flex flex-col gap-2">
         <h1 className="titulo text-5xl md:text-6xl">Feed</h1>
         <p className="text-base text-texto-2">
-          {canManage ? "Toque no + ou copie uma imagem e aperte Ctrl+V para colocar o próximo post. Toque num post para mudar o tipo, a ordem ou tirar." : "Uma prévia de como o seu perfil vai ficar com os próximos posts."}
+          {canManage ? "Toque no +, cole o link do post ou copie uma imagem e aperte Ctrl+V para colocar o próximo post. Toque num post para mudar o tipo, a ordem ou tirar." : "Uma prévia de como o seu perfil vai ficar com os próximos posts."}
         </p>
       </header>
 
@@ -118,6 +118,7 @@ export default function FeedPage() {
       <section aria-label={`Prévia do perfil @${profile.handle}`} className="mx-auto w-full max-w-[470px] overflow-hidden rounded-[28px] border border-[#DBDBDB] bg-white text-black shadow-[0_10px_40px_rgba(92,15,49,0.10)]">
         <ProfileHeader profile={profile} count={counted} canManage={canManage} onEdit={() => setEditing(true)} />
 
+        {canManage && <LinkBar slug={ws.slug} />}
         <ol className="grid grid-cols-3 gap-[2px]">
           {canManage && <AddTile slug={ws.slug} />}
           {pieces.map((p) => (
@@ -284,7 +285,15 @@ function AddTile({ slug }: { slug: string }) {
       const target = e.target as HTMLElement | null;
       if (target && (target.closest("input, textarea, [contenteditable]") || target.closest("dialog"))) return;
       const files = Array.from(e.clipboardData?.files ?? []);
-      if (!files.length) return;
+      if (!files.length) {
+        // Colou um link: o Hub busca a capa do post.
+        const text = e.clipboardData?.getData("text")?.trim() ?? "";
+        if (/^https?:\/\/\S+$/i.test(text)) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent("feed-link", { detail: text }));
+        }
+        return;
+      }
       e.preventDefault();
       chooseRef.current(files.map((f, i) => (f.name && f.name !== "image.png" ? f : new File([f], `colado-${Date.now()}-${i}.png`, { type: f.type || "image/png" }))));
     };
@@ -361,6 +370,72 @@ function AddTile({ slug }: { slug: string }) {
         </Sheet>
       )}
     </li>
+  );
+}
+
+/** Cola o link de um post (Instagram, TikTok, YouTube, Drive, Canva...) e o Hub busca a capa. */
+function LinkBar({ slug }: { slug: string }) {
+  const addFromLink = useAction(api.feed.addFromLink);
+  const [url, setUrl] = useState("");
+  const [pending, setPending] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const send = async (link: string) => {
+    const clean = link.trim();
+    if (!clean) return;
+    setPending(true);
+    setMsg(null);
+    try {
+      const { kind } = await addFromLink({ slug, url: clean });
+      setUrl("");
+      setMsg({ ok: true, text: kind === "reels" ? "Reels adicionado no topo." : "Post adicionado no topo." });
+    } catch (err) {
+      setUrl(clean);
+      setMsg({ ok: false, text: errorText(err) });
+    } finally {
+      setPending(false);
+    }
+  };
+
+  // Ctrl+V de um link em qualquer lugar da página chega aqui.
+  const sendRef = useRef(send);
+  useEffect(() => {
+    sendRef.current = send;
+  });
+  useEffect(() => {
+    const onLink = (e: Event) => void sendRef.current((e as CustomEvent<string>).detail);
+    window.addEventListener("feed-link", onLink);
+    return () => window.removeEventListener("feed-link", onLink);
+  }, []);
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void send(url);
+      }}
+      className="flex flex-col gap-1.5 border-t border-[#EFEFEF] px-3 py-3"
+    >
+      <div className="flex gap-2">
+        <label className="sr-only" htmlFor="feed-link">Link do post</label>
+        <input
+          id="feed-link"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Cole o link do post (Instagram, TikTok, Drive...)"
+          inputMode="url"
+          className="min-h-10 min-w-0 flex-1 rounded-lg border border-[#DBDBDB] bg-[#FAFAFA] px-3 text-[14px] text-black"
+        />
+        <button type="submit" disabled={pending || !url.trim()} className="min-h-10 shrink-0 rounded-lg bg-[#0095F6] px-4 text-[13px] font-semibold text-white disabled:opacity-40">
+          {pending ? "Buscando" : "Adicionar"}
+        </button>
+      </div>
+      {msg && (
+        <span role={msg.ok ? "status" : "alert"} className={`text-[12px] font-semibold ${msg.ok ? "text-[#1F8F4E]" : "text-st-ajuste-texto"}`}>
+          {msg.text}
+        </span>
+      )}
+    </form>
   );
 }
 

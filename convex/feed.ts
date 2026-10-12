@@ -1,7 +1,8 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { action, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { requireAdmin, requireClientBySlug } from "./lib/access";
+import { getViewer, requireAdmin, requireClientBySlug } from "./lib/access";
 import { alive } from "./lib/content";
 
 /**
@@ -204,5 +205,112 @@ export const setShowPlanned = mutation({
     await requireAdmin(ctx);
     const { client } = await requireClientBySlug(ctx, slug);
     await ctx.db.patch(client._id, { feedShowPlanned: value });
+  },
+});
+
+/* ---------- Post a partir de um link ---------- */
+
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36";
+
+function decodeHtml(s: string) {
+  return s.replace(/&amp;/g, "&").replace(/&#x2F;/gi, "/").replace(/&#47;/g, "/").replace(/&quot;/g, '"').replace(/\\u0026/g, "&").replace(/\\\//g, "/");
+}
+
+function metaImage(html: string) {
+  const m =
+    html.match(/<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i) ??
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ??
+    html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i);
+  return m ? decodeHtml(m[1]) : null;
+}
+
+async function getText(url: string) {
+  const res = await fetch(url, { headers: { "User-Agent": UA, "Accept-Language": "pt-BR,pt;q=0.9" }, redirect: "follow" });
+  if (!res.ok) throw new Error(`O site respondeu ${res.status}`);
+  return await res.text();
+}
+
+/** Descobre a imagem de capa e o tipo do post a partir do link. */
+async function coverFromLink(raw: string): Promise<{ image: string; kind: "post" | "reels" }> {
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(raw.trim()) ? raw.trim() : `https://${raw.trim()}`);
+  } catch {
+    throw new ConvexError("Esse link não parece válido.");
+  }
+  const host = url.hostname.replace(/^www\./, "").toLowerCase();
+
+  // Instagram: a página pública de incorporar o post traz a imagem sem login.
+  if (host.endsWith("instagram.com")) {
+    const m = url.pathname.match(/\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/);
+    if (!m) throw new ConvexError("Cole o link de um post ou reels do Instagram (com /p/ ou /reel/).");
+    const kind = m[1] === "p" ? "post" : "reels";
+    const html = await getText(`https://www.instagram.com/p/${m[2]}/embed/captioned/`).catch(() => "");
+    const img =
+      html.match(/class="EmbeddedMediaImage"[^>]*src="([^"]+)"/)?.[1] ??
+      html.match(/<img[^>]+class="[^"]*EmbeddedMediaImage[^"]*"[^>]+src="([^"]+)"/)?.[1] ??
+      html.match(/"display_url"\s*:\s*"([^"]+)"/)?.[1] ??
+      metaImage(html);
+    if (!img) throw new ConvexError("O Instagram não liberou a capa deste post. Copie a imagem e cole com Ctrl+V.");
+    return { image: decodeHtml(img), kind };
+  }
+  // TikTok: oEmbed público.
+  if (host.endsWith("tiktok.com")) {
+    const res = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url.toString())}`, { headers: { "User-Agent": UA } });
+    const data = (await res.json().catch(() => null)) as { thumbnail_url?: string } | null;
+    if (!data?.thumbnail_url) throw new ConvexError("O TikTok não liberou a capa deste vídeo.");
+    return { image: data.thumbnail_url, kind: "reels" };
+  }
+  // YouTube: miniatura pública.
+  const yt = host === "youtu.be" ? url.pathname.slice(1) : host.endsWith("youtube.com") ? (url.searchParams.get("v") ?? url.pathname.match(/\/(shorts|embed)\/([^/?]+)/)?.[2]) : null;
+  if (yt) return { image: `https://img.youtube.com/vi/${yt}/hqdefault.jpg`, kind: "reels" };
+  // Google Drive: miniatura do arquivo compartilhado.
+  const drive = host.endsWith("drive.google.com") ? (url.pathname.match(/\/d\/([^/]+)/)?.[1] ?? url.searchParams.get("id")) : null;
+  if (drive) return { image: `https://drive.google.com/thumbnail?id=${drive}&sz=w1080`, kind: "post" };
+  // Link direto de imagem.
+  if (/\.(jpe?g|png|webp|gif)$/i.test(url.pathname)) return { image: url.toString(), kind: "post" };
+  // Qualquer outro site: imagem de prévia (Canva, Pinterest, Behance...).
+  const html = await getText(url.toString()).catch(() => "");
+  const og = metaImage(html);
+  if (!og) throw new ConvexError("Não achei a imagem de capa desse link. Copie a imagem e cole com Ctrl+V.");
+  return { image: new URL(og, url).toString(), kind: "post" };
+}
+
+/** Cola o link do post: o Hub baixa a capa e põe no topo do feed. */
+export const addFromLink = action({
+  args: { slug: v.string(), url: v.string() },
+  handler: async (ctx, { slug, url }): Promise<{ kind: "post" | "reels" }> => {
+    const viewer = await ctx.runQuery(internal.feed.viewerRole, {});
+    if (viewer !== "admin") throw new ConvexError("Só a administradora pode fazer isso.");
+    const { image, kind } = await coverFromLink(url);
+    const res = await fetch(image, { headers: { "User-Agent": UA, Referer: "https://www.instagram.com/" } }).catch(() => null);
+    const type = res?.headers.get("content-type") ?? "";
+    if (!res?.ok || !type.startsWith("image/")) {
+      throw new ConvexError("Achei o post, mas a imagem não baixou. Se for do Drive, deixe o arquivo como \"qualquer pessoa com o link\".");
+    }
+    const blob = await res.blob();
+    if (blob.size > 15 * 1024 * 1024) throw new ConvexError("A imagem desse link é grande demais.");
+    const storageId = await ctx.storage.store(blob);
+    await ctx.runMutation(internal.feed.insertStored, { slug, storageId, kind });
+    return { kind };
+  },
+});
+
+export const viewerRole = internalQuery({
+  args: {},
+  handler: async (ctx) => (await getViewer(ctx))?.role ?? null,
+});
+
+export const insertStored = internalMutation({
+  args: { slug: v.string(), storageId: v.id("_storage"), kind: kindV },
+  handler: async (ctx, { slug, storageId, kind }) => {
+    const client = await ctx.db
+      .query("clients")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    if (!client) throw new ConvexError("Cliente não encontrado.");
+    const current = await ordered(ctx, client._id);
+    const id = await ctx.db.insert("feedPosts", { clientId: client._id, storageId, kind, position: 0 });
+    await renumber(ctx, [id, ...current.map((p) => p._id)]);
   },
 });

@@ -28,6 +28,7 @@ import type * as invites from "../invites.js";
 import type * as lib_access from "../lib/access.js";
 import type * as lib_adminKey from "../lib/adminKey.js";
 import type * as lib_content from "../lib/content.js";
+import type * as lib_fetchPreview from "../lib/fetchPreview.js";
 import type * as lib_log from "../lib/log.js";
 import type * as lib_notify from "../lib/notify.js";
 import type * as lib_opportunities from "../lib/opportunities.js";
@@ -73,6 +74,7 @@ import type * as viewer from "../viewer.js";
 "lib/access": typeof lib_access,
 "lib/adminKey": typeof lib_adminKey,
 "lib/content": typeof lib_content,
+"lib/fetchPreview": typeof lib_fetchPreview,
 "lib/log": typeof lib_log,
 "lib/notify": typeof lib_notify,
 "lib/opportunities": typeof lib_opportunities,

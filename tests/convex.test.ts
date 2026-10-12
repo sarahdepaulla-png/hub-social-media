@@ -874,6 +874,21 @@ describe("prévia do feed", () => {
     expect(after[1]).toMatchObject({ zoom: 3, focusX: 0, focusY: 30 });
     expect(after[0]).toMatchObject({ zoom: 1, focusX: 50, focusY: 50 });
 
+    // Fixados: aparecem primeiro, no máximo 3.
+    const extra = await t.run(async (ctx) => Promise.all(["e", "f"].map((x) => ctx.storage.store(new Blob([x])))));
+    await as(admin).mutation(api.feed.addPosts, { slug: "lili", where: "fim", items: extra.map((id) => ({ storageIds: [id], isVideo: false })) });
+    const four = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    expect(four).toHaveLength(4);
+    await as(admin).mutation(api.feed.setPinned, { postId: four[3]._id, pinned: true });
+    let pinnedView = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    expect(pinnedView[0]).toMatchObject({ _id: four[3]._id, pinned: true });
+    await as(admin).mutation(api.feed.setPinned, { postId: four[0]._id, pinned: true });
+    await as(admin).mutation(api.feed.setPinned, { postId: four[1]._id, pinned: true });
+    await expect(as(admin).mutation(api.feed.setPinned, { postId: four[2]._id, pinned: true })).rejects.toThrow(/3 posts fixados/);
+    await as(admin).mutation(api.feed.setPinned, { postId: four[3]._id, pinned: false });
+    pinnedView = (await as(admin).query(api.feed.get, { slug: "lili" })).posts;
+    expect(pinnedView.filter((p) => p.pinned)).toHaveLength(2);
+
     // Editar perfil.
     await as(admin).mutation(api.feed.updateProfile, { slug: "lili", handle: "https://instagram.com/liliexplica/", name: "Lili Explica", bio: "Fisio", link: "", posts: "", followers: "12,3 mil", following: "512" });
     const prof = (await as(liliUser).query(api.feed.get, { slug: "lili" })).profile;

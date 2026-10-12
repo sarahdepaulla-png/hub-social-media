@@ -45,8 +45,9 @@ export const get = query({
       .withIndex("by_client", (q) => q.eq("clientId", client._id))
       .collect();
     const posts = await Promise.all(
+      // Fixados primeiro (o último fixado fica à esquerda, como no Instagram), depois a ordem do feed.
       rows
-        .sort((a, b) => a.position - b.position)
+        .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0) || a.position - b.position)
         .map(async (p) => ({
           _id: p._id,
           kind: p.kind ?? "post",
@@ -54,6 +55,7 @@ export const get = query({
           zoom: p.zoom ?? 1,
           focusX: p.focusX ?? 50,
           focusY: p.focusY ?? 50,
+          pinned: !!p.pinnedAt,
           url: await ctx.storage.getUrl(p.storageId),
           extras: await Promise.all((p.extraIds ?? []).map((id) => ctx.storage.getUrl(id))),
         })),
@@ -173,6 +175,21 @@ export const setFrame = mutation({
     if (!(await ctx.db.get(postId))) return;
     const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
     await ctx.db.patch(postId, { zoom: clamp(zoom, 1, 3), focusX: clamp(focusX, 0, 100), focusY: clamp(focusY, 0, 100) });
+  },
+});
+
+/** Fixa ou desafixa no topo do perfil. Até 3, como no Instagram. */
+export const setPinned = mutation({
+  args: { postId: v.id("feedPosts"), pinned: v.boolean() },
+  handler: async (ctx, { postId, pinned }) => {
+    await requireAdmin(ctx);
+    const post = await ctx.db.get(postId);
+    if (!post) return;
+    if (pinned && !post.pinnedAt) {
+      const count = (await ordered(ctx, post.clientId)).filter((p) => p.pinnedAt).length;
+      if (count >= 3) throw new ConvexError("Já tem 3 posts fixados. Desafixe um antes.");
+    }
+    await ctx.db.patch(postId, { pinnedAt: pinned ? (post.pinnedAt ?? Date.now()) : undefined });
   },
 });
 

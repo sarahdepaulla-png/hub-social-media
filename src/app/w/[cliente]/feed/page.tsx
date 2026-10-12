@@ -62,6 +62,17 @@ function KindIcon({ kind }: { kind: Kind }) {
   );
 }
 
+/** Alfinete dos posts fixados, no canto como no Instagram. */
+function PinIcon() {
+  return (
+    <span aria-label="Fixado" className="pointer-events-none absolute right-1.5 top-1.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]">
+      <svg viewBox="0 0 24 24" className="size-[18px] fill-white" aria-hidden="true">
+        <path d="M15.6 2.3a1 1 0 011.4 0l4.7 4.7a1 1 0 010 1.4l-1.3 1.3a1 1 0 01-1.1.2l-.9-.4-3.4 3.4.3 3.1a1 1 0 01-.3.8l-1.1 1.1a1 1 0 01-1.4 0L9.4 14.8 4 20.2 2.6 20.2l.1-1.4 5.4-5.4-3.1-3.1a1 1 0 010-1.4L6 7.8a1 1 0 01.8-.3l3.1.3 3.4-3.4-.4-.9a1 1 0 01.2-1.1z" />
+      </svg>
+    </span>
+  );
+}
+
 /** Imagem ou primeiro quadro do vídeo. */
 type Frame = { zoom: number; focusX: number; focusY: number };
 
@@ -156,12 +167,26 @@ export default function FeedPage() {
         {counted > 0 && (
           <PostGrid
             slug={ws.slug}
-            posts={posts}
+            posts={posts.filter((p) => !p.pinned)}
             canManage={canManage}
             onOpen={setOpen}
-            before={pieces.map((p) => (
-              <PieceTile key={p._id} p={p} slug={ws.slug} clean={clean} accent={profile.accentColor} />
-            ))}
+            before={
+              <>
+                {posts
+                  .filter((p) => p.pinned)
+                  .map((p) => (
+                    <li key={p._id} className="relative aspect-[3/4] overflow-hidden bg-[#EFEFEF]">
+                      <button type="button" onClick={() => setOpen(p)} className="block size-full" aria-label="Abrir post fixado">
+                        <Media url={p.url} video={p.isVideo} frame={p} />
+                        <PinIcon />
+                      </button>
+                    </li>
+                  ))}
+                {pieces.map((p) => (
+                  <PieceTile key={p._id} p={p} slug={ws.slug} clean={clean} accent={profile.accentColor} />
+                ))}
+              </>
+            }
           />
         )}
         {counted === 0 && (
@@ -174,7 +199,16 @@ export default function FeedPage() {
       </section>
 
       {editing && <EditProfile slug={ws.slug} clientId={data.clientId} profile={profile} onClose={() => setEditing(false)} />}
-      {current && <PostSheet post={current} index={posts.indexOf(current)} total={posts.length} canManage={canManage} onClose={() => setOpen(null)} />}
+      {current && (
+        <PostSheet
+          post={current}
+          index={posts.indexOf(current)}
+          total={posts.length}
+          pinnedCount={posts.filter((p) => p.pinned).length}
+          canManage={canManage}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </main>
   );
 }
@@ -606,7 +640,22 @@ function PieceTile({ p, slug, clean, accent }: { p: Piece; slug: string; clean: 
 }
 
 /** Post aberto: ver em tamanho grande e, para a admin, mudar tipo, ordem ou tirar. */
-function PostSheet({ post, index, total, canManage, onClose }: { post: Post; index: number; total: number; canManage: boolean; onClose: () => void }) {
+function PostSheet({
+  post,
+  index,
+  total,
+  pinnedCount,
+  canManage,
+  onClose,
+}: {
+  post: Post;
+  index: number;
+  total: number;
+  pinnedCount: number;
+  canManage: boolean;
+  onClose: () => void;
+}) {
+  const setPinned = useMutation(api.feed.setPinned);
   const setKind = useMutation(api.feed.setKind);
   const movePost = useMutation(api.feed.movePost);
   const removePost = useMutation(api.feed.removePost);
@@ -632,6 +681,17 @@ function PostSheet({ post, index, total, canManage, onClose }: { post: Post; ind
 
       {canManage && (
         <>
+          <button
+            type="button"
+            disabled={!post.pinned && pinnedCount >= 3}
+            onClick={() => run(() => setPinned({ postId: post._id, pinned: !post.pinned }))}
+            className={`${post.pinned ? buttonClass.outline : buttonClass.primary} min-h-11 gap-2 text-sm`}
+          >
+            <svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden="true">
+              <path d="M15.6 2.3a1 1 0 011.4 0l4.7 4.7a1 1 0 010 1.4l-1.3 1.3a1 1 0 01-1.1.2l-.9-.4-3.4 3.4.3 3.1a1 1 0 01-.3.8l-1.1 1.1a1 1 0 01-1.4 0L9.4 14.8 4 20.2 2.6 20.2l.1-1.4 5.4-5.4-3.1-3.1a1 1 0 010-1.4L6 7.8a1 1 0 01.8-.3l3.1.3 3.4-3.4-.4-.9a1 1 0 01.2-1.1z" />
+            </svg>
+            {post.pinned ? "Desafixar do topo" : pinnedCount >= 3 ? "Já tem 3 fixados" : `Fixar no topo (${pinnedCount} de 3)`}
+          </button>
           <FrameEditor key={post._id} post={post} />
           <div className="flex flex-col gap-2">
             <span className="text-sm font-semibold">Tipo</span>

@@ -362,5 +362,6 @@ export default defineSchema({
     zoom: v.optional(v.number()),
     focusX: v.optional(v.number()),
     focusY: v.optional(v.number()),
+    pinnedAt: v.optional(v.number()), // fixado no topo do perfil (até 3)
   }).index("by_client", ["clientId"]),
 });

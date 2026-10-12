@@ -18,19 +18,19 @@ export const get = query({
   handler: async (ctx, { slug }) => {
     const { viewer, client } = await requireClientBySlug(ctx, slug);
     const showPlanned = client.feedShowPlanned === true;
-    let pieces: { _id: Id<"contents">; title: string; date: string; format: string; status: string; coverUrl: string | null }[] = [];
-    if (showPlanned) {
-      const all = (
-        await ctx.db
-          .query("contents")
-          .withIndex("by_client_date", (q) => q.eq("clientId", client._id))
-          .collect()
-      ).filter(alive);
-      pieces = await Promise.all(
-        all
-          .filter((c) => c.format !== "stories" && c.status !== "ideia" && c.status !== "publicado")
-          .sort((a, b) => b.date.localeCompare(a.date) || (b.time ?? "").localeCompare(a.time ?? "") || b._creationTime - a._creationTime)
-          .map(async (c) => ({
+    // Peças do calendário que entram na grade: Instagram, sem stories e sem ideias (inclui as já postadas).
+    const all = (
+      await ctx.db
+        .query("contents")
+        .withIndex("by_client_date", (q) => q.eq("clientId", client._id))
+        .collect()
+    ).filter(alive);
+    const eligible = all
+      .filter((c) => c.platform === "instagram" && c.format !== "stories" && c.status !== "ideia")
+      .sort((a, b) => b.date.localeCompare(a.date) || (b.time ?? "").localeCompare(a.time ?? "") || b._creationTime - a._creationTime);
+    const pieces = showPlanned
+      ? await Promise.all(
+          eligible.map(async (c) => ({
             _id: c._id,
             title: c.title,
             date: c.date,
@@ -38,8 +38,8 @@ export const get = query({
             status: c.status,
             coverUrl: c.coverId ? await ctx.storage.getUrl(c.coverId) : (c.coverUrl ?? null),
           })),
-      );
-    }
+        )
+      : [];
     const rows = await ctx.db
       .query("feedPosts")
       .withIndex("by_client", (q) => q.eq("clientId", client._id))
@@ -75,6 +75,7 @@ export const get = query({
       },
       clientId: client._id,
       showPlanned,
+      plannedCount: eligible.length,
       pieces,
       posts,
       // A equipe da cliente também monta a prévia; calendário segue com a admin.

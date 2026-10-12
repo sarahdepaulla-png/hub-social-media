@@ -244,8 +244,13 @@ export function FeedPreview({ slug, highlight }: { slug: string; highlight?: Hig
         </span>
         {isAdmin && !highlight && (
           <Toggle on={showPlanned} onClick={() => void setShowPlanned({ slug, value: !showPlanned })}>
-            Mostrar peças do calendário
+            {showPlanned ? `Peças do calendário: ${data.plannedCount}` : "Mostrar peças do calendário"}
           </Toggle>
+        )}
+        {isAdmin && !highlight && showPlanned && data.plannedCount === 0 && (
+          <span role="status" className="text-sm font-semibold text-texto-2">
+            Nenhuma peça de Instagram no calendário desta cliente (stories e ideias não entram no feed).
+          </span>
         )}
         <button type="button" onClick={() => void download()} disabled={saving === "Gerando imagem"} className={`${buttonClass.primary} min-h-10 gap-2 px-4 text-sm`}>
           <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>

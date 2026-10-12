@@ -901,7 +901,8 @@ describe("prévia do feed", () => {
     await as(admin).mutation(api.feed.setShowPlanned, { slug: "lili", value: true });
     const planned = (await as(liliUser).query(api.feed.get, { slug: "lili" })).pieces;
     expect(planned.length).toBeGreaterThan(0);
-    expect(planned.every((p) => p.format !== "stories" && !["ideia", "publicado"].includes(p.status))).toBe(true);
+    expect(planned.every((p) => p.format !== "stories" && p.status !== "ideia")).toBe(true);
+    expect((await as(admin).query(api.feed.get, { slug: "lili" })).plannedCount).toBe(planned.length);
     await expect(as(liliUser).query(api.feed.get, { slug: "bia" })).rejects.toThrow(/não encontrado/);
   });
 });

@@ -14,6 +14,7 @@ import { ContentForm } from "@/components/editor/ContentForm";
 import { MediaManager } from "@/components/editor/MediaManager";
 import { CoverPicker } from "@/components/editor/CoverPicker";
 import { AutoCovers } from "@/components/AutoCovers";
+import { ApprovalNotice } from "@/components/ApprovalNotice";
 import { STATUS, type Status } from "@/lib/labels";
 
 export default function EditarPage() {
@@ -100,6 +101,10 @@ export default function EditarPage() {
         )}
         {error && <p role="alert" className="w-full text-sm font-semibold text-st-ajuste-texto">{error}</p>}
       </div>
+
+      {admin && content.status === "aguardando" && (
+        <ApprovalNotice phone={client.whatsapp} title={content.title} date={content.date} slug={cliente} contentId={contentId} notice={data.notice} />
+      )}
 
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-12">

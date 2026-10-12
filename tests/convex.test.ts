@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import schema from "../convex/schema";
 import { api, internal } from "../convex/_generated/api";
 import type { Id } from "../convex/_generated/dataModel";
@@ -781,5 +781,59 @@ describe("responsável e prazo", () => {
     expect(pipe.team.slice(0, 3)).toEqual(["Sarita", "Mai", "Leo"]);
     expect((await as(liliUser).query(api.contents.get, { contentId: direct })).content).toMatchObject({ owner: null, dueDate: null });
     expect(await as(admin).query(api.team.list, {})).toEqual(["Sarita", "Mai", "Leo"]);
+  });
+});
+
+describe("aviso de aprovação", () => {
+  test("junta peças enviadas em seguida num aviso só e registra o resultado", async () => {
+    vi.useFakeTimers();
+    try {
+      const { t, as, admin, lili } = await setup();
+      const ready = await t.run(async (ctx) => {
+        const all = await ctx.db.query("contents").withIndex("by_client_date", (q) => q.eq("clientId", lili)).collect();
+        return all.filter((c) => c.status === "producao").map((c) => c._id);
+      });
+      expect(ready.length).toBeGreaterThanOrEqual(2);
+      await t.run(async (ctx) => {
+        await ctx.db.insert("invites", { email: "lili@x.com", name: "Lili", role: "cliente", clientId: lili, token: "tok-lili" });
+      });
+      for (const id of ready.slice(0, 2)) {
+        await as(admin).mutation(api.media.add, { contentId: id, kind: "link", url: "https://drive.google.com/x" });
+        await as(admin).mutation(api.contents.setStatus, { contentId: id, status: "aguardando" });
+      }
+      const notices = await t.run((ctx) => ctx.db.query("approvalNotices").collect());
+      expect(notices).toHaveLength(1);
+      expect(notices[0].contentIds).toHaveLength(2);
+
+      const data = await t.query(internal.notify.noticeData, { noticeId: notices[0]._id });
+      expect(data?.pieces).toHaveLength(2);
+      expect(data?.recipients).toEqual([{ email: "lili@x.com", name: "Lili", token: "tok-lili" }]);
+
+      // Sem Gmail no teste: o motivo fica registrado e aparece na peça.
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+      const view = await as(admin).query(api.contents.get, { contentId: ready[0] });
+      expect(view.notice?.error).toMatch(/não configurado/);
+
+      // Cliente com aviso desligado não gera e-mail.
+      await as(admin).mutation(api.clients.update, { clientId: lili, name: "Lili", niches: [], accentColor: "#C2186B", whatsapp: "(11) 98888-7777", notifyApproval: false });
+      const third = ready[2] ?? ready[0];
+      await as(admin).mutation(api.contents.setStatus, { contentId: third, status: "producao" });
+      await as(admin).mutation(api.media.add, { contentId: third, kind: "link", url: "https://drive.google.com/y" });
+      await as(admin).mutation(api.contents.setStatus, { contentId: third, status: "aguardando" });
+      expect(await t.run((ctx) => ctx.db.query("approvalNotices").collect())).toHaveLength(1);
+      expect((await as(admin).query(api.contents.get, { contentId: third })).client.whatsapp).toBe("5511988887777");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("e-mail lista as peças e usa o link pessoal", async () => {
+    const { approvalEmail } = await import("../convex/mailer");
+    const one = approvalEmail({ name: "Lili Souza", clientName: "Lili", from: "Sarah", pieces: [{ title: "Postura", date: "2026-10-14", format: "reels" }], link: "https://hub/acesso/x?ir=%2Fw%2Flili" });
+    expect(one.subject).toBe("Conteúdo para aprovar: Postura");
+    expect(one.text).toContain("Oi, Lili!");
+    expect(one.html).toContain("14/10");
+    const many = approvalEmail({ name: null, clientName: "Lili", from: "Sarah", pieces: [{ title: "A", date: "2026-10-14", format: "reels" }, { title: "B", date: "2026-10-15", format: "carrossel" }], link: "x" });
+    expect(many.subject).toBe("2 conteúdos para aprovar, Lili");
   });
 });

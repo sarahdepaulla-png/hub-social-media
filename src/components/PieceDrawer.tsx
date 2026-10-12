@@ -8,6 +8,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { Loading, buttonClass } from "@/components/brand";
 import { StatusMenu } from "@/components/StatusMenu";
 import { DueBadge, OwnerBadge, TaskFields } from "@/components/Task";
+import { ApprovalNotice } from "@/components/ApprovalNotice";
 import { TrashButton } from "@/components/Trash";
 import { CaptionPicker } from "@/components/content/CaptionPicker";
 import { MediaManager } from "@/components/editor/MediaManager";
@@ -113,6 +114,10 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
             done={["aprovado", "agendado", "publicado"].includes(content.status)}
           />
         </header>
+
+        {content.status === "aguardando" && (
+          <ApprovalNotice phone={client.whatsapp} title={content.title} date={content.date} slug={slug} contentId={contentId} notice={data.notice} />
+        )}
 
         <MediaManager contentId={contentId} media={media} version={content.version} compact />
 

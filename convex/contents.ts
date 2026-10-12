@@ -1,7 +1,8 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { cleanDue, cleanOwner } from "./lib/team";
+import { queueApprovalNotice } from "./lib/notify";
 import { canEditContent, requireAdmin, requireClientBySlug, requireContentAccess, requireContentEditor } from "./lib/access";
 import { displayName, logActivity } from "./lib/log";
 import { TRASH_MS, UNDO_WINDOW_MS, alive, toCard } from "./lib/content";
@@ -26,6 +27,15 @@ const DECISION_LABEL: Record<Doc<"decisions">["type"], string> = {
 };
 
 /** A peça completa, do jeito que a tela de Conteúdo precisa. */
+async function lastNotice(ctx: QueryCtx, clientId: Id<"clients">, contentId: Id<"contents">) {
+  const all = await ctx.db
+    .query("approvalNotices")
+    .withIndex("by_client", (q) => q.eq("clientId", clientId))
+    .collect();
+  const n = all.filter((x) => x.contentIds.includes(contentId)).sort((a, b) => b._creationTime - a._creationTime)[0];
+  return n ? { sendAt: n.sendAt, sentAt: n.sentAt ?? null, sentTo: n.sentTo ?? [], error: n.error ?? null } : null;
+}
+
 export const get = query({
   args: { contentId: v.id("contents") },
   handler: async (ctx, { contentId }) => {
@@ -80,7 +90,14 @@ export const get = query({
 
     return {
       viewer: { _id: viewer._id, role: viewer.role!, canEdit: canEditContent(viewer, client) },
-      client: { slug: client.slug, name: client.name, accentColor: client.accentColor },
+      client: {
+        slug: client.slug,
+        name: client.name,
+        accentColor: client.accentColor,
+        whatsapp: viewer.role === "admin" ? (client.whatsapp ?? null) : null,
+      },
+      // Último aviso de aprovação desta peça (só a admin vê).
+      notice: viewer.role === "admin" ? await lastNotice(ctx, client._id, contentId) : null,
       content: {
         _id: content._id,
         date: content.date,
@@ -427,6 +444,7 @@ export const setStatus = mutation({
     if (content.status === next) return;
     if (next === "aguardando") await assertReady(ctx, content);
     await ctx.db.patch(contentId, { status: next });
+    if (next === "aguardando") await queueApprovalNotice(ctx, content.clientId, contentId);
     await logActivity(ctx, {
       clientId: content.clientId,
       contentId,

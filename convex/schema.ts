@@ -84,6 +84,9 @@ export default defineSchema({
     active: v.boolean(),
     // A equipe da cliente pode editar as peças (legenda, mídia, capa, dados).
     clientCanEdit: v.optional(v.boolean()),
+    // Avisos de conteúdo para aprovação.
+    whatsapp: v.optional(v.string()), // só números, com DDI (5511999999999)
+    notifyApproval: v.optional(v.boolean()), // e-mail automático; vazio = ligado
   }).index("by_slug", ["slug"]),
 
   contents: defineTable({
@@ -324,5 +327,14 @@ export default defineSchema({
     note: v.optional(v.string()),
     file: v.optional(v.object({ id: v.id("_storage"), name: v.string(), type: v.string() })),
     updatedAt: v.number(),
+  }).index("by_client", ["clientId"]),
+  // E-mail "tem conteúdo para aprovar": junta as peças enviadas em poucos minutos num aviso só.
+  approvalNotices: defineTable({
+    clientId: v.id("clients"),
+    contentIds: v.array(v.id("contents")),
+    sendAt: v.number(),
+    sentAt: v.optional(v.number()),
+    sentTo: v.optional(v.array(v.string())),
+    error: v.optional(v.string()),
   }).index("by_client", ["clientId"]),
 });

@@ -18,7 +18,11 @@ export default function AcessoPage() {
     started.current = true;
     signIn("link", { token })
       // Recarrega a página inteira para o servidor já enxergar a sessão nova.
-      .then(() => window.location.replace("/"))
+      .then(() => {
+        // Link do aviso de aprovação: depois de entrar, vai direto para a peça.
+        const next = new URLSearchParams(window.location.search).get("ir") ?? "";
+        window.location.replace(/^\/w\/[a-z0-9-]+(\/c\/[a-z0-9]+)?$/.test(next) ? next : "/");
+      })
       .catch(() => setFailed(true));
   }, [signIn, token]);
 

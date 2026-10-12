@@ -108,6 +108,8 @@ export const listAdmin = query({
         name: c.name,
         description: c.description ?? null,
         clientCanEdit: c.clientCanEdit === true,
+        whatsapp: c.whatsapp ?? null,
+        notifyApproval: c.notifyApproval !== false,
         niches: c.niches,
         accentColor: c.accentColor,
         secondaryColor: c.secondaryColor ?? null,
@@ -137,7 +139,18 @@ const clientFields = {
   niches: v.array(v.string()),
   accentColor: v.string(),
   secondaryColor: v.optional(v.string()),
+  whatsapp: v.optional(v.string()),
+  notifyApproval: v.optional(v.boolean()),
 };
+
+/** WhatsApp só com números; número brasileiro sem DDI ganha o 55. */
+function cleanPhone(p?: string) {
+  const digits = (p ?? "").replace(/\D/g, "");
+  if (!digits) return undefined;
+  const full = digits.length <= 11 ? `55${digits}` : digits;
+  if (full.length < 12 || full.length > 15) throw new ConvexError("WhatsApp inválido. Use DDD e número, ex.: (11) 99999-9999.");
+  return full;
+}
 
 function validate(args: { name: string; accentColor: string; secondaryColor?: string }) {
   if (!args.name.trim()) throw new ConvexError("Dê um nome para o cliente.");
@@ -164,6 +177,7 @@ export const create = mutation({
       niches: args.niches,
       accentColor: args.accentColor,
       secondaryColor: args.secondaryColor || undefined,
+      whatsapp: cleanPhone(args.whatsapp),
       active: true,
     });
   },
@@ -180,6 +194,8 @@ export const update = mutation({
       niches: args.niches,
       accentColor: args.accentColor,
       secondaryColor: args.secondaryColor || undefined,
+      whatsapp: cleanPhone(args.whatsapp),
+      ...(args.notifyApproval === undefined ? {} : { notifyApproval: args.notifyApproval }),
       ...(args.active === undefined ? {} : { active: args.active }),
     });
   },

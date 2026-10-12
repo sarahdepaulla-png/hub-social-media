@@ -300,6 +300,12 @@ function Invite({ client, mailReady }: { client: Client; mailReady: boolean }) {
   );
 }
 
+/** 5511999999999 vira +55 (11) 99999-9999. */
+function formatPhone(p: string) {
+  const m = p.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
+  return m ? `(${m[1]}) ${m[2]}-${m[3]}` : `+${p}`;
+}
+
 function ClientCard({ client, mailReady }: { client: Client; mailReady: boolean }) {
   const update = useMutation(api.clients.update);
   const setCanEdit = useMutation(api.clients.setClientCanEdit);
@@ -321,6 +327,8 @@ function ClientCard({ client, mailReady }: { client: Client; mailReady: boolean 
         niches: parseNiches(String(d.get("niches") ?? "")),
         accentColor: accent,
         secondaryColor: secondary || undefined,
+        whatsapp: String(d.get("whatsapp") ?? ""),
+        notifyApproval: d.get("notifyApproval") === "on",
         active: d.get("active") === "on",
       });
       setState("saved");
@@ -366,6 +374,14 @@ function ClientCard({ client, mailReady }: { client: Client; mailReady: boolean 
             <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
               Nichos
               <input name="niches" defaultValue={client.niches.join(", ")} className={field} />
+            </label>
+            <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
+              WhatsApp da cliente
+              <input name="whatsapp" type="tel" inputMode="tel" defaultValue={client.whatsapp ? formatPhone(client.whatsapp) : ""} placeholder="(11) 99999-9999" className={field} />
+            </label>
+            <label className="flex items-center gap-2.5 text-sm">
+              <input type="checkbox" name="notifyApproval" defaultChecked={client.notifyApproval} className="size-[18px] accent-rosa-forte" />
+              Avisar por e-mail quando houver conteúdo para aprovar
             </label>
             <div className="flex flex-wrap gap-4">
               <ColorField name="accent" label="Cor de destaque" value={accent} onChange={(v) => { setAccent(v); setState("idle"); }} />

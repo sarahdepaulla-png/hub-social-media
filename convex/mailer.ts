@@ -119,3 +119,99 @@ export const sendInvite = internalAction({
     }
   },
 });
+
+const FORMAT_LABEL: Record<string, string> = { carrossel: "Carrossel", reels: "Reels", stories: "Stories", imagem: "Post", video: "Vídeo" };
+
+function shortDate(iso: string) {
+  const [, m, d] = iso.split("-");
+  return `${d}/${m}`;
+}
+
+export function approvalEmail({
+  name,
+  clientName,
+  from,
+  pieces,
+  link,
+}: {
+  name: string | null;
+  clientName: string;
+  from: string;
+  pieces: { title: string; date: string; format: string }[];
+  link: string;
+}) {
+  const hi = name ? `Oi, ${name.split(" ")[0]}!` : "Oi!";
+  const one = pieces.length === 1;
+  const subject = one ? `Conteúdo para aprovar: ${pieces[0].title}` : `${pieces.length} conteúdos para aprovar, ${clientName}`;
+  const lead = one ? "Tem um conteúdo novo esperando a sua aprovação no Hub." : `Tem ${pieces.length} conteúdos novos esperando a sua aprovação no Hub.`;
+  const lines = pieces.map((p) => `${shortDate(p.date)}  ${p.title} (${FORMAT_LABEL[p.format] ?? p.format})`);
+  const text = [hi, "", lead, "", ...lines, "", "Para ver e aprovar:", link, "", `${from}`].join("\n");
+  const rows = pieces
+    .map(
+      (p) => `<tr><td style="padding:10px 0;border-top:1px solid #f3dbe6;font-size:15px">
+<span style="display:inline-block;min-width:48px;font-weight:700">${shortDate(p.date)}</span>${escape(p.title)}
+<span style="color:#7a4a5e"> · ${escape(FORMAT_LABEL[p.format] ?? p.format)}</span></td></tr>`,
+    )
+    .join("");
+  const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f8ece6;font-family:Helvetica,Arial,sans-serif;color:#5c0f31">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8ece6;padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="background:#ff8dc7;padding:28px 28px 22px">
+<div style="font-size:13px;font-weight:700;letter-spacing:.02em;color:#5c0f31">HUB SOCIAL MEDIA</div>
+<div style="font-size:40px;line-height:1;font-weight:800;letter-spacing:-.04em;color:#ffffff;margin-top:14px">${one ? "Tem conteúdo<br>para aprovar *" : `${pieces.length} conteúdos<br>para aprovar *`}</div>
+</td></tr>
+<tr><td style="padding:26px 28px 6px;font-size:16px;line-height:1.55">
+<p style="margin:0 0 12px;font-weight:700">${escape(hi)}</p>
+<p style="margin:0 0 8px">${escape(lead)}</p>
+</td></tr>
+<tr><td style="padding:0 28px 8px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table></td></tr>
+<tr><td style="padding:16px 28px 26px">
+<a href="${link}" style="display:inline-block;background:#5c0f31;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:15px 28px;border-radius:999px">${one ? "Ver e aprovar" : "Ver os conteúdos"}</a>
+</td></tr>
+<tr><td style="padding:0 28px 28px;font-size:13px;line-height:1.5;color:#7a4a5e">
+Enviado por ${escape(from)} pelo Hub Social Media.<br>
+Se o botão não abrir, copie: <a href="${link}" style="color:#c2186b;word-break:break-all">${link}</a>
+</td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, text, html };
+}
+
+/** Manda o aviso de aprovação para cada pessoa da cliente (um e-mail por pessoa, com o link dela). */
+export const sendApproval = internalAction({
+  args: { noticeId: v.id("approvalNotices") },
+  handler: async (ctx, { noticeId }) => {
+    const data = await ctx.runQuery(internal.notify.noticeData, { noticeId });
+    if (!data) return;
+    if (data.pieces.length === 0) {
+      await ctx.runMutation(internal.notify.markNotice, { noticeId, error: "As peças saíram de aprovação antes do envio." });
+      return;
+    }
+    if (data.recipients.length === 0) {
+      await ctx.runMutation(internal.notify.markNotice, { noticeId, error: "A cliente ainda não tem e-mail cadastrado no Hub." });
+      return;
+    }
+    const mail = gmail();
+    const site = process.env.SITE_URL?.replace(/\/$/, "");
+    if (!mail || !site) {
+      await ctx.runMutation(internal.notify.markNotice, { noticeId, error: "E-mail não configurado (falta a senha de app do Gmail na Vercel)." });
+      return;
+    }
+    const fromName = process.env.MAIL_FROM_NAME || data.adminName || "Hub Social Media";
+    const target = data.pieces.length === 1 ? `/w/${data.client.slug}/c/${data.pieces[0]._id}` : `/w/${data.client.slug}`;
+    const sent: string[] = [];
+    const failed: string[] = [];
+    for (const r of data.recipients) {
+      // Quem tem link pessoal entra direto, sem código.
+      const link = r.token ? `${site}/acesso/${r.token}?ir=${encodeURIComponent(target)}` : `${site}${target}`;
+      const { subject, text, html } = approvalEmail({ name: r.name, clientName: data.client.name, from: fromName, pieces: data.pieces, link });
+      try {
+        await mail.transport.sendMail({ from: { name: fromName, address: mail.user }, to: r.email, replyTo: mail.user, subject, text, html });
+        sent.push(r.email);
+      } catch (err) {
+        failed.push(`${r.email}: ${(err instanceof Error ? err.message : String(err)).slice(0, 120)}`);
+      }
+    }
+    if (sent.length) await ctx.runMutation(internal.notify.markNotice, { noticeId, sentTo: sent });
+    else await ctx.runMutation(internal.notify.markNotice, { noticeId, error: `Não deu para enviar. ${failed.join("; ")}` });
+  },
+});

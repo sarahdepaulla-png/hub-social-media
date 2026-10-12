@@ -665,9 +665,22 @@ function PostSheet({
 
   return (
     <Sheet title={canManage ? `Post ${index + 1} de ${total}` : KIND_LABEL[post.kind]} onClose={onClose}>
+      {canManage && (
+          <button
+          type="button"
+          disabled={!post.pinned && pinnedCount >= 3}
+          onClick={() => run(() => setPinned({ postId: post._id, pinned: !post.pinned }))}
+          className={`${post.pinned ? buttonClass.outline : buttonClass.primary} min-h-11 w-full gap-2 text-sm`}
+        >
+          <svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden="true">
+            <path d="M15.6 2.3a1 1 0 011.4 0l4.7 4.7a1 1 0 010 1.4l-1.3 1.3a1 1 0 01-1.1.2l-.9-.4-3.4 3.4.3 3.1a1 1 0 01-.3.8l-1.1 1.1a1 1 0 01-1.4 0L9.4 14.8 4 20.2 2.6 20.2l.1-1.4 5.4-5.4-3.1-3.1a1 1 0 010-1.4L6 7.8a1 1 0 01.8-.3l3.1.3 3.4-3.4-.4-.9a1 1 0 01.2-1.1z" />
+          </svg>
+          {post.pinned ? "Desafixar do topo" : pinnedCount >= 3 ? "Já tem 3 fixados" : `Fixar no topo (${pinnedCount} de 3)`}
+        </button>
+      )}
       <div className="-mx-5 flex snap-x snap-mandatory gap-1 overflow-x-auto">
         {cards.map((u, i) => (
-          <div key={u} className="relative aspect-[4/5] w-full shrink-0 snap-center bg-black">
+          <div key={u} className={`relative w-full shrink-0 snap-center bg-black ${canManage ? "h-[34dvh]" : "aspect-[4/5]"}`}>
             {post.isVideo ? (
               <video src={u} controls playsInline className="size-full object-contain" />
             ) : (
@@ -681,17 +694,6 @@ function PostSheet({
 
       {canManage && (
         <>
-          <button
-            type="button"
-            disabled={!post.pinned && pinnedCount >= 3}
-            onClick={() => run(() => setPinned({ postId: post._id, pinned: !post.pinned }))}
-            className={`${post.pinned ? buttonClass.outline : buttonClass.primary} min-h-11 gap-2 text-sm`}
-          >
-            <svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden="true">
-              <path d="M15.6 2.3a1 1 0 011.4 0l4.7 4.7a1 1 0 010 1.4l-1.3 1.3a1 1 0 01-1.1.2l-.9-.4-3.4 3.4.3 3.1a1 1 0 01-.3.8l-1.1 1.1a1 1 0 01-1.4 0L9.4 14.8 4 20.2 2.6 20.2l.1-1.4 5.4-5.4-3.1-3.1a1 1 0 010-1.4L6 7.8a1 1 0 01.8-.3l3.1.3 3.4-3.4-.4-.9a1 1 0 01.2-1.1z" />
-            </svg>
-            {post.pinned ? "Desafixar do topo" : pinnedCount >= 3 ? "Já tem 3 fixados" : `Fixar no topo (${pinnedCount} de 3)`}
-          </button>
           <FrameEditor key={post._id} post={post} />
           <div className="flex flex-col gap-2">
             <span className="text-sm font-semibold">Tipo</span>

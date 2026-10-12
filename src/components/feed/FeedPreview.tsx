@@ -116,6 +116,21 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
 /** A peça em aprovação, mostrada no topo da prévia para a cliente ver como fica. */
 export type Highlight = { title: string; url: string | null; video: boolean; kind: Kind };
 
+/** A peça como ela entra no feed (ou null se não entra: stories, outra rede, lixeira). */
+export function highlightFor(
+  content: { title: string; platform: string; format: string; coverUrl: string | null; deletedAt: number | null },
+  media: { kind: string; url: string | null }[],
+): Highlight | null {
+  if (content.platform !== "instagram" || content.format === "stories" || content.deletedAt) return null;
+  const first = media.find((m) => m.kind !== "link" && m.url);
+  return {
+    title: content.title,
+    url: content.coverUrl ?? first?.url ?? null,
+    video: !content.coverUrl && first?.kind === "video",
+    kind: content.format === "carrossel" ? "carrossel" : content.format === "reels" || content.format === "video" ? "reels" : "post",
+  };
+}
+
 const MOBILE_SIZES = [320, 375, 430, 480, 560];
 const DESKTOP_SIZES = [640, 760, 880, 975, 1100];
 

@@ -12,12 +12,13 @@ import { ApprovalNotice } from "@/components/ApprovalNotice";
 import { TrashButton } from "@/components/Trash";
 import { CaptionPicker } from "@/components/content/CaptionPicker";
 import { MediaManager } from "@/components/editor/MediaManager";
+import { FeedPreview, highlightFor } from "@/components/feed/FeedPreview";
 import { errorText } from "@/components/content/DecisionSheet";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { longDate, stamp } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
 
-type Tab = "briefing" | "legenda" | "ajustes" | "historico";
+type Tab = "briefing" | "legenda" | "ajustes" | "historico" | "feed";
 
 /** Com quem está e prazo: mostra os selos e abre a edição num toque. */
 function TaskEditor({ contentId, owner, dueDate, done }: { contentId: Id<"contents">; owner: string | null; dueDate: string | null; done: boolean }) {
@@ -85,12 +86,14 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
   const body = (() => {
     if (data === undefined) return <Loading />;
     const { content, media, captions, decision, comments, briefing, client } = data;
+    const highlight = highlightFor(content, media);
     const current: Tab = tab ?? (content.status === "ajuste" ? "ajustes" : "briefing");
     const tabs: { id: Tab; label: string }[] = [
       { id: "briefing", label: "Briefing" },
       { id: "legenda", label: captions.length > 1 ? `Legendas ${captions.length}` : "Legenda" },
       { id: "ajustes", label: comments.length ? `Ajustes ${comments.length}` : "Ajustes" },
       { id: "historico", label: "Histórico" },
+      ...(highlight ? [{ id: "feed" as const, label: "No feed" }] : []),
     ];
 
     return (
@@ -207,6 +210,7 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
               </div>
             )}
             {current === "historico" && <HistoryList contentId={contentId} />}
+            {current === "feed" && highlight && <FeedPreview slug={slug} highlight={highlight} />}
           </div>
         </div>
         <div className="border-t border-linha pt-3">

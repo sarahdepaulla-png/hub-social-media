@@ -15,6 +15,7 @@ import { MediaManager } from "@/components/editor/MediaManager";
 import { CoverPicker } from "@/components/editor/CoverPicker";
 import { AutoCovers } from "@/components/AutoCovers";
 import { ApprovalNotice } from "@/components/ApprovalNotice";
+import { FeedPreview, highlightFor } from "@/components/feed/FeedPreview";
 import { STATUS, type Status } from "@/lib/labels";
 
 export default function EditarPage() {
@@ -150,6 +151,15 @@ export default function EditarPage() {
           )}
         </aside>
       </div>
+      {highlightFor(content, media) && (
+        <section aria-labelledby="no-feed" className="flex flex-col gap-4 border-t border-linha pt-8">
+          <div className="flex flex-col gap-1">
+            <h2 id="no-feed" className="text-xl font-extrabold tracking-[-0.04em]">Como fica no feed</h2>
+            <p className="text-sm text-texto-2">A peça aparece em azul, no topo. É a mesma prévia que a cliente vê na aprovação.</p>
+          </div>
+          <FeedPreview slug={cliente} highlight={highlightFor(content, media)!} />
+        </section>
+      )}
     </main>
   );
 }

@@ -13,7 +13,7 @@ import { CaptionPicker } from "@/components/content/CaptionPicker";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { DecisionSheet } from "@/components/content/DecisionSheet";
 import { MediaViewer, PostBar } from "@/components/content/MediaViewer";
-import { FeedPreview, type Highlight } from "@/components/feed/FeedPreview";
+import { FeedPreview, highlightFor } from "@/components/feed/FeedPreview";
 import { longDate, stamp } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
 
@@ -37,17 +37,7 @@ export default function ConteudoPage() {
   const waiting = content.status === "aguardando";
   const chosen = captions.find((c) => c.chosen);
   const rootComments = comments.length;
-  // Prévia no feed: só para post do Instagram que aparece na grade (stories não entra).
-  const firstVisual = media.find((m) => m.kind !== "link" && m.url);
-  const highlight: Highlight | null =
-    content.platform === "instagram" && content.format !== "stories" && !content.deletedAt
-      ? {
-          title: content.title,
-          url: content.coverUrl ?? firstVisual?.url ?? null,
-          video: !content.coverUrl && firstVisual?.kind === "video",
-          kind: content.format === "carrossel" ? "carrossel" : content.format === "reels" || content.format === "video" ? "reels" : "post",
-        }
-      : null;
+  const highlight = highlightFor(content, media);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "legenda", label: captions.length > 1 ? `Legendas ${captions.length}` : "Legenda" },

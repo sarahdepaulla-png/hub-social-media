@@ -2,12 +2,13 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { buttonClass } from "@/components/brand";
 import { Step } from "@/components/briefing/BriefingForm";
 import { TaskFields } from "@/components/Task";
+import { useMediaUpload } from "@/components/editor/MediaManager";
 import { errorText } from "@/components/content/DecisionSheet";
 import { useWorkspace } from "@/components/WorkspaceShell";
 import { todayISO } from "@/lib/dates";
@@ -26,6 +27,10 @@ function NovoForm() {
   const [error, setError] = useState<string | null>(null);
   const [links, setLinks] = useState<string[]>([""]);
   const team = useQuery(api.team.list, ws.viewerRole === "admin" ? {} : "skip");
+  const [files, setFiles] = useState<File[]>([]);
+  const media = useMediaUpload();
+  const previews = useMemo(() => files.map((f) => ({ f, url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null })), [files]);
+  useEffect(() => () => previews.forEach((p) => p.url && URL.revokeObjectURL(p.url)), [previews]);
 
   if (ws.viewerRole !== "admin") return <p className="px-6 py-16 text-lg">Só a administradora cria conteúdos.</p>;
 
@@ -51,6 +56,7 @@ function NovoForm() {
           links: links.map((l) => l.trim()).filter(Boolean),
         },
       });
+      if (files.length) await media.upload(id, files);
       router.replace(`/w/${cliente}/c/${id}/editar`);
     } catch (err) {
       setError(errorText(err));
@@ -96,7 +102,46 @@ function NovoForm() {
           <TaskFields team={team ?? []} id="novo" />
         </Step>
 
-        <Step n={2} title="Briefing" hint="Fica na ficha da peça, só para o estúdio. Se deixar em branco, dá para escrever depois.">
+        <Step n={2} title="Fotos e vídeos" hint="Opcional. Pode escolher várias de uma vez; num carrossel, a ordem aqui é a ordem dos cards.">
+          {files.length > 0 && (
+            <ol className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+              {previews.map(({ f, url }, i) => (
+                <li key={`${f.name}-${i}`} className="relative aspect-[4/5] overflow-hidden rounded-lg bg-thumb">
+                  {url ? (
+                    <img src={url} alt="" className="size-full object-cover" />
+                  ) : (
+                    <span className="flex size-full items-center justify-center p-1 text-center text-[11px]">{f.name}</span>
+                  )}
+                  <span className="absolute left-1 top-1 rounded-full bg-vinho px-1.5 text-[11px] font-bold leading-5 text-white">{i + 1}</span>
+                  <button
+                    type="button"
+                    aria-label={`Tirar ${f.name}`}
+                    onClick={() => setFiles((arr) => arr.filter((_, j) => j !== i))}
+                    className="absolute right-1 top-1 flex size-7 items-center justify-center rounded-full bg-white text-base"
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+          <label className="flex min-h-12 cursor-pointer items-center justify-center rounded-full border-[1.5px] border-dashed border-campo bg-white px-5 text-[15px] font-semibold">
+            {files.length ? `Adicionar mais (${files.length} ${files.length === 1 ? "escolhida" : "escolhidas"})` : "Escolher fotos ou vídeos"}
+            <input
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              className="sr-only"
+              onChange={(e) => {
+                const picked = Array.from(e.target.files ?? []);
+                setFiles((arr) => [...arr, ...picked]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </Step>
+
+        <Step n={3} title="Briefing" hint="Fica na ficha da peça, só para o estúdio. Se deixar em branco, dá para escrever depois.">
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             Objetivo
             <input name="objective" list="objetivos-novo" placeholder="Escolha ou escreva" className={field} />
@@ -153,8 +198,9 @@ function NovoForm() {
         {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
         <div className="border-t border-linha pt-6">
           <button type="submit" disabled={pending} className={buttonClass.primary}>
-            {pending ? "Criando" : "Criar e abrir o editor"}
+            {pending ? (media.progress ?? "Criando") : "Criar e abrir o editor"}
           </button>
+          {media.error && <p role="alert" className="mt-3 text-sm font-semibold text-st-ajuste-texto">{media.error}</p>}
         </div>
       </form>
     </main>

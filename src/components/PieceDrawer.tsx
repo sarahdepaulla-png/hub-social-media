@@ -10,6 +10,7 @@ import { StatusMenu } from "@/components/StatusMenu";
 import { DueBadge, OwnerBadge, TaskFields } from "@/components/Task";
 import { TrashButton } from "@/components/Trash";
 import { CaptionPicker } from "@/components/content/CaptionPicker";
+import { MediaManager } from "@/components/editor/MediaManager";
 import { errorText } from "@/components/content/DecisionSheet";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { longDate, stamp } from "@/lib/dates";
@@ -113,23 +114,7 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
           />
         </header>
 
-        {media.length === 0 ? (
-          <p className="rounded-peca border border-dashed border-campo px-4 py-5 text-sm text-texto-2">Sem mídia ainda.</p>
-        ) : (
-          <ul className="flex gap-2 overflow-x-auto pb-1" aria-label="Mídias da peça">
-            {media.map((m) => (
-              <li key={m._id} className="h-36 w-[115px] shrink-0 overflow-hidden rounded-xl bg-thumb">
-                {m.kind === "video" && m.url ? (
-                  <video src={m.url} muted playsInline preload="metadata" className="size-full object-cover" />
-                ) : m.kind === "imagem" && m.url ? (
-                  <img src={m.url} alt={m.alt ?? ""} className="size-full object-cover" />
-                ) : (
-                  <span className="flex size-full items-center justify-center p-2 text-center text-xs text-texto-2">Link</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        <MediaManager contentId={contentId} media={media} version={content.version} compact />
 
         <div className="flex flex-wrap gap-2.5">
           <Link href={`${base}/c/${contentId}/editar`} className={`${buttonClass.primary} min-h-11 px-5 text-sm`}>

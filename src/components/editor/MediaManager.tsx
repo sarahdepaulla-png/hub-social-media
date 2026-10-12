@@ -10,35 +10,41 @@ import { captureFrame, uploadToStorage } from "@/lib/videoFrame";
 
 const MAX_BYTES = 100 * 1024 * 1024;
 
-/** Upload, ordem e remoção dos cards da versão atual. */
-export function MediaManager({ contentId, media, version }: { contentId: Id<"contents">; media: MediaItem[]; version: number }) {
+const IMAGE_EXT = /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i;
+const VIDEO_EXT = /\.(mp4|mov|m4v|webm)$/i;
+
+/** Imagem, vídeo ou nada. Alguns celulares mandam o arquivo sem tipo: olha a extensão. */
+function mediaKind(f: File): "imagem" | "video" | null {
+  if (f.type.startsWith("image/") || (!f.type && IMAGE_EXT.test(f.name))) return "imagem";
+  if (f.type.startsWith("video/") || (!f.type && VIDEO_EXT.test(f.name))) return "video";
+  return null;
+}
+
+/** Sobe vários arquivos de uma vez para uma peça, na ordem escolhida. */
+export function useMediaUpload() {
   const uploadUrl = useMutation(api.media.generateUploadUrl);
   const add = useMutation(api.media.add);
-  const remove = useMutation(api.media.remove);
-  const move = useMutation(api.media.move);
   const setCover = useMutation(api.media.setCover);
-  const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [link, setLink] = useState("");
-  const [dragging, setDragging] = useState(false);
 
-  const upload = async (files: FileList | File[]) => {
+  const upload = async (contentId: Id<"contents">, files: FileList | File[]) => {
     setError(null);
     const list = Array.from(files);
+    const problems: string[] = [];
     const tooBig = list.filter((f) => f.size > MAX_BYTES);
-    if (tooBig.length) {
-      setError(`${tooBig.map((f) => f.name).join(", ")} passa de 100 MB. Suba no Drive ou Vimeo e cole o link.`);
-    }
-    const ok = list.filter((f) => f.size <= MAX_BYTES && (f.type.startsWith("image/") || f.type.startsWith("video/")));
+    if (tooBig.length) problems.push(`${tooBig.map((f) => f.name).join(", ")} passa de 100 MB. Suba no Drive ou Vimeo e cole o link.`);
+    const wrong = list.filter((f) => f.size <= MAX_BYTES && !mediaKind(f));
+    if (wrong.length) problems.push(`${wrong.map((f) => f.name).join(", ")} não é imagem nem vídeo.`);
+    const ok = list.filter((f) => f.size <= MAX_BYTES && mediaKind(f));
     for (const [i, file] of ok.entries()) {
-      setProgress(`Enviando ${i + 1} de ${ok.length}: ${file.name}`);
+      setProgress(ok.length > 1 ? `Enviando ${i + 1} de ${ok.length}: ${file.name}` : `Enviando ${file.name}`);
       try {
         const url = await uploadUrl();
-        const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+        const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
         if (!res.ok) throw new Error(`Falha no envio (${res.status})`);
         const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
-        const isVideo = file.type.startsWith("video/");
+        const isVideo = mediaKind(file) === "video";
         await add({ contentId, storageId, kind: isVideo ? "video" : "imagem" });
         // Vídeo sem capa: tira um quadro do arquivo local na hora (o servidor ignora se já houver capa).
         if (isVideo) {
@@ -52,10 +58,29 @@ export function MediaManager({ contentId, media, version }: { contentId: Id<"con
           }
         }
       } catch (err) {
-        setError(err instanceof Error && !("data" in err) ? `${file.name}: ${err.message}` : errorText(err));
+        problems.push(err instanceof Error && !("data" in err) ? `${file.name}: ${err.message}` : errorText(err));
       }
     }
     setProgress(null);
+    if (problems.length) setError(problems.join(" "));
+    return ok.length;
+  };
+
+  return { upload, progress, error, setError };
+}
+
+/** Upload, ordem e remoção dos cards da versão atual. */
+export function MediaManager({ contentId, media, version, compact = false }: { contentId: Id<"contents">; media: MediaItem[]; version: number; compact?: boolean }) {
+  const add = useMutation(api.media.add);
+  const remove = useMutation(api.media.remove);
+  const move = useMutation(api.media.move);
+  const input = useRef<HTMLInputElement>(null);
+  const { upload: send, progress, error, setError } = useMediaUpload();
+  const [link, setLink] = useState("");
+  const [dragging, setDragging] = useState(false);
+
+  const upload = async (files: FileList | File[]) => {
+    await send(contentId, files);
     if (input.current) input.current.value = "";
   };
 
@@ -78,12 +103,12 @@ export function MediaManager({ contentId, media, version }: { contentId: Id<"con
   return (
     <section aria-label="Mídia" className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-extrabold tracking-[-0.04em]">Mídia da versão {version}</h2>
+        <h2 className={compact ? "text-base font-bold" : "text-xl font-extrabold tracking-[-0.04em]"}>{compact ? "Fotos e vídeos" : `Mídia da versão ${version}`}</h2>
         <span className="text-sm text-texto-2">{media.length} {media.length === 1 ? "card" : "cards"}</span>
       </div>
 
       {media.length > 0 && (
-        <ol className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+        <ol className={`grid gap-3 ${compact ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-4"}`}>
           {media.map((m, i) => (
             <li key={m._id} className="flex flex-col gap-1.5">
               <span className="relative block aspect-[4/5] overflow-hidden rounded-lg bg-thumb">
@@ -119,12 +144,16 @@ export function MediaManager({ contentId, media, version }: { contentId: Id<"con
           setDragging(false);
           void upload(e.dataTransfer.files);
         }}
-        className={`flex cursor-pointer flex-col items-center gap-1.5 border-[1.5px] border-dashed p-6 text-center transition-colors ${
+        className={`flex cursor-pointer flex-col items-center gap-1.5 border-[1.5px] border-dashed text-center transition-colors ${compact ? "p-4" : "p-6"} ${
           dragging ? "border-rosa-forte bg-white" : "border-campo"
         }`}
       >
-        <strong className="text-[15px]">{progress ?? "Solte imagens ou vídeos aqui, ou toque para escolher"}</strong>
-        <span className="text-[13px] text-texto-2">JPG, PNG, MP4 até 100 MB. Entram na ordem em que você escolher.</span>
+        <strong className="text-[15px]">
+          {progress ?? (media.length ? "Adicionar mais fotos ou vídeos" : "Escolha as fotos ou vídeos")}
+        </strong>
+        <span className="text-[13px] text-texto-2">
+          Pode selecionar várias de uma vez (Ctrl ou Shift no computador, toque em várias no celular). Entram na ordem escolhida, até 100 MB cada.
+        </span>
         <input
           ref={input}
           type="file"

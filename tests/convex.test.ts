@@ -937,3 +937,25 @@ describe("feed por link", () => {
     }
   });
 });
+
+describe("ver como cliente", () => {
+  test("admin vira cliente daquele espaço, não aprova, e volta", async () => {
+    const { as, admin, waiting } = await setup();
+    await as(admin).mutation(api.viewer.setViewAs, { slug: "lili" });
+    expect(await as(admin).query(api.viewer.me, {})).toMatchObject({ role: "cliente", viewingAs: true, client: { slug: "lili" } });
+    // Como cliente: não vê o estúdio nem outra cliente, não vê o briefing e não decide.
+    await expect(as(admin).query(api.clients.listForStudio, { month: "2026-10", today: "2026-10-05" })).rejects.toThrow(/administradora/);
+    await expect(as(admin).query(api.clients.bySlug, { slug: "bia" })).rejects.toThrow(/não encontrado/);
+    const view = await as(admin).query(api.contents.get, { contentId: waiting[0] });
+    expect(view.viewer.role).toBe("cliente");
+    await expect(as(admin).mutation(api.contents.decide, { contentId: waiting[0], type: "aprovar" })).rejects.toThrow(/vendo como a cliente/);
+    // Sai do modo mesmo estando "como cliente".
+    await as(admin).mutation(api.viewer.setViewAs, {});
+    expect(await as(admin).query(api.viewer.me, {})).toMatchObject({ role: "admin", viewingAs: false });
+  });
+
+  test("cliente não liga o modo", async () => {
+    const { as, liliUser } = await setup();
+    await expect(as(liliUser).mutation(api.viewer.setViewAs, { slug: "bia" })).rejects.toThrow(/administradora/);
+  });
+});

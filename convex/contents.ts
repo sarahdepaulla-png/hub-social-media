@@ -189,6 +189,9 @@ export const decide = mutation({
   args: { contentId: v.id("contents"), type: decisionType, comment: v.optional(v.string()), mediaOrder: v.optional(v.number()) },
   handler: async (ctx, { contentId, type, comment, mediaOrder }) => {
     const { viewer, content } = await requireContentAccess(ctx, contentId);
+    if ((viewer as { viewingAs?: boolean }).viewingAs) {
+      throw new ConvexError("Você está vendo como a cliente. Aprovar e pedir ajuste ficam com ela.");
+    }
     if (content.status !== "aguardando") {
       throw new ConvexError("Esta peça não está esperando decisão.");
     }

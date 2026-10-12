@@ -7,6 +7,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { api } from "@convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { Avatar, Loading, Logo } from "./brand";
+import { ViewAsButton } from "@/components/ViewAs";
 import { SignOutButton } from "./SignOutButton";
 
 type Workspace = FunctionReturnType<typeof api.clients.bySlug>;
@@ -59,9 +60,12 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
         <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <div className="flex items-center gap-4">
             {ws.viewerRole === "admin" ? (
-              <Link href="/estudio" className="text-sm font-semibold text-rosa-forte hover:text-rosa-forte-hover">
-                Estúdio
-              </Link>
+              <>
+                <Link href="/estudio" className="text-sm font-semibold text-rosa-forte hover:text-rosa-forte-hover">
+                  Estúdio
+                </Link>
+                <ViewAsButton slug={ws.slug} />
+              </>
             ) : (
               <Logo className="text-[15px] sm:text-[19px]" />
             )}

@@ -4,6 +4,7 @@ import "@fontsource-variable/inter-tight";
 import "./globals.css";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { TrashToastHost } from "@/components/Trash";
+import { ViewAsBanner } from "@/components/ViewAs";
 
 export const metadata: Metadata = {
   title: { default: "Hub Social Media", template: "%s | Hub Social Media" },
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <html lang="pt-BR">
         <body className="min-h-dvh antialiased">
           <ConvexClientProvider>
+            <ViewAsBanner />
             {children}
             <TrashToastHost />
           </ConvexClientProvider>

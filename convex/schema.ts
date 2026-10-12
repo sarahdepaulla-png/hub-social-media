@@ -52,6 +52,7 @@ export default defineSchema({
     role: v.optional(role),
     clientId: v.optional(v.id("clients")),
     photoId: v.optional(v.id("_storage")), // foto da admin na página inicial
+    viewAsClientId: v.optional(v.id("clients")), // admin vendo o Hub como a cliente (modo de visualização)
   })
     .index("email", ["email"])
     .index("phone", ["phone"])

@@ -8,10 +8,23 @@ import type { Doc, Id } from "../_generated/dataModel";
  * admin acessa tudo; cliente só o próprio workspace.
  */
 
-export async function getViewer(ctx: QueryCtx): Promise<Doc<"users"> | null> {
+/** Quem está usando o Hub. Admin no modo "ver como cliente" vira cliente daquele espaço. */
+export type Viewer = Doc<"users"> & { viewingAs?: boolean };
+
+export async function getViewer(ctx: QueryCtx): Promise<Viewer | null> {
   const userId = await getAuthUserId(ctx);
   if (!userId) return null;
-  return await ctx.db.get(userId);
+  const user = await ctx.db.get(userId);
+  if (user?.role === "admin" && user.viewAsClientId) {
+    return { ...user, role: "cliente", clientId: user.viewAsClientId, viewingAs: true };
+  }
+  return user;
+}
+
+/** A conta de verdade, ignorando o modo "ver como cliente" (para ligar e desligar o modo). */
+export async function getRealUser(ctx: QueryCtx): Promise<Doc<"users"> | null> {
+  const userId = await getAuthUserId(ctx);
+  return userId ? await ctx.db.get(userId) : null;
 }
 
 export async function requireViewer(ctx: QueryCtx): Promise<Doc<"users">> {

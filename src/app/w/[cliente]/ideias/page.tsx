@@ -12,6 +12,7 @@ import { Asterisk, Loading, buttonClass } from "@/components/brand";
 import { errorText } from "@/components/content/DecisionSheet";
 import { useWorkspace } from "@/components/WorkspaceShell";
 import { shortDate, stamp, todayISO } from "@/lib/dates";
+import { Linkify } from "@/components/Linkify";
 
 type Idea = FunctionReturnType<typeof api.ideas.list>[number];
 type Filter = "todas" | "nova" | "analise" | "convertida" | "arquivada";
@@ -282,7 +283,7 @@ function Conversation({ idea }: { idea: Idea }) {
                 </button>
               )}
             </span>
-            <p className="whitespace-pre-line break-words text-sm leading-snug">{c.body}</p>
+            <p className="whitespace-pre-line break-words text-sm leading-snug"><Linkify text={c.body} /></p>
           </div>
         </div>
       ))}

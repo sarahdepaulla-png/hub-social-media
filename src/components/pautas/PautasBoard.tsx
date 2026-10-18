@@ -10,6 +10,7 @@ import { Asterisk, Loading, StatusTag, buttonClass } from "@/components/brand";
 import { errorText } from "@/components/content/DecisionSheet";
 import { currentMonth, monthName, shiftMonth, shortDate, stamp, todayISO } from "@/lib/dates";
 import { PLATFORM, type Format, type Platform } from "@/lib/labels";
+import { Linkify } from "@/components/Linkify";
 
 type Pauta = FunctionReturnType<typeof api.pautas.list>[number];
 type FileRef = { id: Id<"_storage">; name: string; type: string };
@@ -371,7 +372,7 @@ function PautaDetail({ pauta, admin, base, months }: { pauta: Pauta; admin: bool
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {pauta.notes ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{pauta.notes}</p> : <p className="text-sm text-texto-2">Sem descrição.</p>}
+          {pauta.notes ? <p className="whitespace-pre-wrap text-[15px] leading-relaxed"><Linkify text={pauta.notes} /></p> : <p className="text-sm text-texto-2">Sem descrição.</p>}
           {pauta.link && (
             <a href={pauta.link} target="_blank" rel="noreferrer" className="break-all text-sm font-semibold text-rosa-forte underline">
               {pauta.link}

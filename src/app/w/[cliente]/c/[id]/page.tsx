@@ -16,6 +16,7 @@ import { MediaViewer, PostBar } from "@/components/content/MediaViewer";
 import { FeedPreview, highlightFor } from "@/components/feed/FeedPreview";
 import { longDate, stamp } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
+import { Linkify } from "@/components/Linkify";
 
 type Tab = "legenda" | "comentarios" | "historico" | "briefing";
 
@@ -131,7 +132,7 @@ export default function ConteudoPage() {
               <span>
                 <strong>{decision.label}</strong> por {decision.isMine ? "você" : decision.userName}, {stamp(decision.at)}
               </span>
-              {decision.comment && <span className="text-texto-2">&ldquo;{decision.comment}&rdquo;</span>}
+              {decision.comment && <span className="text-texto-2">&ldquo;<Linkify text={decision.comment} />&rdquo;</span>}
             </div>
           )}
 
@@ -165,7 +166,7 @@ export default function ConteudoPage() {
                   {briefing.objective && (
                     <span className="self-start rounded-full bg-rosa px-3 py-1 text-sm font-semibold text-vinho">{briefing.objective}</span>
                   )}
-                  <p className="whitespace-pre-wrap text-base leading-relaxed">{briefing.body}</p>
+                  <p className="whitespace-pre-wrap text-base leading-relaxed"><Linkify text={briefing.body} /></p>
                   {briefing.links.length > 0 && (
                     <ul className="flex flex-col gap-1.5">
                       {briefing.links.map((l) => (

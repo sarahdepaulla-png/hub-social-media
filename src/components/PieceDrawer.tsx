@@ -17,6 +17,7 @@ import { errorText } from "@/components/content/DecisionSheet";
 import { CommentThread, HistoryList } from "@/components/content/CommentThread";
 import { longDate, stamp } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
+import { Linkify } from "@/components/Linkify";
 
 type Tab = "briefing" | "legenda" | "ajustes" | "historico" | "feed";
 
@@ -161,7 +162,7 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
                   {briefing.objective && (
                     <span className="self-start rounded-full bg-rosa px-3 py-1 text-sm font-semibold text-vinho">{briefing.objective}</span>
                   )}
-                  <p className="whitespace-pre-wrap text-base leading-relaxed">{briefing.body}</p>
+                  <p className="whitespace-pre-wrap text-base leading-relaxed"><Linkify text={briefing.body} /></p>
                   {briefing.links.length > 0 && (
                     <ul className="flex flex-col gap-1.5">
                       {briefing.links.map((l) => (
@@ -203,7 +204,7 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
                     <span>
                       <strong>{decision.label}</strong> por {decision.userName}, {stamp(decision.at)}
                     </span>
-                    {decision.comment && <span className="text-texto-2">&ldquo;{decision.comment}&rdquo;</span>}
+                    {decision.comment && <span className="text-texto-2">&ldquo;<Linkify text={decision.comment} />&rdquo;</span>}
                   </div>
                 )}
                 <CommentThread contentId={contentId} comments={comments} accent={client.accentColor} />

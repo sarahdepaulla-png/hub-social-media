@@ -3,6 +3,7 @@
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { Linkify } from "@/components/Linkify";
 
 type Caption = { _id: string; order: number; text: string; cta: string | null; hashtags: string | null; notes: string | null; chosen: boolean };
 
@@ -74,7 +75,7 @@ export function CaptionPicker({ captions, locked, studio = false }: { captions: 
           {chosen.notes && (
             <>
               <dt className="font-semibold">Observação</dt>
-              <dd className="text-texto-2">{chosen.notes}</dd>
+              <dd className="text-texto-2"><Linkify text={chosen.notes} /></dd>
             </>
           )}
         </dl>

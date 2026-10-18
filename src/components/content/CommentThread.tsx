@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { stamp } from "@/lib/dates";
 import { errorText } from "./DecisionSheet";
+import { Linkify } from "@/components/Linkify";
 
 type Comment = {
   _id: string;
@@ -41,7 +42,7 @@ function Bubble({ c, accent }: { c: Comment; accent: string }) {
             {c.mediaOrder && <span className="rounded-full border border-campo px-2.5 py-0.5 text-xs font-semibold">Card {c.mediaOrder}</span>}
           </span>
         )}
-        <p className="whitespace-pre-line break-words text-[15px] leading-relaxed">{c.body}</p>
+        <p className="whitespace-pre-line break-words text-[15px] leading-relaxed"><Linkify text={c.body} /></p>
       </div>
     </div>
   );

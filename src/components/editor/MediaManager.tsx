@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { MediaItem } from "@/components/content/MediaViewer";
 import { errorText } from "@/components/content/DecisionSheet";
+import { linkHost } from "@/components/Linkify";
 import { captureFrame, uploadToStorage } from "@/lib/videoFrame";
 
 const MAX_BYTES = 100 * 1024 * 1024;
@@ -114,7 +115,21 @@ export function MediaManager({ contentId, media, version, compact = false }: { c
               <span className="relative block aspect-[4/5] overflow-hidden rounded-lg bg-thumb">
                 {m.kind === "imagem" && m.url && <img src={m.url} alt="" className="size-full object-cover" />}
                 {m.kind === "video" && m.url && <video src={m.url} muted playsInline preload="metadata" className="size-full object-cover" />}
-                {m.kind === "link" && <span className="flex size-full items-center justify-center p-2 text-center text-xs">Link externo</span>}
+                {m.kind === "link" && (
+                  <a
+                    href={m.url ?? "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={m.url ?? undefined}
+                    className="flex size-full flex-col items-center justify-center gap-1.5 bg-white p-2 text-center hover:bg-[#FFF6FA]"
+                  >
+                    <svg viewBox="0 0 24 24" className="size-6 fill-none stroke-rosa-forte stroke-2" aria-hidden="true">
+                      <path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" />
+                    </svg>
+                    <span className="max-w-full truncate text-[11px] font-semibold text-texto-3">{m.url ? linkHost(m.url) : "Link"}</span>
+                    <span className="text-xs font-bold text-rosa-forte underline">Abrir link</span>
+                  </a>
+                )}
                 <span className="absolute left-1.5 top-1.5 rounded-full bg-vinho px-2 text-xs font-bold leading-5 text-white">{i + 1}</span>
               </span>
               <span className="flex justify-between">

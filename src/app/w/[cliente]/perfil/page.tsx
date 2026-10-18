@@ -8,6 +8,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { Asterisk, Loading, buttonClass } from "@/components/brand";
 import { errorText } from "@/components/content/DecisionSheet";
 import { useWorkspace } from "@/components/WorkspaceShell";
+import { Linkify } from "@/components/Linkify";
 
 type Profile = FunctionReturnType<typeof api.profile.get>;
 type Item = Profile["items"][number];
@@ -251,7 +252,7 @@ function ItemRow({ slug, item }: { slug: string; item: Item }) {
         </a>
       )}
 
-      {item.note && <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-texto-3">{item.note}</p>}
+      {item.note && <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-texto-3"><Linkify text={item.note} /></p>}
     </li>
   );
 }

@@ -13,6 +13,7 @@ import { useWorkspace } from "@/components/WorkspaceShell";
 import { DueBadge, OwnerBadge } from "@/components/Task";
 import { longDate, stamp, todayISO } from "@/lib/dates";
 import { BRIEF_STATUS, FORMAT, PLATFORM, type Format, type Platform } from "@/lib/labels";
+import { Linkify } from "@/components/Linkify";
 
 function host(url: string) {
   try {
@@ -186,7 +187,7 @@ function BriefingView() {
             {b.objective && (
               <span className="self-start rounded-full bg-rosa px-3 py-1 text-sm font-semibold text-vinho">{b.objective}</span>
             )}
-            <p className="whitespace-pre-wrap text-[17px] leading-relaxed">{b.body}</p>
+            <p className="whitespace-pre-wrap text-[17px] leading-relaxed"><Linkify text={b.body} /></p>
           </Step>
           <Step n={3} title="Links">
             {b.links.length === 0 ? (

@@ -959,3 +959,19 @@ describe("ver como cliente", () => {
     await expect(as(liliUser).mutation(api.viewer.setViewAs, { slug: "bia" })).rejects.toThrow(/administradora/);
   });
 });
+
+describe("página para aprovar", () => {
+  test("lista o que espera a cliente; links pessoais só para a admin", async () => {
+    const { t, as, admin, liliUser, lili } = await setup();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("invites", { email: "lili@x.com", name: "Lili", role: "cliente", clientId: lili, token: "tok-lili" });
+    });
+    const forClient = await as(liliUser).query(api.approvals.list, { slug: "lili" });
+    expect(forClient.items.map((i) => i.date)).toEqual(["2026-10-13", "2026-10-15", "2026-10-20", "2026-10-29"]);
+    expect(forClient).toMatchObject({ isAdmin: false, people: [], whatsapp: null });
+    const forAdmin = await as(admin).query(api.approvals.list, { slug: "lili" });
+    expect(forAdmin.people).toEqual([{ name: "Lili", token: "tok-lili" }]);
+    expect((await as(liliUser).query(api.clients.bySlug, { slug: "lili" })).waitingCount).toBe(4);
+    await expect(as(liliUser).query(api.approvals.list, { slug: "bia" })).rejects.toThrow(/não encontrado/);
+  });
+});

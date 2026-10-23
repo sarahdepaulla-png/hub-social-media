@@ -197,7 +197,7 @@ export const sendApproval = internalAction({
       return;
     }
     const fromName = process.env.MAIL_FROM_NAME || data.adminName || "Hub Social Media";
-    const target = data.pieces.length === 1 ? `/w/${data.client.slug}/c/${data.pieces[0]._id}` : `/w/${data.client.slug}`;
+    const target = data.pieces.length === 1 ? `/w/${data.client.slug}/c/${data.pieces[0]._id}` : `/w/${data.client.slug}/aprovar`;
     const sent: string[] = [];
     const failed: string[] = [];
     for (const r of data.recipients) {

@@ -41,6 +41,13 @@ async function workspaceHeader(ctx: Parameters<typeof requireAdmin>[0], slug: st
       // A equipe da cliente pode editar peças (legenda, mídia, capa).
       canEdit: viewer.role === "admin" || client.clientCanEdit === true,
       clientCanEdit: client.clientCanEdit === true,
+      // Peças esperando a decisão da cliente (aba "Aprovar").
+      waitingCount: (
+        await ctx.db
+          .query("contents")
+          .withIndex("by_client_status", (q) => q.eq("clientId", client._id).eq("status", "aguardando"))
+          .collect()
+      ).filter((c) => !c.deletedAt).length,
       // Ideias que ainda ninguém do estúdio olhou (só interessa à admin).
       newIdeas:
         viewer.role === "admin"

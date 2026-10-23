@@ -10,6 +10,7 @@
   
   import type { ApiFromModules, FilterApi, FunctionReference } from "convex/server";
   import type * as access from "../access.js";
+import type * as approvals from "../approvals.js";
 import type * as auth from "../auth.js";
 import type * as briefings from "../briefings.js";
 import type * as calendar from "../calendar.js";
@@ -56,6 +57,7 @@ import type * as viewer from "../viewer.js";
    */
   declare const fullApi: ApiFromModules<{
     "access": typeof access,
+"approvals": typeof approvals,
 "auth": typeof auth,
 "briefings": typeof briefings,
 "calendar": typeof calendar,

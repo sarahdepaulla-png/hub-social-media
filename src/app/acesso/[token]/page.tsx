@@ -21,7 +21,7 @@ export default function AcessoPage() {
       .then(() => {
         // Link do aviso de aprovação: depois de entrar, vai direto para a peça.
         const next = new URLSearchParams(window.location.search).get("ir") ?? "";
-        window.location.replace(/^\/w\/[a-z0-9-]+(\/c\/[a-z0-9]+)?$/.test(next) ? next : "/");
+        window.location.replace(/^\/w\/[a-z0-9-]+(\/c\/[a-z0-9]+|\/aprovar)?$/.test(next) ? next : "/");
       })
       .catch(() => setFailed(true));
   }, [signIn, token]);

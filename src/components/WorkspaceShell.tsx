@@ -29,6 +29,7 @@ const ICONS = {
   ),
   datas: <path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z" />,
   ideias: <path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9V16h7v-2.1A6 6 0 0012 3z" />,
+  aprovar: <path d="M4 12.5l5 5L20 6.5" />,
   feed: <path d="M3.5 3.5h17v17h-17zM9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17" />,
   perfil: <path d="M3.5 6.5h6l2 2h9v11h-17zM3.5 6.5V4.5h6l2 2" />,
 };
@@ -45,6 +46,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
   const tabs: { href: string; label: string; icon: React.ReactNode; active: boolean; badge?: number }[] = [
     { href: base, label: "Início", icon: ICONS.inicio, active: pathname === base },
     { href: `${base}/calendario`, label: "Calendário", icon: ICONS.calendario, active: pathname.startsWith(`${base}/calendario`) || pathname.startsWith(`${base}/c/`) },
+    { href: `${base}/aprovar`, label: "Aprovar", icon: ICONS.aprovar, active: pathname.startsWith(`${base}/aprovar`), badge: ws.waitingCount },
     { href: `${base}/datas`, label: "Datas", icon: ICONS.datas, active: pathname.startsWith(`${base}/datas`) },
     { href: `${base}/ideias`, label: "Ideias", icon: ICONS.ideias, active: pathname.startsWith(`${base}/ideias`), badge: ws.newIdeas },
     { href: `${base}/feed`, label: "Feed", icon: ICONS.feed, active: pathname.startsWith(`${base}/feed`) },
@@ -52,6 +54,9 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
       ? [{ href: `${base}/perfil`, label: "Perfil", icon: ICONS.perfil, active: pathname.startsWith(`${base}/perfil`) }]
       : []),
   ];
+
+  // No celular cabem 6: o Perfil (só do estúdio) fica no menu do topo, no computador.
+  const mobileTabs = tabs.length > 6 ? tabs.filter((t) => !t.href.endsWith("/perfil")) : tabs;
 
   return (
     <WorkspaceContext.Provider value={ws}>
@@ -99,15 +104,15 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
         <nav
           aria-label="Navegação principal"
           hidden={focused}
-          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${mobileTabs.length}, minmax(0, 1fr))` }}
           className={`fixed inset-x-0 bottom-0 z-20 grid h-[76px] border-t border-linha bg-white pb-[env(safe-area-inset-bottom)] md:hidden`}
         >
-          {tabs.map((t) => (
+          {mobileTabs.map((t) => (
             <Link
               key={t.href}
               href={t.href}
               aria-current={t.active ? "page" : undefined}
-              className={`relative flex flex-col items-center justify-center gap-1 ${tabs.length > 5 ? "text-[11px]" : "text-xs"} ${t.active ? "font-bold text-vinho" : "text-texto-2"}`}
+              className={`relative flex flex-col items-center justify-center gap-1 ${mobileTabs.length > 5 ? "text-[11px]" : "text-xs"} ${t.active ? "font-bold text-vinho" : "text-texto-2"}`}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                 {t.icon}

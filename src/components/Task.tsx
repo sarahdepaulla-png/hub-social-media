@@ -56,8 +56,8 @@ const field = "min-h-12 w-full border-[1.5px] border-campo bg-white px-3 text-ba
 /** Campos "Com quem está" e "Prazo" para formulários (nomes owner e dueDate). */
 export function TaskFields({ team, owner, dueDate, id = "tarefa" }: { team: string[]; owner?: string | null; dueDate?: string | null; id?: string }) {
   return (
-    <div className="grid grid-cols-1 gap-3 rounded-xl bg-[#FFF6FA] p-3 sm:grid-cols-2">
-      <label className="flex flex-col gap-1.5 text-sm font-semibold">
+    <div className="grid min-w-0 grid-cols-1 gap-3 rounded-xl bg-[#FFF6FA] p-3 sm:grid-cols-2">
+      <label className="flex min-w-0 flex-col gap-1.5 text-sm font-semibold">
         Com quem está
         <input name="owner" list={`${id}-equipe`} defaultValue={owner ?? ""} placeholder="Sarita, Mai, Leo" autoComplete="off" className={field} />
         <datalist id={`${id}-equipe`}>
@@ -66,9 +66,10 @@ export function TaskFields({ team, owner, dueDate, id = "tarefa" }: { team: stri
           ))}
         </datalist>
       </label>
-      <label className="flex flex-col gap-1.5 text-sm font-semibold">
+      <label className="flex min-w-0 flex-col gap-1.5 text-sm font-semibold">
         Prazo de entrega
-        <input name="dueDate" type="date" defaultValue={dueDate ?? ""} className={field} />
+        {/* No iPhone o campo de data ignora a largura: min-w-0 e appearance-none seguram dentro da caixa. */}
+        <input name="dueDate" type="date" defaultValue={dueDate ?? ""} className={`${field} min-w-0 max-w-full appearance-none [&::-webkit-date-and-time-value]:text-left`} />
       </label>
       <p className="text-xs text-texto-2 sm:col-span-2">Só o estúdio vê. Aparece na esteira.</p>
     </div>

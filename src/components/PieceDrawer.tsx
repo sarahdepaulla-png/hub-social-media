@@ -27,12 +27,15 @@ function TaskEditor({ contentId, owner, dueDate, done }: { contentId: Id<"conten
   const setTask = useMutation(api.contents.setTask);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   if (!open) {
     return (
       <div className="flex flex-wrap items-center gap-2">
         <OwnerBadge owner={owner} />
         <DueBadge due={dueDate} done={done} />
+        {saved && <span role="status" className="text-[13px] font-semibold text-[#1F8F4E]">Salvo</span>}
         <button type="button" onClick={() => setOpen(true)} className="min-h-9 text-[13px] font-semibold text-rosa-forte">
           {owner || dueDate ? "Mudar responsável ou prazo" : "Definir responsável e prazo"}
         </button>
@@ -44,15 +47,19 @@ function TaskEditor({ contentId, owner, dueDate, done }: { contentId: Id<"conten
     e.preventDefault();
     const d = new FormData(e.currentTarget);
     setError(null);
+    setPending(true);
     try {
       await setTask({
         contentId,
         owner: String(d.get("owner") ?? "").trim() || undefined,
         dueDate: String(d.get("dueDate") ?? "").trim() || undefined,
       });
+      setSaved(true);
       setOpen(false);
     } catch (err) {
-      setError(errorText(err));
+      setError(errorText(err) || "Não deu para salvar. Confira a internet e tente de novo.");
+    } finally {
+      setPending(false);
     }
   };
 
@@ -61,7 +68,9 @@ function TaskEditor({ contentId, owner, dueDate, done }: { contentId: Id<"conten
       <TaskFields team={team ?? []} owner={owner} dueDate={dueDate} id="ficha" />
       {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
       <div className="flex gap-2">
-        <button type="submit" className={`${buttonClass.primary} min-h-10 px-4 text-sm`}>Salvar</button>
+        <button type="submit" disabled={pending} className={`${buttonClass.primary} min-h-11 px-5 text-sm`}>
+          {pending ? "Salvando…" : "Salvar"}
+        </button>
         <button type="button" onClick={() => setOpen(false)} className="min-h-10 px-3 text-sm font-semibold text-texto-2">Cancelar</button>
       </div>
     </form>
@@ -111,7 +120,6 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
           </span>
           <StatusMenu contentId={contentId} status={content.status} editable />
           <TaskEditor
-            key={`${content.owner}-${content.dueDate}`}
             contentId={contentId}
             owner={content.owner}
             dueDate={content.dueDate}

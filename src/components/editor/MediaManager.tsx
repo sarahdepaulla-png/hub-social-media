@@ -7,6 +7,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import type { MediaItem } from "@/components/content/MediaViewer";
 import { errorText } from "@/components/content/DecisionSheet";
 import { linkHost } from "@/components/Linkify";
+import { Lightbox, lightboxItems } from "@/components/content/Lightbox";
 import { captureFrame, uploadToStorage } from "@/lib/videoFrame";
 
 const MAX_BYTES = 100 * 1024 * 1024;
@@ -71,13 +72,27 @@ export function useMediaUpload() {
 }
 
 /** Upload, ordem e remoção dos cards da versão atual. */
-export function MediaManager({ contentId, media, version, compact = false }: { contentId: Id<"contents">; media: MediaItem[]; version: number; compact?: boolean }) {
+export function MediaManager({
+  contentId,
+  media,
+  version,
+  compact = false,
+  title,
+}: {
+  contentId: Id<"contents">;
+  media: MediaItem[];
+  version: number;
+  compact?: boolean;
+  title?: string;
+}) {
   const add = useMutation(api.media.add);
   const remove = useMutation(api.media.remove);
   const move = useMutation(api.media.move);
   const input = useRef<HTMLInputElement>(null);
   const { upload: send, progress, error, setError } = useMediaUpload();
   const [link, setLink] = useState("");
+  const [zoom, setZoom] = useState<number | null>(null);
+  const visual = lightboxItems(media);
   const [dragging, setDragging] = useState(false);
 
   const upload = async (files: FileList | File[]) => {
@@ -113,8 +128,27 @@ export function MediaManager({ contentId, media, version, compact = false }: { c
           {media.map((m, i) => (
             <li key={m._id} className="flex flex-col gap-1.5">
               <span className="relative block aspect-[4/5] overflow-hidden rounded-lg bg-thumb">
-                {m.kind === "imagem" && m.url && <img src={m.url} alt="" className="size-full object-cover" />}
-                {m.kind === "video" && m.url && <video src={m.url} muted playsInline preload="metadata" className="size-full object-cover" />}
+                {(m.kind === "imagem" || m.kind === "video") && m.url && (
+                  <button
+                    type="button"
+                    onClick={() => setZoom(visual.findIndex((v) => v.index === i))}
+                    aria-label={`Abrir o card ${i + 1} em tela cheia`}
+                    className="block size-full cursor-zoom-in"
+                  >
+                    {m.kind === "imagem" ? (
+                      <img src={m.url} alt="" className="size-full object-cover" />
+                    ) : (
+                      <>
+                        <video src={m.url} muted playsInline preload="metadata" className="size-full object-cover" />
+                        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+                          <span className="flex size-10 items-center justify-center rounded-full bg-black/45">
+                            <svg viewBox="0 0 24 24" className="ml-0.5 size-5 fill-white"><path d="M8 5v14l11-7z" /></svg>
+                          </span>
+                        </span>
+                      </>
+                    )}
+                  </button>
+                )}
                 {m.kind === "link" && (
                   <a
                     href={m.url ?? "#"}
@@ -195,6 +229,9 @@ export function MediaManager({ contentId, media, version, compact = false }: { c
         </button>
       </form>
       {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
+      {zoom !== null && zoom >= 0 && (
+        <Lightbox items={visual.map((v) => ({ url: v.url, kind: v.kind }))} start={zoom} title={title ?? "Peça"} onClose={() => setZoom(null)} />
+      )}
     </section>
   );
 }

@@ -123,7 +123,7 @@ export function PieceDrawer({ contentId, slug, onClose }: { contentId: Id<"conte
           <ApprovalNotice phone={client.whatsapp} title={content.title} date={content.date} slug={slug} contentId={contentId} notice={data.notice} />
         )}
 
-        <MediaManager contentId={contentId} media={media} version={content.version} compact />
+        <MediaManager contentId={contentId} media={media} version={content.version} compact title={content.title} />
 
         <div className="flex flex-wrap gap-2.5">
           <Link href={`${base}/c/${contentId}/editar`} className={`${buttonClass.primary} min-h-11 px-5 text-sm`}>

@@ -109,7 +109,7 @@ export default function EditarPage() {
 
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-12">
-          <MediaManager contentId={contentId} media={media} version={content.version} />
+          <MediaManager contentId={contentId} media={media} version={content.version} title={content.title} />
           <CoverPicker contentId={contentId} coverUrl={content.coverUrl} coverSource={content.coverSource} />
           <AutoCovers contentId={contentId} />
           <ContentForm

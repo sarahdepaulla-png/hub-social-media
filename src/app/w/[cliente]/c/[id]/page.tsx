@@ -75,6 +75,7 @@ export default function ConteudoPage() {
             justApproved={justApproved}
             onIndexChange={onIndex}
             coverUrl={content.coverUrl}
+            title={content.title}
           />
           {content.platform === "instagram" && media.length > 0 && <PostBar />}
         </div>

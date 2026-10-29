@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Lightbox, lightboxItems } from "@/components/content/Lightbox";
 import { SelectionBox, Sticker } from "@/components/brand";
 import type { Format, Status } from "@/lib/labels";
 
@@ -20,7 +21,9 @@ export function MediaViewer({
   justApproved = false,
   onIndexChange,
   coverUrl = null,
+  title = "Peça",
 }: {
+  title?: string;
   coverUrl?: string | null;
   media: MediaItem[];
   format: Format;
@@ -31,6 +34,12 @@ export function MediaViewer({
 }) {
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  const [zoom, setZoom] = useState<number | null>(null);
+  const visual = lightboxItems(media);
+  const openAt = (i: number) => {
+    const at = visual.findIndex((v) => v.index === i);
+    if (at >= 0) setZoom(at);
+  };
   const vertical = VERTICAL.includes(format);
   const approved = status === "aprovado" || status === "agendado" || status === "publicado";
 
@@ -99,13 +108,26 @@ export function MediaViewer({
                     </a>
                   </div>
                 ) : m.url ? (
-                  <img src={m.url} alt={m.alt ?? `Card ${i + 1}`} className="size-full object-cover" draggable={false} />
+                  <button type="button" onClick={() => openAt(i)} aria-label={`Abrir o card ${i + 1} em tela cheia`} className="block size-full cursor-zoom-in">
+                    <img src={m.url} alt={m.alt ?? `Card ${i + 1}`} className="size-full object-cover" draggable={false} />
+                  </button>
                 ) : null}
               </div>
             ))}
           </div>
         )}
 
+        {media[index] && media[index].kind !== "link" && media[index].url && (
+          <button
+            type="button"
+            onClick={() => openAt(index)}
+            aria-label="Ver em tela cheia"
+            className="absolute left-3 top-3 z-10 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-white/90 px-3 text-[13px] font-semibold text-vinho shadow-sm hover:bg-white"
+          >
+            <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+            Ampliar
+          </button>
+        )}
         {media.length > 1 && (
           <>
             <span className="absolute right-3 top-3 rounded-full bg-vinho px-2.5 py-1 text-[13px] font-semibold text-white" aria-live="polite">
@@ -160,6 +182,7 @@ export function MediaViewer({
           </SelectionBox>
         </span>
       )}
+      {zoom !== null && <Lightbox items={visual.map((v) => ({ url: v.url, kind: v.kind }))} start={zoom} title={title} onClose={() => setZoom(null)} />}
     </div>
   );
 }

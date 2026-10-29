@@ -48,37 +48,24 @@ export function CaptionPicker({ captions, locked, studio = false }: { captions: 
                 className="mt-1 size-[18px] shrink-0 accent-rosa-forte"
               />
             )}
-            <span className="flex flex-col gap-1.5">
+            <span className="flex min-w-0 flex-col gap-1.5">
               <strong className="text-sm">
                 {captions.length > 1 ? `Opção ${c.order}` : "Legenda"}
                 {c.chosen && captions.length > 1 && <span className="font-medium text-rosa-forte">{studio ? " (escolhida pela cliente)" : " (sua favorita)"}</span>}
               </strong>
-              <span className="whitespace-pre-line text-[15px] leading-relaxed text-texto-3">{c.text}</span>
+              <span className="whitespace-pre-line break-words text-[15px] leading-relaxed text-texto-3">{c.text}</span>
+              {/* A legenda inteira, como vai ao ar: texto, CTA e hashtags em cada opção. */}
+              {c.cta && <span className="whitespace-pre-line break-words text-[15px] leading-relaxed text-texto-3">{c.cta}</span>}
+              {c.hashtags && <span className="break-words text-[15px] leading-relaxed text-rosa-forte">{c.hashtags}</span>}
             </span>
           </label>
         ))}
       </fieldset>
-      {chosen && (chosen.cta || chosen.hashtags || chosen.notes) && (
-        <dl className="mt-1 grid grid-cols-[92px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm leading-relaxed">
-          {chosen.cta && (
-            <>
-              <dt className="font-semibold">CTA</dt>
-              <dd>{chosen.cta}</dd>
-            </>
-          )}
-          {chosen.hashtags && (
-            <>
-              <dt className="font-semibold">Hashtags</dt>
-              <dd className="break-words text-rosa-forte">{chosen.hashtags}</dd>
-            </>
-          )}
-          {chosen.notes && (
-            <>
-              <dt className="font-semibold">Observação</dt>
-              <dd className="text-texto-2"><Linkify text={chosen.notes} /></dd>
-            </>
-          )}
-        </dl>
+      {chosen?.notes && (
+        <p className="mt-1 text-sm leading-relaxed text-texto-2">
+          <strong className="text-vinho">Observação: </strong>
+          <Linkify text={chosen.notes} />
+        </p>
       )}
     </div>
   );

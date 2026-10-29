@@ -73,19 +73,18 @@ export function CaptionEditor({ contentId, captions }: { contentId: Id<"contents
             Texto
             <textarea rows={4} value={it.text} onChange={(e) => set(i, { text: e.target.value })} className={`${field} resize-y py-2.5 leading-relaxed`} />
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
-              CTA
-              <input value={it.cta} onChange={(e) => set(i, { cta: e.target.value })} className={`${field} min-h-11`} />
-            </label>
-            <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
-              Hashtags
-              <input value={it.hashtags} onChange={(e) => set(i, { hashtags: e.target.value })} className={`${field} min-h-11`} />
-            </label>
-          </div>
+          {/* CTA e hashtags em caixa que cresce com o texto: nada fica escondido no fim da linha. */}
+          <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
+            CTA
+            <textarea rows={2} value={it.cta} onChange={(e) => set(i, { cta: e.target.value })} className={`${field} field-sizing-content min-h-11 resize-y py-2.5 leading-relaxed`} />
+          </label>
+          <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
+            Hashtags
+            <textarea rows={1} value={it.hashtags} onChange={(e) => set(i, { hashtags: e.target.value })} className={`${field} field-sizing-content min-h-11 resize-y py-2.5 leading-relaxed`} />
+          </label>
           <label className="flex flex-col gap-1.5 text-[13px] font-semibold">
             Observação para a cliente
-            <input value={it.notes} onChange={(e) => set(i, { notes: e.target.value })} className={`${field} min-h-11`} />
+            <textarea rows={1} value={it.notes} onChange={(e) => set(i, { notes: e.target.value })} className={`${field} field-sizing-content min-h-11 resize-y py-2.5 leading-relaxed`} />
           </label>
         </fieldset>
       ))}

@@ -217,7 +217,11 @@ function PlanPage() {
               </button>
             </>
           ) : (
-            <p className="text-base text-texto-3">O plano deste mês ainda não chegou. Quando o estúdio enviar, ele aparece aqui.</p>
+            <p className="text-base text-texto-3">
+              {data.hiddenDraft
+                ? "Você está vendo como a cliente. O plano deste mês ainda está em rascunho, então ela não vê. Volte para o estúdio e toque em Enviar para a cliente."
+                : "O plano deste mês ainda não chegou. Quando o estúdio enviar, ele aparece aqui."}
+            </p>
           )}
         </section>
       )}

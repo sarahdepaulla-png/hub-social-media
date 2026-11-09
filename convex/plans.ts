@@ -133,6 +133,8 @@ export const get = query({
 
     return {
       isAdmin: admin,
+      // "Ver como cliente": existe rascunho que a cliente ainda não vê.
+      hiddenDraft: !admin && !!plan && plan.status === "rascunho" && !!(viewer as { viewingAs?: boolean }).viewingAs,
       canDecide: viewer.role === "cliente" && !(viewer as { viewingAs?: boolean }).viewingAs,
       client: {
         name: client.name,
@@ -175,15 +177,17 @@ export const get = query({
 export const pending = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
-    const { client } = await requireClientBySlug(ctx, slug);
+    const { viewer, client } = await requireClientBySlug(ctx, slug);
+    const admin = viewer.role === "admin";
+    // A admin também vê o rascunho na entrada, para lembrar de enviar.
     return (
       await ctx.db
         .query("monthPlans")
         .withIndex("by_client_month", (q) => q.eq("clientId", client._id))
         .collect()
     )
-      .filter((p) => p.status === "aguardando")
-      .map((p) => ({ month: p.month, theme: p.theme }));
+      .filter((p) => p.status === "aguardando" || (admin && p.status === "rascunho"))
+      .map((p) => ({ month: p.month, theme: p.theme, status: p.status }));
   },
 });
 

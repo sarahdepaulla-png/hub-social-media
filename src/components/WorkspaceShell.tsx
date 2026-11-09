@@ -63,8 +63,8 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
   ];
 
   // No celular cabem 6: o Perfil (só do estúdio) fica no menu do topo, no computador.
-  // No celular cabem 6: Perfil e Plano saem da barra (o Plano chega pelo link e pela página Aprovar).
-  const mobileTabs = tabs.length > 6 ? tabs.filter((t) => !t.href.endsWith("/perfil") && !t.href.endsWith("/plano")) : tabs;
+  // No celular cabem 6: Perfil e Datas saem da barra (Datas continua no calendário).
+  const mobileTabs = tabs.length > 6 ? tabs.filter((t) => !t.href.endsWith("/perfil") && !t.href.endsWith("/datas")) : tabs;
 
   return (
     <WorkspaceContext.Provider value={ws}>

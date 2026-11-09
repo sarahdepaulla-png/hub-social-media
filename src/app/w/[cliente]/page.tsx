@@ -107,7 +107,7 @@ export default function InicioPage() {
   const base = `/w/${ws.slug}`;
   const admin = ws.viewerRole === "admin";
 
-  const pendingPlan = plans?.[0];
+  const pendingPlan = plans?.find((p) => p.status === "aguardando");
   const headline = pendingPlan
     ? `Seu plano de ${monthName(pendingPlan.month).toLowerCase()} espera a sua aprovação.`
     : counts.total === 0
@@ -138,13 +138,17 @@ export default function InicioPage() {
               className="flex flex-col gap-3 rounded-[22px] bg-vinho p-5 text-white shadow-[0_14px_36px_rgba(92,15,49,0.28)] hover:bg-vinho-escuro md:flex-row md:items-center md:justify-between md:p-6"
             >
               <span className="flex min-w-0 flex-col gap-1">
-                <span className="text-sm font-bold uppercase tracking-[0.06em] text-rosa">Para você aprovar</span>
-                <strong className="text-2xl leading-tight tracking-tight md:text-3xl">Seu calendário de {monthName(p.month).toLowerCase()} está pronto</strong>
+                <span className="text-sm font-bold uppercase tracking-[0.06em] text-rosa">{p.status === "rascunho" ? "Rascunho: só você vê" : "Para você aprovar"}</span>
+                <strong className="text-2xl leading-tight tracking-tight md:text-3xl">
+                  {p.status === "rascunho" ? `Plano de ${monthName(p.month).toLowerCase()} pronto para enviar` : `Seu calendário de ${monthName(p.month).toLowerCase()} está pronto`}
+                </strong>
                 <span className="text-[15px] font-semibold text-creme">&ldquo;{p.theme}&rdquo;</span>
-                <span className="text-[15px] text-creme">Veja o caminho do mês e aprove para os posts entrarem no calendário.</span>
+                <span className="text-[15px] text-creme">
+                  {p.status === "rascunho" ? "Confira e toque em Enviar para a cliente." : "Veja o caminho do mês e aprove para os posts entrarem no calendário."}
+                </span>
               </span>
               <span className="inline-flex min-h-12 shrink-0 items-center justify-center self-start rounded-full bg-rosa px-6 text-base font-bold text-vinho md:self-center">
-                Ver e aprovar o plano
+                {p.status === "rascunho" ? "Abrir o plano" : "Ver e aprovar o plano"}
               </span>
             </Link>
           ))}

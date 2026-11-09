@@ -200,6 +200,9 @@ function CalendarView() {
           <button type="button" aria-label="Próximo mês" onClick={() => go(1)} className="flex size-11 items-center justify-center rounded-full hover:bg-white">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
           </button>
+          <Link href={`${base}/plano?mes=${month}`} className="ml-2 inline-flex min-h-11 items-center rounded-full bg-white px-4 text-sm font-semibold text-rosa-forte md:px-5">
+            Plano do mês
+          </Link>
           <Link
             href={`${base}/briefing/novo?data=${selected}`}
             className={`ml-2 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold md:px-5 ${admin ? "border-[1.5px] border-vinho text-vinho" : "bg-vinho text-white"}`}

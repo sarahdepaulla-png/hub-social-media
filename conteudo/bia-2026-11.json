@@ -1,0 +1,134 @@
+[
+  {
+    "key": "bia-2026-11-sobrancelha-por-fazer",
+    "client": "bia",
+    "date": "2026-11-11",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "Sobrancelha por fazer",
+    "objective": "Alcance",
+    "pillar": "Serviço",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-novo-espaco-teaser",
+    "client": "bia",
+    "date": "2026-11-12",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "Vem coisa nova por aí",
+    "objective": "Curiosidade",
+    "pillar": "Novo espaço",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-trend-cilios-babado",
+    "client": "bia",
+    "date": "2026-11-13",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Trend: cílios babado",
+    "objective": "Alcance",
+    "pillar": "Resultado",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-sabado-de-atendimento",
+    "client": "bia",
+    "date": "2026-11-16",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Bora pra um sábado de atendimento",
+    "objective": "Prova social",
+    "pillar": "Prova social",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-cilios-cocando",
+    "client": "bia",
+    "date": "2026-11-18",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Cílios coçando: o que pode ser e o que fazer",
+    "objective": "Autoridade",
+    "pillar": "Autoridade",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-novo-espaco-tour",
+    "client": "bia",
+    "date": "2026-11-19",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "Tour pelo espaço novo",
+    "objective": "Confiança",
+    "pillar": "Novo espaço",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-conselhos-de-maquiadora",
+    "client": "bia",
+    "date": "2026-11-20",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "Conselhos de maquiadora pra quando você agendar comigo",
+    "objective": "Autoridade",
+    "pillar": "Autoridade",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-nunca-fez-cilios",
+    "client": "bia",
+    "date": "2026-11-23",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Nunca fez cílios? Respondi suas dúvidas",
+    "objective": "Autoridade",
+    "pillar": "Autoridade",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-video-de-natal",
+    "client": "bia",
+    "date": "2026-11-25",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "Vídeo de Natal: agenda de dezembro aberta",
+    "objective": "Vendas",
+    "pillar": "Bastidor",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-novo-espaco-dezembro",
+    "client": "bia",
+    "date": "2026-11-26",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Seu dezembro no espaço novo",
+    "objective": "Vendas",
+    "pillar": "Novo espaço",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-datas-de-dezembro",
+    "client": "bia",
+    "date": "2026-11-27",
+    "platform": "instagram",
+    "format": "imagem",
+    "title": "Datas de dezembro que ainda tenho",
+    "objective": "Vendas",
+    "pillar": "Agenda",
+    "status": "ideia"
+  },
+  {
+    "key": "bia-2026-11-depoimento",
+    "client": "bia",
+    "date": "2026-11-30",
+    "platform": "instagram",
+    "format": "imagem",
+    "title": "Depoimento de cliente de festa ou formatura",
+    "objective": "Prova social",
+    "pillar": "Prova social",
+    "status": "ideia"
+  }
+]

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import { Asterisk, Loading, Thumb } from "@/components/brand";
 import { useWorkspace } from "@/components/WorkspaceShell";
-import { longDate } from "@/lib/dates";
+import { longDate, monthName } from "@/lib/dates";
 import { FORMAT } from "@/lib/labels";
 
 const firstUpper = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -14,6 +14,7 @@ const firstUpper = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 export default function AprovarPage() {
   const ws = useWorkspace();
   const data = useQuery(api.approvals.list, { slug: ws.slug });
+  const plans = useQuery(api.plans.pending, { slug: ws.slug });
   if (data === undefined) return <Loading />;
   const { items, isAdmin } = data;
   const n = items.length;
@@ -31,6 +32,15 @@ export default function AprovarPage() {
               ? `${n} ${n === 1 ? "peça esperando" : "peças esperando"} a decisão de ${ws.name}.`
               : `${n === 1 ? "Tem 1 conteúdo esperando" : `Tem ${n} conteúdos esperando`} você. Toque em cada um para ver, escolher a legenda e aprovar ou pedir ajuste.`}
         </p>
+        {plans?.map((p) => (
+          <Link key={p.month} href={`/w/${ws.slug}/plano?mes=${p.month}`} className="flex flex-wrap items-center gap-3 rounded-peca bg-vinho p-4 text-white hover:bg-vinho-escuro">
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[13px] font-semibold text-rosa">Plano de {monthName(p.month).toLowerCase()}</span>
+              <strong className="text-lg leading-tight">{p.theme}</strong>
+            </span>
+            <span className="inline-flex min-h-10 items-center rounded-full bg-rosa px-4 text-sm font-bold text-vinho">Ver o plano do mês</span>
+          </Link>
+        ))}
         {isAdmin && <SendBar slug={ws.slug} name={ws.name} count={n} whatsapp={data.whatsapp} people={data.people} />}
       </header>
 

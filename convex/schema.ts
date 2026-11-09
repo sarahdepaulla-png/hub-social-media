@@ -365,4 +365,44 @@ export default defineSchema({
     focusY: v.optional(v.number()),
     pinnedAt: v.optional(v.number()), // fixado no topo do perfil (até 3)
   }).index("by_client", ["clientId"]),
+  // Plano do mês: o "vision board" que a cliente aprova antes das peças (tema, caminho, calendário).
+  monthPlans: defineTable({
+    clientId: v.id("clients"),
+    month: v.string(), // AAAA-MM
+    theme: v.string(), // frase grande da capa
+    concept: v.optional(v.string()),
+    mood: v.optional(v.string()), // clima em poucas palavras
+    palette: v.array(v.string()), // cores em hex
+    moodPhrases: v.array(v.string()), // frases do moodboard tipográfico
+    moodIds: v.array(v.id("_storage")), // imagens do moodboard
+    goals: v.array(v.object({ title: v.string(), how: v.optional(v.string()) })),
+    phases: v.array(
+      v.object({
+        name: v.string(),
+        start: v.string(), // AAAA-MM-DD
+        end: v.string(),
+        intent: v.optional(v.string()),
+        stories: v.optional(v.string()),
+      }),
+    ),
+    // Destaque do mês: um fio de peças de um pilar (ex.: "Novo espaço").
+    highlight: v.optional(v.object({ title: v.string(), text: v.optional(v.string()), pillar: v.string() })),
+    needs: v.array(v.object({ text: v.string(), due: v.optional(v.string()), done: v.boolean() })),
+    // Por peça: frase da capa (rascunho), nota de briefing e se é essencial.
+    pieces: v.array(
+      v.object({
+        contentId: v.id("contents"),
+        hook: v.optional(v.string()),
+        note: v.optional(v.string()),
+        essential: v.optional(v.boolean()),
+      }),
+    ),
+    status: v.union(v.literal("rascunho"), v.literal("aguardando"), v.literal("aprovado"), v.literal("ajuste")),
+    sentAt: v.optional(v.number()),
+    decision: v.optional(
+      v.object({ userId: v.id("users"), name: v.string(), at: v.number(), comment: v.optional(v.string()) }),
+    ),
+    importKey: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_client_month", ["clientId", "month"]),
 });

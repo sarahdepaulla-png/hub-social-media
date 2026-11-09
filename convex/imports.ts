@@ -32,6 +32,8 @@ const item = v.object({
   externalUrl: v.optional(v.string()),
   captions: v.optional(v.array(caption)),
   remove: v.optional(v.boolean()),
+  // Só na criação: "ideia" para peças que ainda são só a ideia do plano do mês.
+  status: v.optional(v.union(v.literal("ideia"), v.literal("producao"))),
 });
 
 const LOCKED: Doc<"contents">["status"][] = ["aprovado", "agendado", "publicado"];
@@ -98,7 +100,7 @@ export const apply = internalMutation({
       if (!existing) {
         contentId = await ctx.db.insert("contents", {
           clientId: client._id,
-          status: "producao",
+          status: it.status ?? "producao",
           version: 1,
           importKey: it.key,
           ...fields,

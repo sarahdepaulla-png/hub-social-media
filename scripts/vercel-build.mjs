@@ -93,6 +93,21 @@ if (existsSync("conteudo")) {
   }
 }
 
+log("Aplicando os planos do mês (pasta planos/)");
+if (existsSync("planos")) {
+  for (const file of readdirSync("planos").filter((f) => f.endsWith(".json")).sort()) {
+    let plan;
+    try {
+      plan = JSON.parse(readFileSync(`planos/${file}`, "utf8"));
+    } catch (e) {
+      console.error(`[hub] ${file}: JSON inválido (${e.message})`);
+      continue;
+    }
+    const r = convex(["run", "plans:apply", JSON.stringify({ plan })], { quiet: true });
+    console.log(r.ok ? `[hub] ${file}: ${r.out}` : `[hub] ${file} falhou: ${r.err}`);
+  }
+}
+
 log("Conferindo dados iniciais");
 // Ajustes de uma vez só (cada chave roda uma única vez; dá para desfazer depois pela tela).
 for (const once of [{ key: "edicao-entalpia-2026-10", slug: "entalpia", clientCanEdit: true }]) {

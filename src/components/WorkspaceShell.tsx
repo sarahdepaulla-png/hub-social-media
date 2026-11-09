@@ -20,6 +20,12 @@ export function useWorkspace(): Workspace {
 }
 
 const ICONS = {
+  plano: (
+    <>
+      <path d="M4 5h16v14H4z" />
+      <path d="M8 14l3-3 2 2 4-4" />
+    </>
+  ),
   inicio: <path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
   calendario: (
     <>
@@ -46,6 +52,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
   const tabs: { href: string; label: string; icon: React.ReactNode; active: boolean; badge?: number }[] = [
     { href: base, label: "Início", icon: ICONS.inicio, active: pathname === base },
     { href: `${base}/calendario`, label: "Calendário", icon: ICONS.calendario, active: pathname.startsWith(`${base}/calendario`) || pathname.startsWith(`${base}/c/`) },
+    { href: `${base}/plano`, label: "Plano", icon: ICONS.plano, active: pathname.startsWith(`${base}/plano`) },
     { href: `${base}/aprovar`, label: "Aprovar", icon: ICONS.aprovar, active: pathname.startsWith(`${base}/aprovar`), badge: ws.waitingCount },
     { href: `${base}/datas`, label: "Datas", icon: ICONS.datas, active: pathname.startsWith(`${base}/datas`) },
     { href: `${base}/ideias`, label: "Ideias", icon: ICONS.ideias, active: pathname.startsWith(`${base}/ideias`), badge: ws.newIdeas },
@@ -56,7 +63,8 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
   ];
 
   // No celular cabem 6: o Perfil (só do estúdio) fica no menu do topo, no computador.
-  const mobileTabs = tabs.length > 6 ? tabs.filter((t) => !t.href.endsWith("/perfil")) : tabs;
+  // No celular cabem 6: Perfil e Plano saem da barra (o Plano chega pelo link e pela página Aprovar).
+  const mobileTabs = tabs.length > 6 ? tabs.filter((t) => !t.href.endsWith("/perfil") && !t.href.endsWith("/plano")) : tabs;
 
   return (
     <WorkspaceContext.Provider value={ws}>

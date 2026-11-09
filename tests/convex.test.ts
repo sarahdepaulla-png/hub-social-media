@@ -975,3 +975,70 @@ describe("página para aprovar", () => {
     await expect(as(liliUser).query(api.approvals.list, { slug: "bia" })).rejects.toThrow(/não encontrado/);
   });
 });
+
+describe("plano do mês", () => {
+  test("fila cria peças e plano; cliente só vê depois de enviado e aprova", async () => {
+    const { t, as, admin, biaUser, liliUser } = await setup();
+    await t.mutation(internal.imports.apply, {
+      items: [
+        { key: "p-1", client: "bia", date: "2026-11-11", platform: "instagram", format: "reels", title: "Sobrancelha", pillar: "Serviço", status: "ideia" },
+        { key: "p-2", client: "bia", date: "2026-11-19", platform: "instagram", format: "reels", title: "Tour", pillar: "Novo espaço", status: "ideia" },
+      ],
+    });
+    const msg = await t.mutation(internal.plans.apply, {
+      plan: {
+        key: "bia-11",
+        client: "bia",
+        month: "2026-11",
+        theme: "Novembro decide o dezembro.",
+        phases: [
+          { name: "Desejo", start: "2026-11-11", end: "2026-11-15" },
+          { name: "Confiança", start: "2026-11-16", end: "2026-11-23" },
+        ],
+        highlight: { title: "Espaço novo", pillar: "Novo espaço" },
+        needs: [{ text: "Mandar datas", due: "Até 26/11" }],
+        pieces: [{ key: "p-2", hook: "Bem-vinda", essential: true }],
+      },
+    });
+    expect(msg).toMatch(/criado/);
+
+    // Rascunho: a cliente não vê.
+    expect((await as(biaUser).query(api.plans.get, { slug: "bia", month: "2026-11" })).plan).toBeNull();
+    const adminView = await as(admin).query(api.plans.get, { slug: "bia", month: "2026-11" });
+    expect(adminView.plan?.status).toBe("rascunho");
+    expect(adminView.pieces.map((p) => p.status)).toEqual(["ideia", "ideia"]);
+    expect(adminView.pieces[1]).toMatchObject({ hook: "Bem-vinda", essential: true });
+
+    // Cliente não envia nem edita; outra cliente não lê.
+    await expect(as(biaUser).mutation(api.plans.setStatus, { slug: "bia", month: "2026-11", status: "aguardando" })).rejects.toThrow(/administradora/);
+    await expect(as(liliUser).query(api.plans.get, { slug: "bia", month: "2026-11" })).rejects.toThrow(/não encontrado/);
+
+    await as(admin).mutation(api.plans.setStatus, { slug: "bia", month: "2026-11", status: "aguardando" });
+    expect(await as(biaUser).query(api.plans.pending, { slug: "bia" })).toEqual([{ month: "2026-11", theme: "Novembro decide o dezembro." }]);
+    const view = await as(biaUser).query(api.plans.get, { slug: "bia", month: "2026-11" });
+    expect(view.canDecide).toBe(true);
+
+    // Ajuste exige texto; marcar pendência; aprovar.
+    await expect(as(biaUser).mutation(api.plans.decide, { slug: "bia", month: "2026-11", type: "ajuste" })).rejects.toThrow(/mudar/);
+    await as(biaUser).mutation(api.plans.toggleNeed, { slug: "bia", month: "2026-11", index: 0 });
+    await as(biaUser).mutation(api.plans.decide, { slug: "bia", month: "2026-11", type: "aprovado" });
+    const after = await as(admin).query(api.plans.get, { slug: "bia", month: "2026-11" });
+    expect(after.plan?.status).toBe("aprovado");
+    expect(after.plan?.needs[0].done).toBe(true);
+    expect(after.plan?.decision?.name).toBe("Bia");
+
+    // Plano já enviado não é sobrescrito pela fila.
+    expect(await t.mutation(internal.plans.apply, { plan: { key: "bia-11", client: "bia", month: "2026-11", theme: "Outro" } })).toMatch(/não mexi/);
+  });
+
+  test("admin salva o plano pela tela e só aceita peças da própria cliente", async () => {
+    const { as, admin, biaContent } = await setup();
+    const base = { slug: "lili", month: "2026-10", theme: "Tema", palette: ["#5C0F31", "rosa"], moodPhrases: [], goals: [], phases: [], needs: [] };
+    await expect(as(admin).mutation(api.plans.save, { ...base, pieces: [{ contentId: biaContent }] })).rejects.toThrow(/outra cliente/);
+    await expect(as(admin).mutation(api.plans.save, { ...base, theme: " ", pieces: [] })).rejects.toThrow(/tema/);
+    await as(admin).mutation(api.plans.save, { ...base, pieces: [] });
+    const view = await as(admin).query(api.plans.get, { slug: "lili", month: "2026-10" });
+    expect(view.plan?.palette).toEqual(["#5C0F31"]);
+    expect(view.pieces.length).toBe(12);
+  });
+});

@@ -1013,6 +1013,10 @@ describe("plano do mês", () => {
     await expect(as(biaUser).mutation(api.plans.setStatus, { slug: "bia", month: "2026-11", status: "aguardando" })).rejects.toThrow(/administradora/);
     await expect(as(liliUser).query(api.plans.get, { slug: "bia", month: "2026-11" })).rejects.toThrow(/não encontrado/);
 
+    // Ideia do plano fica fora do calendário até a aprovação.
+    const cal = await as(biaUser).query(api.calendar.month, { slug: "bia", month: "2026-11" });
+    expect(cal.contents.map((c) => c.title)).toEqual(["Sobrancelha"]);
+    expect(cal.planHeld?.count).toBe(1);
     await as(admin).mutation(api.plans.setStatus, { slug: "bia", month: "2026-11", status: "aguardando" });
     expect(await as(biaUser).query(api.plans.pending, { slug: "bia" })).toEqual([{ month: "2026-11", theme: "Novembro decide o dezembro." }]);
     const view = await as(biaUser).query(api.plans.get, { slug: "bia", month: "2026-11" });
@@ -1026,6 +1030,9 @@ describe("plano do mês", () => {
     expect(after.plan?.status).toBe("aprovado");
     // Só a peça citada no plano entra no calendário como Em produção.
     expect(after.pieces.map((p) => p.status)).toEqual(["ideia", "producao"]);
+    const cal2 = await as(biaUser).query(api.calendar.month, { slug: "bia", month: "2026-11" });
+    expect(cal2.contents.map((c) => c.title)).toEqual(["Sobrancelha", "Tour"]);
+    expect(cal2.planHeld).toBeNull();
     const mail = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).map((f) => f.name));
     expect(mail.some((n) => n.includes("sendPlanDecision"))).toBe(true);
     expect(after.plan?.needs[0].done).toBe(true);

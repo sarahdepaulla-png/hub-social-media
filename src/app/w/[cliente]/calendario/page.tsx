@@ -217,6 +217,14 @@ function CalendarView() {
           )}
         </div>
       </header>
+      {data?.planHeld && (
+        <Link href={`${base}/plano?mes=${month}`} className="flex flex-wrap items-center justify-between gap-3 rounded-peca bg-vinho px-4 py-3.5 text-white hover:bg-vinho-escuro">
+          <span className="text-[15px]">
+            {data.planHeld.count === 1 ? "1 post" : `${data.planHeld.count} posts`} do plano do mês {data.planHeld.count === 1 ? "entra" : "entram"} aqui quando o plano for aprovado.
+          </span>
+          <span className="shrink-0 rounded-full bg-rosa px-4 py-1.5 text-sm font-bold text-vinho">{admin ? "Ver o plano" : "Ver e aprovar o plano"}</span>
+        </Link>
+      )}
 
       <div className="flex gap-2 overflow-x-auto px-2 pb-1 md:px-0" role="group" aria-label="Filtros">
         <label className="sr-only" htmlFor="f-plat">Plataforma</label>

@@ -13,7 +13,14 @@ export const month = query({
     const list = (await contentsInMonth(ctx, client._id, month)).sort(
       (a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""),
     );
-    const contents = await Promise.all(list.map((c) => toCard(ctx, c)));
+    // Ideias do plano do mês só entram no calendário quando a cliente aprova o plano.
+    const plan = await ctx.db
+      .query("monthPlans")
+      .withIndex("by_client_month", (q) => q.eq("clientId", client._id).eq("month", month))
+      .first();
+    const waitingIds = new Set(plan && plan.status !== "aprovado" ? plan.pieces.map((p) => p.contentId) : []);
+    const held = list.filter((c) => c.status === "ideia" && waitingIds.has(c._id));
+    const contents = await Promise.all(list.filter((c) => !held.includes(c)).map((c) => toCard(ctx, c)));
     const briefings = (
       await ctx.db
         .query("briefings")
@@ -23,6 +30,7 @@ export const month = query({
     const opps = await opportunitiesFor(ctx, client, `${month}-01`, `${month}-31`);
     return {
       contents,
+      planHeld: held.length ? { count: held.length, status: plan!.status } : null,
       briefings: briefings.map((b) => ({ _id: b._id, date: b.desiredDate!, title: b.title })),
       opportunities: opps.map((o: Doc<"opportunities">) => ({
         _id: o._id,

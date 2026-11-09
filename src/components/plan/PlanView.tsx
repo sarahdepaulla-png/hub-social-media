@@ -171,6 +171,11 @@ export function PlanView({ data, plan, slug, month }: { data: Data; plan: Plan; 
             {plan.theme}
           </h1>
           {plan.concept && <p className="max-w-[520px] whitespace-pre-line text-lg leading-relaxed text-texto-3">{plan.concept}</p>}
+          {data.canDecide && waiting && (
+            <a href="#aprovar" className="inline-flex min-h-12 items-center self-start rounded-full bg-vinho px-6 text-base font-bold text-white hover:bg-vinho-escuro">
+              Ver e aprovar o plano
+            </a>
+          )}
           <div className="flex flex-wrap gap-2.5 text-sm text-texto-3">
             <span className="rounded-full border-[1.5px] border-campo px-3 py-1.5">{pieces.length} {pieces.length === 1 ? "post" : "posts"}</span>
             {first && last && <span className="rounded-full border-[1.5px] border-campo px-3 py-1.5">{rangeLabel(first, last)}</span>}
@@ -464,7 +469,7 @@ export function PlanView({ data, plan, slug, month }: { data: Data; plan: Plan; 
       )}
 
       {/* Aprovação */}
-      <section aria-labelledby="plano-aprovar" className="flex flex-col gap-4 rounded-[28px] bg-vinho p-6 text-white md:p-9">
+      <section id="aprovar" aria-labelledby="plano-aprovar" className="scroll-mt-6 flex flex-col gap-4 rounded-[28px] bg-vinho p-6 text-white md:p-9">
         {plan.status === "aprovado" ? (
           <>
             <h2 id="plano-aprovar" className={`${h2} flex items-center gap-3`}>
@@ -495,46 +500,44 @@ export function PlanView({ data, plan, slug, month }: { data: Data; plan: Plan; 
               Gostou do caminho?
             </h2>
             <p className="max-w-[640px] text-[17px] leading-relaxed text-creme">
-              Aprovar o plano é aprovar a direção do mês: as fases, os temas e o calendário. Cada post continua chegando para aprovação quando a arte ficar pronta.
+              Aprovando, os {pieces.length === 1 ? "post do plano entra" : `${pieces.length} posts do plano entram`} no calendário de {monthName(month).toLowerCase()}. Cada post ainda chega para você aprovar quando a arte ficar pronta.
             </p>
-            {data.canDecide && waiting ? (
-              <>
-                <label className="flex max-w-[640px] flex-col gap-2 text-sm font-semibold">
-                  Quer mudar algo? Escreva aqui
-                  <textarea
-                    rows={3}
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Ex.: prefiro trocar o post do dia 18 por outro tema"
-                    className="resize-y rounded-2xl bg-white px-3.5 py-3 text-base font-normal text-vinho"
-                  />
-                </label>
-                {error && (
-                  <p role="alert" className="text-sm font-semibold text-rosa">
-                    {error}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-3">
-                  <button type="button" disabled={busy} onClick={() => void send("aprovado")} className={buttonClass.secondary}>
-                    Aprovar o plano
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => (comment.trim() ? void send("ajuste") : setError("Escreva o que você quer mudar e toque de novo."))}
-                    className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-rosa px-6 text-base font-semibold text-white hover:bg-vinho-escuro disabled:opacity-50"
-                  >
-                    Pedir ajuste no plano
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-rosa">
+            <label className="flex max-w-[640px] flex-col gap-2 text-sm font-semibold">
+              Quer mudar algo? Escreva aqui
+              <textarea
+                rows={3}
+                value={comment}
+                disabled={!(data.canDecide && waiting)}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Ex.: prefiro trocar o post do dia 18 por outro tema"
+                className="resize-y rounded-2xl bg-white px-3.5 py-3 text-base font-normal text-vinho disabled:opacity-70"
+              />
+            </label>
+            {error && (
+              <p role="alert" className="text-sm font-semibold text-rosa">
+                {error}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-3">
+              <button type="button" disabled={busy || !(data.canDecide && waiting)} onClick={() => void send("aprovado")} className={`${buttonClass.secondary} disabled:cursor-not-allowed`}>
+                Aprovar e mandar pro calendário
+              </button>
+              <button
+                type="button"
+                disabled={busy || !(data.canDecide && waiting)}
+                onClick={() => (comment.trim() ? void send("ajuste") : setError("Escreva o que você quer mudar e toque de novo."))}
+                className="inline-flex min-h-12 items-center justify-center rounded-full border-[1.5px] border-rosa px-6 text-base font-semibold text-white hover:bg-vinho-escuro disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Pedir ajuste no plano
+              </button>
+            </div>
+            {!(data.canDecide && waiting) && (
+              <p className="text-sm font-semibold text-rosa">
                 {data.isAdmin
                   ? plan.status === "rascunho"
-                    ? "Rascunho: a cliente ainda não vê esta página. Envie quando estiver pronto."
-                    : "A cliente vê aqui os botões Aprovar o plano e Pedir ajuste."
-                  : "Você está vendo como a cliente: os botões aparecem só para ela."}
+                    ? "Prévia: é assim que a cliente vê. Os botões funcionam para ela depois que você tocar em Enviar para a cliente."
+                    : "Prévia: os botões funcionam só para a cliente."
+                  : "Você está vendo como a cliente: os botões funcionam só para ela."}
               </p>
             )}
           </>

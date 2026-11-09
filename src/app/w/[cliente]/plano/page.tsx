@@ -201,6 +201,11 @@ function PlanPage() {
               onEdit={() => setEditing(month)}
             />
           )}
+          {data.previewDraft && (
+            <p className="rounded-[22px] bg-white px-5 py-4 text-[15px] leading-relaxed text-texto-3">
+              <strong className="text-vinho">Prévia do rascunho.</strong> É assim que {ws.name} vai ver o plano. Ela só recebe depois que você voltar para o estúdio e tocar em Enviar para a cliente.
+            </p>
+          )}
           <PlanView data={data} plan={data.plan} slug={ws.slug} month={month} />
         </>
       ) : (
@@ -218,9 +223,7 @@ function PlanPage() {
             </>
           ) : (
             <p className="text-base text-texto-3">
-              {data.hiddenDraft
-                ? "Você está vendo como a cliente. O plano deste mês ainda está em rascunho, então ela não vê. Volte para o estúdio e toque em Enviar para a cliente."
-                : "O plano deste mês ainda não chegou. Quando o estúdio enviar, ele aparece aqui."}
+              O plano deste mês ainda não chegou. Quando o estúdio enviar, ele aparece aqui.
             </p>
           )}
         </section>

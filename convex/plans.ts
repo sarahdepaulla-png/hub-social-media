@@ -74,7 +74,9 @@ export const get = query({
     const { viewer, client } = await requireClientBySlug(ctx, slug);
     const admin = viewer.role === "admin";
     const plan = await findPlan(ctx, client._id, month);
-    const visible = plan && (admin || plan.status !== "rascunho") ? plan : null;
+    // "Ver como cliente": a admin vê o rascunho exatamente como a cliente vai ver (prévia).
+    const viewingAs = !!(viewer as { viewingAs?: boolean }).viewingAs;
+    const visible = plan && (admin || viewingAs || plan.status !== "rascunho") ? plan : null;
 
     // Meses com plano, para a navegação (a cliente só vê os enviados).
     const months = (
@@ -83,7 +85,7 @@ export const get = query({
         .withIndex("by_client_month", (q) => q.eq("clientId", client._id))
         .collect()
     )
-      .filter((p) => admin || p.status !== "rascunho")
+      .filter((p) => admin || viewingAs || p.status !== "rascunho")
       .map((p) => ({ month: p.month, status: p.status }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
@@ -134,7 +136,7 @@ export const get = query({
     return {
       isAdmin: admin,
       // "Ver como cliente": existe rascunho que a cliente ainda não vê.
-      hiddenDraft: !admin && !!plan && plan.status === "rascunho" && !!(viewer as { viewingAs?: boolean }).viewingAs,
+      previewDraft: !admin && viewingAs && !!plan && plan.status === "rascunho",
       canDecide: viewer.role === "cliente" && !(viewer as { viewingAs?: boolean }).viewingAs,
       client: {
         name: client.name,

@@ -203,7 +203,7 @@ export const sendApproval = internalAction({
     for (const r of data.recipients) {
       // Quem tem link pessoal entra direto, sem código.
       const link = r.token ? `${site}/acesso/${r.token}?ir=${encodeURIComponent(target)}` : `${site}${target}`;
-      const { subject, text, html } = approvalEmail({ name: r.name, clientName: data.client.name, from: fromName, pieces: data.pieces, link });
+      const { subject, text, html } = approvalEmail({ name: data.recipients.length > 1 ? r.name : data.client.name, clientName: data.client.name, from: fromName, pieces: data.pieces, link });
       try {
         await mail.transport.sendMail({ from: { name: fromName, address: mail.user }, to: r.email, replyTo: mail.user, subject, text, html });
         sent.push(r.email);
@@ -330,7 +330,7 @@ export const sendPlanReady = internalAction({
     const failed: string[] = [];
     for (const r of data.recipients) {
       const link = r.token ? `${site}/acesso/${r.token}?ir=${encodeURIComponent(target)}` : `${site}${target}`;
-      const { subject, text, html } = planReadyEmail({ name: r.name, month: data.month, theme: data.theme, count: data.count, from: fromName, link });
+      const { subject, text, html } = planReadyEmail({ name: data.recipients.length > 1 ? r.name : data.client.name, month: data.month, theme: data.theme, count: data.count, from: fromName, link });
       try {
         await mail.transport.sendMail({ from: { name: fromName, address: mail.user }, to: r.email, replyTo: mail.user, subject, text, html });
         sent.push(r.email);

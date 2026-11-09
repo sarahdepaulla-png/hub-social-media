@@ -67,7 +67,8 @@ function AdminBar({
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const page = `/w/${slug}/plano?mes=${month}`;
   const link = person ? `${origin}/acesso/${person.token}?ir=${encodeURIComponent(page)}` : `${origin}${page}`;
-  const first = (person?.name ?? name).split(" ")[0];
+  // Uma pessoa só: chama pelo nome da cliente no Hub (ex.: "Vivi"). Equipe: pelo nome de quem recebe.
+  const first = (people.length > 1 && person ? person.name : name).split(" ")[0];
   const message = `Oi, ${first}! Seu calendário de ${monthName(month).toLowerCase()} está pronto para aprovação.\n\nMontei o plano do mês pra você ver como pensei tudo: o caminho, os posts e como o feed vai ficar.\n\nÉ só abrir, dar uma olhada e tocar em "Aprovar e mandar pro calendário" (ou pedir ajuste se quiser mudar algo):\n${link}`;
   const copy = async () => {
     try {

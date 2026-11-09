@@ -96,7 +96,8 @@ function SendBar({
   const page = `/w/${slug}/aprovar`;
   // Link pessoal: a cliente entra sem código e cai direto nesta página.
   const link = person ? `${origin}/acesso/${person.token}?ir=${encodeURIComponent(page)}` : `${origin}${page}`;
-  const first = (person?.name ?? name).split(" ")[0];
+  // Uma pessoa só: chama pelo nome da cliente no Hub (ex.: "Vivi"). Equipe: pelo nome de quem recebe.
+  const first = (people.length > 1 && person ? person.name : name).split(" ")[0];
   const message =
     count === 0
       ? `Oi, ${first}! Por aqui está tudo aprovado. Quando tiver conteúdo novo, ele aparece neste link: ${link}`

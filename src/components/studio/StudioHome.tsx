@@ -202,7 +202,7 @@ function LateList({ items, onOpen }: { items: Home["late"]; onOpen: (o: Open) =>
   if (items.length === 0) {
     return (
       <p className="flex items-center gap-3 rounded-peca bg-white px-5 py-6 text-base text-texto-2">
-        <Asterisk size={22} color="var(--color-rosa)" /> Nada atrasado. Tudo que passou da data foi postado.
+        <Asterisk size={22} color="var(--color-rosa)" /> Nada atrasado neste mês. Tudo que passou da data foi postado.
       </p>
     );
   }
@@ -547,6 +547,14 @@ export function StudioHome({ home, clients, inbox, greeting, time, today }: { ho
           <section id="atrasados" className="flex min-w-0 scroll-mt-6 flex-col gap-4">
             <SectionTitle aside={counts.late > 0 ? <span className="text-sm font-semibold text-st-ajuste-texto">{counts.late}</span> : null}>Atrasados</SectionTitle>
             <LateList items={home.late} onOpen={setOpen} />
+            {counts.archived > 0 && (
+              <Link href="/estudio/arquivo" className="flex min-h-11 items-center justify-between gap-3 rounded-peca bg-white px-4 py-3 text-sm text-texto-3 hover:bg-[#FFF6FA]">
+                <span>
+                  {counts.archived === 1 ? "1 peça de meses anteriores ficou em aberto" : `${counts.archived} peças de meses anteriores ficaram em aberto`} e foi para o Arquivo.
+                </span>
+                <span className="shrink-0 font-semibold text-rosa-forte">Ver arquivo</span>
+              </Link>
+            )}
           </section>
           <section id="precisa" className="flex min-w-0 scroll-mt-6 flex-col gap-4">
             <SectionTitle aside={inbox.length > 0 ? <span className="text-sm font-semibold text-texto-2">{inbox.length}</span> : null}>Precisa de você</SectionTitle>

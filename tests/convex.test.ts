@@ -1024,6 +1024,10 @@ describe("plano do mês", () => {
     await as(biaUser).mutation(api.plans.decide, { slug: "bia", month: "2026-11", type: "aprovado" });
     const after = await as(admin).query(api.plans.get, { slug: "bia", month: "2026-11" });
     expect(after.plan?.status).toBe("aprovado");
+    // Só a peça citada no plano entra no calendário como Em produção.
+    expect(after.pieces.map((p) => p.status)).toEqual(["ideia", "producao"]);
+    const mail = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).map((f) => f.name));
+    expect(mail.some((n) => n.includes("sendPlanDecision"))).toBe(true);
     expect(after.plan?.needs[0].done).toBe(true);
     expect(after.plan?.decision?.name).toBe("Bia");
 
@@ -1040,5 +1044,22 @@ describe("plano do mês", () => {
     const view = await as(admin).query(api.plans.get, { slug: "lili", month: "2026-10" });
     expect(view.plan?.palette).toEqual(["#5C0F31"]);
     expect(view.pieces.length).toBe(12);
+  });
+});
+
+describe("virada do mês", () => {
+  test("o que ficou em aberto de meses anteriores sai da entrada e vai para o Arquivo", async () => {
+    const { as, admin } = await setup();
+    const before = await as(admin).query(api.dashboard.studioHome, { today: "2026-10-20" });
+    const after = await as(admin).query(api.dashboard.studioHome, { today: "2026-11-09" });
+    expect(before.counts.archived).toBe(0);
+    expect(after.late.every((c) => c.date >= "2026-11-01")).toBe(true);
+    expect(after.counts.archived).toBeGreaterThan(0);
+    expect(after.counts.aguardando).toBe(0);
+    const arq = await as(admin).query(api.dashboard.archive, { today: "2026-11-09" });
+    expect(arq.length).toBe(after.counts.archived);
+    expect(arq.every((c) => c.date < "2026-11-01" && c.status !== "publicado")).toBe(true);
+    const inbox = await as(admin).query(api.dashboard.studioInbox, { today: "2026-11-09" });
+    expect(inbox.filter((i) => i.kind === "ajuste")).toEqual([]);
   });
 });

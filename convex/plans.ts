@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
-import { internalMutation, mutation, query, type QueryCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireAdmin, requireClientBySlug, requireViewer, getViewer } from "./lib/access";
 import { alive, contentsInMonth } from "./lib/content";
@@ -335,6 +336,40 @@ export const decide = mutation({
       kind: "decisao",
       summary: type === "aprovado" ? `Aprovou o plano de ${month}` : `Pediu ajuste no plano de ${month}`,
     });
+    // Aprovado: as peças do plano saem de "Ideia" e entram no calendário do mês como "Em produção".
+    let promoted = 0;
+    if (type === "aprovado") {
+      const inPlan = new Set(plan.pieces.map((p) => p.contentId));
+      for (const c of await contentsInMonth(ctx, client._id, month)) {
+        if (c.status !== "ideia" || (inPlan.size > 0 && !inPlan.has(c._id))) continue;
+        await ctx.db.patch(c._id, { status: "producao" });
+        await logActivity(ctx, { clientId: client._id, contentId: c._id, userId: who._id, kind: "status", summary: "Entrou no calendário com a aprovação do plano do mês" });
+        promoted++;
+      }
+    }
+    // Aviso por e-mail para o estúdio.
+    await ctx.scheduler.runAfter(0, internal.mailer.sendPlanDecision, { planId: plan._id, promoted });
+  },
+});
+
+/** Dados do e-mail "a cliente decidiu o plano". */
+export const decisionData = internalQuery({
+  args: { planId: v.id("monthPlans") },
+  handler: async (ctx, { planId }) => {
+    const plan = await ctx.db.get(planId);
+    if (!plan || !plan.decision) return null;
+    const client = await ctx.db.get(plan.clientId);
+    if (!client) return null;
+    const fromEnv = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+    const fromUsers = (await ctx.db.query("users").collect()).filter((u) => u.role === "admin" && u.email).map((u) => u.email!);
+    return {
+      to: [...new Set([...fromEnv, ...fromUsers].map((e) => e.toLowerCase()))],
+      client: { name: client.name, slug: client.slug },
+      month: plan.month,
+      theme: plan.theme,
+      status: plan.status,
+      decision: plan.decision,
+    };
   },
 });
 

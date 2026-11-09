@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/estudio/esteira", label: "Esteira" },
   { href: "/estudio/clientes", label: "Clientes e acessos" },
   { href: "/estudio/datas", label: "Biblioteca de datas" },
+  { href: "/estudio/arquivo", label: "Arquivo" },
   { href: "/estudio/lixeira", label: "Lixeira" },
 ];
 

@@ -25,9 +25,11 @@ export const forClient = query({
 
 /** O que pede ação da admin agora: ajustes pedidos e ideias novas. */
 export const studioInbox = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { today: v.optional(v.string()) },
+  handler: async (ctx, { today }) => {
     await requireAdmin(ctx);
+    // Virada de mês: ajuste de peça de mês passado vai para o Arquivo, não fica aqui.
+    const monthStart = today && DATE.test(today) ? `${today.slice(0, 7)}-01` : "";
     const clients = await ctx.db.query("clients").collect();
     const byId = new Map<string, (typeof clients)[number]>(clients.map((c) => [c._id, c]));
     const items: {
@@ -48,7 +50,7 @@ export const studioInbox = query({
         .query("contents")
         .withIndex("by_client_status", (q) => q.eq("clientId", client._id).eq("status", "ajuste"))
         .collect();
-      for (const content of adjusting.filter((c) => !c.deletedAt)) {
+      for (const content of adjusting.filter((c) => !c.deletedAt && c.date >= monthStart)) {
         const last = await ctx.db
           .query("decisions")
           .withIndex("by_content", (q) => q.eq("contentId", content._id))
@@ -160,11 +162,12 @@ export const studioHome = query({
     if (!DATE.test(today)) throw new ConvexError("Data inválida.");
     const weekEnd = plusDays(today, 6);
     const month = today.slice(0, 7);
+    const monthStart = `${month}-01`;
     const clients = (await ctx.db.query("clients").collect()).filter((c) => c.active);
 
     const late = [];
     const week = [];
-    const counts = { late: 0, today: 0, week: 0, aguardando: 0, ajuste: 0, postadosMes: 0 };
+    const counts = { late: 0, today: 0, week: 0, aguardando: 0, ajuste: 0, postadosMes: 0, archived: 0 };
 
     for (const client of clients) {
       const info = { slug: client.slug, name: client.name, accentColor: client.accentColor };
@@ -174,6 +177,11 @@ export const studioHome = query({
         .collect();
       for (const c of all) {
         if (c.deletedAt) continue;
+        // Novo mês, novas coisas: o que ficou em aberto de meses anteriores vai para o Arquivo.
+        if (c.date < monthStart) {
+          if (c.status !== "publicado") counts.archived++;
+          continue;
+        }
         if (c.status === "aguardando") counts.aguardando++;
         if (c.status === "ajuste") counts.ajuste++;
         if (c.status === "publicado" && c.date.startsWith(month)) counts.postadosMes++;
@@ -221,5 +229,31 @@ export const updateProfile = mutation({
       patch.photoId = removePhoto ? undefined : photoId;
     }
     await ctx.db.patch(me._id, patch);
+  },
+});
+
+/**
+ * Arquivo: peças de meses anteriores que ficaram em aberto (não postadas).
+ * Saem da entrada do Hub na virada do mês e ficam aqui, por mês, para resolver ou apagar.
+ */
+export const archive = query({
+  args: { today: v.string() },
+  handler: async (ctx, { today }) => {
+    await requireAdmin(ctx);
+    if (!DATE.test(today)) throw new ConvexError("Data inválida.");
+    const monthStart = `${today.slice(0, 7)}-01`;
+    const clients = await ctx.db.query("clients").collect();
+    const items = [];
+    for (const client of clients) {
+      const old = await ctx.db
+        .query("contents")
+        .withIndex("by_client_date", (q) => q.eq("clientId", client._id).lt("date", monthStart))
+        .collect();
+      for (const c of old) {
+        if (c.deletedAt || c.status === "publicado") continue;
+        items.push({ ...(await toCard(ctx, c)), client: { slug: client.slug, name: client.name, accentColor: client.accentColor } });
+      }
+    }
+    return items.sort((a, b) => b.date.localeCompare(a.date) || a.client.name.localeCompare(b.client.name));
   },
 });

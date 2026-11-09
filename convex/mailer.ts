@@ -215,3 +215,58 @@ export const sendApproval = internalAction({
     else await ctx.runMutation(internal.notify.markNotice, { noticeId, error: `Não deu para enviar. ${failed.join("; ")}` });
   },
 });
+
+const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+export function planDecisionEmail({ clientName, month, theme, approved, who, comment, promoted, link }: {
+  clientName: string; month: string; theme: string; approved: boolean; who: string; comment?: string; promoted: number; link: string;
+}) {
+  const monthLabel = MONTHS[Number(month.slice(5, 7)) - 1] ?? month;
+  const subject = approved ? `${clientName} aprovou o plano de ${monthLabel}` : `${clientName} pediu ajuste no plano de ${monthLabel}`;
+  const lines = [
+    approved ? `${who} aprovou o plano de ${monthLabel} da ${clientName}: "${theme}".` : `${who} pediu ajuste no plano de ${monthLabel} da ${clientName}: "${theme}".`,
+    comment ? `\nComentário: "${comment}"` : "",
+    approved && promoted ? `\n${promoted === 1 ? "1 post entrou" : `${promoted} posts entraram`} no calendário de ${monthLabel} como Em produção.` : "",
+    "",
+    `Abrir o plano: ${link}`,
+  ];
+  const text = lines.filter((l, i) => l || i === 3).join("\n");
+  const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f8ece6;font-family:Helvetica,Arial,sans-serif;color:#5c0f31">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8ece6;padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="background:${approved ? "#ff8dc7" : "#e5482e"};padding:24px 28px">
+<div style="font-size:13px;font-weight:700;letter-spacing:.02em;color:#5c0f31">HUB SOCIAL MEDIA</div>
+<div style="font-size:34px;line-height:1.02;font-weight:800;letter-spacing:-.04em;color:#ffffff;margin-top:12px">${approved ? "Plano aprovado *" : "Ajuste no plano"}</div>
+</td></tr>
+<tr><td style="padding:24px 28px 6px;font-size:16px;line-height:1.55">
+<p style="margin:0 0 12px"><strong>${escape(who)}</strong> ${approved ? "aprovou" : "pediu ajuste n"}o plano de ${monthLabel} da ${escape(clientName)}.</p>
+<p style="margin:0 0 12px;font-size:20px;font-weight:800;letter-spacing:-.02em">${escape(theme)}</p>
+${comment ? `<p style="margin:0 0 12px;background:#f8ece6;border-radius:12px;padding:12px 14px">&ldquo;${escape(comment)}&rdquo;</p>` : ""}
+${approved && promoted ? `<p style="margin:0 0 12px">${promoted === 1 ? "1 post entrou" : `${promoted} posts entraram`} no calendário de ${monthLabel} como <strong>Em produção</strong>.</p>` : ""}
+</td></tr>
+<tr><td style="padding:8px 28px 28px"><a href="${link}" style="display:inline-block;background:#5c0f31;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:15px 28px;border-radius:999px">Abrir o plano</a></td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, text, html };
+}
+
+/** Avisa o estúdio por e-mail quando a cliente aprova ou pede ajuste no plano do mês. */
+export const sendPlanDecision = internalAction({
+  args: { planId: v.id("monthPlans"), promoted: v.number() },
+  handler: async (ctx, { planId, promoted }) => {
+    const data = await ctx.runQuery(internal.plans.decisionData, { planId });
+    const mail = gmail();
+    const site = process.env.SITE_URL?.replace(/\/$/, "");
+    if (!data || !data.decision || !mail || !site || data.to.length === 0) return;
+    const { subject, text, html } = planDecisionEmail({
+      clientName: data.client.name,
+      month: data.month,
+      theme: data.theme,
+      approved: data.status === "aprovado",
+      who: data.decision.name,
+      comment: data.decision.comment,
+      promoted,
+      link: `${site}/w/${data.client.slug}/plano?mes=${data.month}`,
+    });
+    await mail.transport.sendMail({ from: { name: process.env.MAIL_FROM_NAME || "Hub Social Media", address: mail.user }, to: data.to, subject, text, html });
+  },
+});

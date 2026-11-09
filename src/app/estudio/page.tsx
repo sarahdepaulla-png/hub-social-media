@@ -11,7 +11,7 @@ export default function EstudioPage() {
   const { greeting, time, today } = useClock();
   const home = useQuery(api.dashboard.studioHome, { today });
   const clients = useQuery(api.clients.listForStudio, { month: today.slice(0, 7), today });
-  const inbox = useQuery(api.dashboard.studioInbox, {});
+  const inbox = useQuery(api.dashboard.studioInbox, { today });
 
   return (
     <>

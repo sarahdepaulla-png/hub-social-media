@@ -3,7 +3,7 @@
   "client": "bia",
   "month": "2026-11",
   "theme": "Novembro decide o dezembro.",
-  "concept": "É agora que a cliente de formatura, confra, Natal e Réveillon escolhe com quem vai fechar. Cílios e sobrancelha abrem a porta, o espaço novo mostra onde tudo acontece, e todo post leva para o mesmo lugar: garantir o horário de dezembro pelo direct.",
+  "concept": "É agora que a cliente de formatura, confra, Natal e Réveillon escolhe com quem vai fechar. Cílios abrem a porta, o espaço novo mostra onde tudo acontece, e todo post leva para o mesmo lugar: garantir o horário de dezembro pelo direct.",
   "mood": "delicado, festivo, sem vermelho e verde",
   "palette": [
     "#3B2A26",
@@ -22,142 +22,87 @@
       "how": "Medimos pelos pedidos de data que chegam no direct até 30/11."
     },
     {
-      "title": "Cílios e sobrancelha como porta de entrada",
-      "how": "Ticket menor e decisão rápida. Medimos pelos agendamentos de cílios e sobrancelha em novembro."
+      "title": "Cílios como porta de entrada",
+      "how": "Ticket menor e decisão rápida. Medimos pelos agendamentos de cílios em novembro."
     },
     {
       "title": "Apresentar o espaço novo",
-      "how": "A cliente de dezembro já chega sabendo onde é e como é. Medimos pelas perguntas sobre endereço e pelas visualizações do tour."
+      "how": "A cliente de dezembro já chega sabendo onde é e como é. Medimos pelas perguntas sobre endereço e pelo alcance do tour."
     }
   ],
   "phases": [
     {
       "name": "Desejo",
       "start": "2026-11-11",
-      "end": "2026-11-15",
-      "intent": "Conteúdo leve e compartilhável de cílios e sobrancelha. Gera alcance e conversa no direct.",
-      "stories": "Enquete: já tem data marcada em dezembro?\nBastidor do sábado 14/11 em tempo real.\nBastidor da arrumação do espaço novo."
+      "end": "2026-11-18",
+      "intent": "Make e cílios do jeito que dá vontade de agendar. Tira as dúvidas de quem nunca fez cílios e gera conversa no direct.",
+      "stories": "Enquete: já tem data marcada em dezembro?\nBastidor do sábado 14/11 em tempo real (as fotos vão para o tour)."
     },
     {
       "name": "Confiança",
-      "start": "2026-11-16",
+      "start": "2026-11-19",
       "end": "2026-11-23",
-      "intent": "Prova social, cuidado técnico e resposta às dúvidas. Tira a objeção de quem está decidindo.",
-      "stories": "Caixinha de perguntas sobre cílios (16 a 20/11).\nRepost dos posts do feed com chamada pro direct."
+      "intent": "O espaço novo funcionando: primeiro vazio, depois cheio de cliente. Mostra cuidado e estrutura para quem está decidindo.",
+      "stories": "Repost do tour com chamada pro direct.\nDetalhes do espaço: cadeira, luz, kit."
     },
     {
       "name": "Conversão",
       "start": "2026-11-24",
       "end": "2026-11-30",
-      "intent": "Agenda de dezembro, datas restantes e depoimento. Pedido direto.",
+      "intent": "Agenda de dezembro aberta. Pedido direto.",
       "stories": "Contagem de datas livres em dezembro, atualizada conforme fecha.\nDepoimentos de clientes."
     }
   ],
-  "highlight": {
-    "title": "As quintas do espaço novo",
-    "text": "Três posts em sequência, um por fase. Quem acompanha vê o espaço nascer e já chega em dezembro sabendo onde fica e como é.",
-    "pillar": "Novo espaço"
-  },
   "needs": [
     {
-      "text": "Confirmar a data de inauguração e o endereço do espaço novo",
+      "text": "Ok no formato do mês: 2 estáticos, 2 carrosséis e 1 reel (o plano previa 3 estáticos e 2 carrosséis)",
       "due": "Até 11/11"
     },
     {
-      "text": "Liberar um horário no espaço para gravar o teaser e o tour",
-      "due": "Até 17/11"
+      "text": "Validar as respostas do carrossel de cílios: tempo médio até a manutenção, se pode molhar e se pode usar rímel",
+      "due": "Até 12/11"
     },
     {
-      "text": "Autorização das clientes do sábado 14/11 para usar primeiro nome e foto",
+      "text": "Autorização das clientes do sábado 14/11 para usar as fotos no tour",
       "due": "Até 14/11"
     },
     {
-      "text": "Validar as dicas de cílios e os conselhos de agendamento",
-      "due": "Até 16/11"
+      "text": "Confirmar o endereço do espaço novo para o tour",
+      "due": "Até 18/11"
     },
     {
-      "text": "Topar gravar o reel falado do dia 20/11 (se não, vira carrossel)",
-      "due": "Até 17/11"
-    },
-    {
-      "text": "Pedir um depoimento de cliente de festa ou formatura",
-      "due": "Até 25/11"
-    },
-    {
-      "text": "Mandar as datas livres de dezembro",
-      "due": "Até 26/11"
-    },
-    {
-      "text": "Decidir se entra combo de Black Friday de cílios e sobrancelha",
-      "due": "Até 26/11"
+      "text": "Mandar as datas livres de dezembro para a contagem nos stories",
+      "due": "Até 24/11"
     }
   ],
   "pieces": [
     {
-      "key": "bia-2026-11-sobrancelha-por-fazer",
-      "hook": "Amiga, não dá pra vencer na vida com essa sobrancelha por fazer",
-      "note": "Reel de 7 a 10s: a Bea olha pra câmera e levanta a sobrancelha, frase na tela, áudio em alta. Alternativa estática: frase em Cormorant sobre off-white com close de sobrancelha feita. CTA: Dezembro vem cheio de foto. Garante sua sobrancelha antes da correria e me chama no direct.",
-      "essential": true
+      "key": "bia-2026-11-dezembro-tem-foto",
+      "hook": "Formatura, confra, Natal, Réveillon. Dezembro tem muita foto pra você sair de qualquer jeito.",
+      "note": "Estático com a frase sobre uma foto de make e penteado. Serviço: make e penteado."
     },
     {
-      "key": "bia-2026-11-novo-espaco-teaser",
-      "hook": "Tô preparando um cantinho novo pra você",
-      "note": "Reel de 7 a 10s com closes de detalhes do espaço sem mostrar o todo: a cadeira, o espelho, a luz, a mão da Bea arrumando o kit. CTA: Quer ser uma das primeiras a conhecer? Me chama no direct."
+      "key": "bia-2026-11-nunca-fez-cilios",
+      "hook": "Nunca fez cílios? Respondi as dúvidas que mais chegam pra mim",
+      "note": "1. Capa: Nunca fez cílios? Respondi as dúvidas que mais chegam pra mim.\n2. Dói? Não. Você fica de olhos fechados e relaxa.\n3. Quanto tempo dura? [Bea confirma: tempo médio até a manutenção]\n4. Estraga meus cílios naturais? Não, quando a aplicação respeita o fio e você faz manutenção em dia.\n5. Posso molhar e usar rímel? [Bea confirma as orientações dela]\n6. CTA: Primeira vez? Me chama no direct que eu te ajudo a escolher o estilo.\n\nAs respostas entre colchetes a Bea valida, porque variam conforme a técnica dela."
     },
     {
       "key": "bia-2026-11-trend-cilios-babado",
       "hook": "Se forem te julgar pela aparência, que seja pelos cílios babado",
-      "note": "Slide 1: foto da Bea do ensaio de branding, close no rosto, com a frase. Slide 2: close de cílios de cliente, boa luz, sem anel de luz no reflexo. CTA: Agenda de cílios aberta pra novembro. Me chama no direct e escolhe seu horário.",
+      "note": "Estático com a frase sobre close de cílios de cliente, boa luz, sem anel de luz no reflexo.",
       "essential": true
-    },
-    {
-      "key": "bia-2026-11-sabado-de-atendimento",
-      "hook": "Bora pra um sábado de atendimento?",
-      "note": "Fotos no sábado 14/11. Uma make por slide com horário, primeiro nome e ocasião (ex.: 8h · Ana · formatura). Último slide: Seu sábado de dezembro pode ser o próximo. CTA: Me chama no direct e garante sua data.",
-      "essential": true
-    },
-    {
-      "key": "bia-2026-11-cilios-cocando",
-      "hook": "Seus cílios estão coçando? Não ignora.",
-      "note": "Causas comuns, o que fazer e quando buscar ajuda (vermelhidão, inchaço ou ardência que não passa: fala comigo e procura um médico). CTA: Manutenção em dia evita a maior parte desses problemas. Agenda a sua no direct."
     },
     {
       "key": "bia-2026-11-novo-espaco-tour",
       "hook": "Bem-vinda ao meu espaço novo",
-      "note": "Reel de 20 a 30s: a Bea abre a porta e mostra tudo, onde a cliente senta, a iluminação para a make, o cuidado com higiene e conforto. CTA: Seu horário de dezembro já pode ser aqui. Me chama no direct.",
+      "note": "Tour e sábado de atendimento num post só. Usa as fotos do sábado 14/11: o espaço vazio nos primeiros slides e o espaço em uso, com as clientes, nos últimos. Mostra o lugar funcionando, que vende mais.",
       "essential": true
-    },
-    {
-      "key": "bia-2026-11-conselhos-de-maquiadora",
-      "hook": "Vai agendar comigo? Anota esses conselhos",
-      "note": "Reel com a Bea falando, 30 a 45s. Se ela não quiser gravar, vira carrossel. Pele limpa e hidratada, nada de procedimento novo na semana do evento, referência e detalhes do evento, cabelo conforme o penteado, roupa que abre na frente, agendar com antecedência. CTA: Já tem data? Me manda no direct que eu vejo se ainda tenho horário."
-    },
-    {
-      "key": "bia-2026-11-nunca-fez-cilios",
-      "hook": "Nunca fez cílios? Respondi as dúvidas que mais chegam",
-      "note": "Perguntas da caixinha dos stories de 16 a 20/11. Base: dói? quanto tempo dura? estraga o fio natural? posso molhar? posso usar rímel? de quanto em quanto tempo faço manutenção? CTA: Primeira vez? Me chama no direct que eu te ajudo a escolher o estilo."
     },
     {
       "key": "bia-2026-11-video-de-natal",
-      "hook": "Formatura, confra, Natal, Réveillon. Dezembro tá aberto.",
-      "note": "Reel de 10 a 15s: close da agenda aberta em dezembro, Bea organizando o kit com laço rosé ou dourado, Bea vira pra câmera segurando os pincéis. Visual rosé e dourado, sem vermelho e verde. CTA: As datas de dezembro estão saindo. Me chama no direct e garante a sua.",
+      "hook": "Dezembro tá aberto.",
+      "note": "Reel de 10 a 15s: close da agenda aberta em dezembro, Bea organizando o kit com laço rosé ou dourado, Bea vira pra câmera segurando os pincéis. Texto na tela: Formatura, confra, Natal, Réveillon. Dezembro tá aberto. Visual rosé e dourado, sem vermelho e verde. CTA: As datas de dezembro estão saindo. Me chama no direct e garante a sua.",
       "essential": true
-    },
-    {
-      "key": "bia-2026-11-novo-espaco-dezembro",
-      "hook": "Seu dezembro já é no espaço novo",
-      "note": "Capa com o espaço pronto, depois endereço, como chegar, estacionamento e o que esperar no dia do atendimento. CTA: As datas estão saindo. Garante a sua no direct."
-    },
-    {
-      "key": "bia-2026-11-datas-de-dezembro",
-      "hook": "Essas são as datas que ainda tenho em dezembro",
-      "note": "Estático com os dias e turnos livres, tirados da agenda real. Black Friday opcional: combo de cílios e sobrancelha (make de evento fica fora de desconto). CTA: Viu sua data aí? Me chama antes que ela saia.",
-      "essential": true
-    },
-    {
-      "key": "bia-2026-11-depoimento",
-      "hook": "Depoimento de cliente de formatura",
-      "note": "Depoimento em template da marca, nunca print cru de WhatsApp. Pedir até 25/11. CTA: Última semana de novembro. Ainda dá tempo de garantir dezembro."
     }
   ]
 }

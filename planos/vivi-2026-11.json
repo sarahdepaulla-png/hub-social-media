@@ -1,0 +1,132 @@
+{
+  "key": "vivi-2026-11",
+  "client": "vivi",
+  "month": "2026-11",
+  "theme": "Nem tudo que sentimos aparece por fora.",
+  "concept": "Dor persistente, cansaço, alterações de sono e mudanças no corpo atravessam a rotina e pedem escuta, avaliação e escolhas individuais. Partimos do que as pessoas sentem, mostramos o olhar clínico da Vivi e, quando faz sentido, a acupuntura aparece como uma possibilidade de cuidado.\n\nO que queremos que pensem: \"A Vivi entende que meu sintoma não conta toda a minha história.\"",
+  "mood": "humano, próximo, acolhedor e baseado em evidências",
+  "palette": [
+    "#2A211D",
+    "#4A3A30",
+    "#8A6446",
+    "#C9A47E",
+    "#F0E6D8"
+  ],
+  "moodPhrases": [
+    "Quando o corpo começa a mudar",
+    "Um exame não conta a história inteira da dor.",
+    "Acupuntura não é para tudo"
+  ],
+  "goals": [
+    {
+      "title": "Identificação e alcance qualificado",
+      "how": "Medimos pelo alcance de quem ainda não segue, pela retenção dos Reels e pelas visitas ao perfil."
+    },
+    {
+      "title": "Confiança no raciocínio clínico da Vivi",
+      "how": "Medimos pelos salvamentos dos carrosséis, compartilhamentos e respostas às enquetes."
+    },
+    {
+      "title": "Interesse informado pelos atendimentos, especialmente a acupuntura",
+      "how": "Medimos pelos cliques no contato e pelas mensagens pedindo avaliação ou agendamento."
+    },
+    {
+      "title": "Descobrir quais dores e dúvidas viram conversa de verdade",
+      "how": "Comparamos saúde da mulher, dor persistente e acupuntura: o que gera identificação e o que gera interesse pelo serviço."
+    }
+  ],
+  "phases": [
+    {
+      "name": "Reconhecer",
+      "start": "2026-11-13",
+      "end": "2026-11-19",
+      "intent": "A Vivi fala das mudanças que viveu, ampliamos para sintomas que nem sempre são vistos e mostramos como eles afetam a rotina.",
+      "stories": "Enquete sobre mudanças no sono e na energia.\nQuiz: transição menopausal é só calor? Mito ou verdade?\nCaixinha: o que você gostaria de entender melhor sobre essa fase?"
+    },
+    {
+      "name": "Compreender",
+      "start": "2026-11-20",
+      "end": "2026-11-24",
+      "intent": "Da experiência dos sintomas para a complexidade da dor persistente, e do tema para o olhar clínico individual da Vivi.",
+      "stories": "Pergunta: se o exame vem normal, a dor deixa de ser real?\nCaixinha: qual sua maior dúvida sobre dor crônica?"
+    },
+    {
+      "name": "Cuidar",
+      "start": "2026-11-25",
+      "end": "2026-11-30",
+      "intent": "A acupuntura com contexto, como a indicação é construída e o convite para a avaliação.",
+      "stories": "Caixinha de dúvidas sobre a primeira sessão de acupuntura.\nBastidor da sala e enquete: você imaginava que a avaliação vinha antes da indicação?\nRepost do carrossel final com sticker de contato."
+    }
+  ],
+  "needs": [
+    {
+      "text": "Definir o quanto quer contar sobre a transição menopausal nos posts de 13 e 16/11",
+      "due": "Até 12/11"
+    },
+    {
+      "text": "Separar duas janelas de gravação: uma para falas pessoais e rotina, outra para conteúdos clínicos e acupuntura",
+      "due": "Até 12/11"
+    },
+    {
+      "text": "Revisar as informações técnicas: transição menopausal, dor crônica, fibromialgia e acupuntura",
+      "due": "Antes de cada post"
+    },
+    {
+      "text": "Autorização específica para qualquer caso ou material de paciente",
+      "due": "Antes de gravar"
+    },
+    {
+      "text": "Revisar as contraindicações citadas no Reels de 27/11",
+      "due": "Até 25/11"
+    },
+    {
+      "text": "Conferir os links e canais de contato na bio",
+      "due": "Até 25/11"
+    }
+  ],
+  "pieces": [
+    {
+      "key": "vivi-2026-11-corpo-muda",
+      "hook": "Quando o corpo começa a mudar",
+      "note": "Reels de 40 a 60s. Abre a campanha com identificação e apresenta a Vivi como mulher e profissional.\n\nGancho: \"Eu trabalho com saúde há anos. E mesmo assim, precisei aprender a reconhecer mudanças no meu próprio corpo.\"\n\nRoteiro:\n• Abertura em primeira pessoa, em tom de conversa.\n• Relatar, só se estiver confortável, que está vivendo a transição menopausal e percebeu sintomas que afetaram a rotina.\n• Reflexão: conhecer o corpo não significa ter todas as respostas; buscar avaliação e cuidado também faz parte.\n• Fecho: \"Nos próximos dias, quero falar sobre mudanças que nem sempre aparecem por fora.\"\n\nCaptação: plano médio, luz natural, consultório ou cenário do dia a dia, poucos cortes. Capa com foto da Vivi.\n\nCTA: Você já passou por uma fase em que demorou a entender o que estava sentindo?\n\nCuidado: confirmar com a Vivi quais dados pessoais ela quer tornar públicos. Não detalhar reposição hormonal, doses ou decisões médicas.",
+      "essential": true
+    },
+    {
+      "key": "vivi-2026-11-nao-e-so-calor",
+      "hook": "Transição menopausal não é só onda de calor.",
+      "note": "Carrossel de 6 cards, para salvar.\n\n1. Capa: Transição menopausal não é só onda de calor.\n2. Fase de mudanças hormonais, com experiências muito diferentes entre mulheres.\n3. Alterações no sono e cansaço podem fazer parte e merecem investigação.\n4. Mudanças de humor, atenção, memória e sintomas vasomotores: nem todas têm tudo.\n5. Outros sintomas e a importância da avaliação: não atribuir toda queixa à transição.\n6. Sentir algo não significa ter que enfrentar sozinha. Converse com profissionais de saúde.\n\nDesign: bege e marrom, uma frase por card, tipografia grande, nada de checklist de diagnóstico.\n\nCTA: Salve para conversar sobre isso na sua próxima consulta.\n\nCuidado: validar a precisão médica e não prometer que um recurso isolado trate todos os sintomas."
+    },
+    {
+      "key": "vivi-2026-11-cansaco-sono-dor",
+      "hook": "O que isso está tirando da sua vida?",
+      "note": "Reels de 35 a 50s. Ponte entre saúde da mulher e o olhar para o impacto na rotina.\n\nGancho: \"Às vezes, a pergunta não é só 'onde dói?', mas 'o que isso está tirando da sua vida?'\"\n\nRoteiro:\n• Situações do dia a dia: acordar cansada, dificuldade de concentração, adiar compromissos.\n• Sono, fadiga, estresse e dor podem interagir, embora tenham causas diversas.\n• Olhar o contexto e investigar as queixas, sem presumir a mesma origem.\n• Ponte: \"É por isso que, quando falamos de dor persistente, olhar apenas para um exame pode ser insuficiente.\"\n\nTexto na tela: sono, energia, rotina.\n\nCTA: Qual dessas mudanças mais interfere na sua rotina?\n\nCuidado: não afirmar que os sintomas vêm necessariamente da menopausa, de ansiedade ou de fibromialgia."
+    },
+    {
+      "key": "vivi-2026-11-dor-no-exame",
+      "hook": "Um exame não conta a história inteira da dor.",
+      "note": "Carrossel de 6 cards sobre dor persistente.\n\n1. Capa: Um exame não conta a história inteira da dor.\n2. Exames são ferramentas importantes, mas não medem toda a experiência de dor.\n3. Dor é uma experiência real, influenciada por vários fatores.\n4. Dor persistente pode afetar sono, emoções, movimento e a vida como um todo.\n5. A avaliação envolve história, exame clínico e, quando indicado, exames complementares.\n6. Entender a dor é parte do cuidado.\n\nDesign: editorial minimalista, contraste forte, sem imagens de cérebro alarmistas.\n\nCTA: Compartilhe com alguém que precisa ouvir que a dor merece ser levada a sério.\n\nCuidado: não sugerir que exames são desnecessários nem que toda dor persistente é fibromialgia."
+    },
+    {
+      "key": "vivi-2026-11-dor-cronica",
+      "hook": "Eu não começo perguntando só onde dói.",
+      "note": "Reels de 45 a 60s. Mostra o raciocínio clínico da Vivi.\n\nGancho: \"Quando alguém chega com dor há meses, eu não começo apenas perguntando onde dói.\"\n\nRoteiro:\n• Perguntas que guiam a avaliação: há quanto tempo, o que piora e melhora, como está o sono, o impacto nas atividades.\n• Dor crônica pede avaliação individual e, muitas vezes, estratégias combinadas.\n• Experiência com pessoas com fibromialgia, sem detalhes identificáveis.\n• Fecho: \"Cuidar também é ajudar a pessoa a compreender sua dor e participar das decisões.\"\n\nCaptação: fala para a câmera no consultório, perguntas curtas na tela.\n\nCTA: Salve este vídeo se você quer entender melhor o cuidado com a dor persistente.\n\nCuidado: caso clínico só desidentificado e, se houver risco de reconhecimento, com consentimento. Sem promessa de melhora."
+    },
+    {
+      "key": "vivi-2026-11-acupuntura-limites",
+      "hook": "Acupuntura não é para tudo",
+      "note": "Reels de 40 a 55s. Apresenta o serviço com transparência.\n\nGancho: \"Acupuntura não é solução para tudo. E entender isso faz parte de um bom tratamento.\"\n\nRoteiro:\n• Quebrar a expectativa de solução universal.\n• A acupuntura pode fazer parte do cuidado em algumas condições, conforme avaliação e evidências.\n• Separar objetivos possíveis de promessas.\n• Ela não substitui avaliação médica ou tratamento necessário.\n• Gancho para o próximo: \"Como eu decido quando indicar?\"\n\nCaptação: fala direta e takes da sala e dos materiais, sem close invasivo de agulhamento. Capa: Acupuntura não é para tudo.\n\nCTA: Me conta: qual é sua maior dúvida sobre acupuntura?\n\nCuidado: as evidências variam por condição. Nada de \"cura\" ou eficácia garantida para menopausa, fibromialgia, estresse ou ansiedade.",
+      "essential": true
+    },
+    {
+      "key": "vivi-2026-11-antes-de-indicar",
+      "hook": "Antes das agulhas, eu preciso entender você.",
+      "note": "Reels de 40 a 60s. O diferencial da Vivi: avaliação e decisão compartilhada antes da técnica.\n\nGancho: \"Antes de pensar nas agulhas, eu preciso entender você.\"\n\nRoteiro:\n• Quatro eixos: queixa e objetivos, histórico de saúde, avaliação clínica, preferências e contraindicações.\n• A acupuntura pode ser apropriada em alguns contextos e não em outros.\n• Expectativas realistas e integração com outros cuidados.\n• Fecho: o tratamento precisa considerar a pessoa, não só o sintoma.\n\nTexto na tela: queixa • contexto • segurança • objetivos.\n\nCTA: Se você pensa em começar, o primeiro passo é uma avaliação individual.\n\nCuidado: contraindicações só com revisão técnica da Vivi."
+    },
+    {
+      "key": "vivi-2026-11-cuidado-individual",
+      "hook": "Duas pessoas. Um mesmo sintoma. Caminhos diferentes.",
+      "note": "Carrossel de 6 cards. Fecha a campanha e transforma afinidade em intenção de atendimento.\n\n1. Capa: Duas pessoas. Um mesmo sintoma. Caminhos de cuidado diferentes.\n2. O sintoma é um ponto de partida, não a história completa.\n3. Histórico, rotina, sono, objetivos e preferências podem mudar o plano.\n4. Avaliar também é saber quando encaminhar ou combinar abordagens.\n5. A acupuntura pode fazer parte desse plano quando houver indicação.\n6. O cuidado começa quando a gente olha para você. + convite para avaliação.\n\nDesign: capa com foto da Vivi e cores da identidade.\n\nCTA: Quer entender quais possibilidades fazem sentido para o seu caso? Entre em contato para saber sobre a avaliação.\n\nCuidado: deixar claro que redes sociais não substituem consulta.",
+      "essential": true
+    }
+  ]
+}

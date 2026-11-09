@@ -114,7 +114,7 @@ export function PlanView({ data, plan, slug, month }: { data: Data; plan: Plan; 
     const i = plan.phases.findIndex((ph) => date >= ph.start && date <= ph.end);
     return i < 0 ? null : i;
   };
-  const pieces: Piece[] = data.pieces.map((p, i) => {
+  const pieces: Piece[] = data.pieces.filter((p) => p.inPlan).map((p, i) => {
     const phase = phaseOf(p.date);
     const isHighlight = !!hl && p.pillar === hl.pillar;
     return {

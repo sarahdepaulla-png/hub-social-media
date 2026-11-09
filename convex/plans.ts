@@ -109,6 +109,8 @@ export const get = query({
           hook: n?.hook ?? null,
           note: n?.note ?? null,
           essential: n?.essential === true,
+          // Combinado: o plano mostra só os posts do plano. Peça avulsa do mês ou já postada fica de fora.
+          inPlan: notes.size > 0 ? notes.has(c._id) : c.status !== "publicado",
         };
       }),
     );

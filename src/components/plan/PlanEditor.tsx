@@ -49,7 +49,9 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
   const [hl, setHl] = useState({ title: plan?.highlight?.title ?? "", text: plan?.highlight?.text ?? "", pillar: plan?.highlight?.pillar ?? "" });
   const [needs, setNeeds] = useState(plan?.needs.map((n) => ({ text: n.text, due: n.due ?? "", done: n.done })) ?? []);
   const [pieces, setPieces] = useState(
-    data.pieces.map((p) => ({ contentId: p._id as Id<"contents">, title: p.title, date: p.date, format: p.format, hook: p.hook ?? "", note: p.note ?? "", essential: p.essential })),
+    data.pieces
+      .filter((p) => p.inPlan || p.status !== "publicado")
+      .map((p) => ({ contentId: p._id as Id<"contents">, title: p.title, date: p.date, format: p.format, hook: p.hook ?? "", note: p.note ?? "", essential: p.essential, inPlan: p.inPlan })),
   );
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -73,7 +75,7 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
         phases,
         highlight: hl.title.trim() && hl.pillar ? hl : null,
         needs,
-        pieces: pieces.map(({ contentId, hook, note, essential }) => ({ contentId, hook, note, essential })),
+        pieces: pieces.filter((p) => p.inPlan).map(({ contentId, hook, note, essential }) => ({ contentId, hook, note, essential })),
       });
       onDone();
     } catch (e) {
@@ -255,10 +257,10 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
 
       <section className={box} aria-labelledby="ed-posts">
         <h2 id="ed-posts" className="text-lg font-bold">
-          Posts do mês ({pieces.length})
+          Posts do mês ({pieces.filter((p) => p.inPlan).length} no plano)
         </h2>
         <p className="-mt-2 text-sm text-texto-2">
-          A frase da capa vira o rascunho enquanto não há arte. A ideia aparece em &ldquo;Ver a ideia&rdquo;. Para mudar data, formato ou pilar, edite a peça no calendário.
+          Só os marcados em &ldquo;No plano&rdquo; aparecem para a cliente; posts já postados ficam de fora. A frase da capa vira o rascunho enquanto não há arte. A ideia aparece em &ldquo;Ver a ideia&rdquo;. Para mudar data, formato ou pilar, edite a peça no calendário.
         </p>
         {pieces.length === 0 && <p className="text-sm text-texto-2">Nenhuma peça no calendário deste mês ainda.</p>}
         {pieces.map((p, i) => (
@@ -267,10 +269,16 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
               <strong className="text-[15px]">
                 {dayLabel(p.date)} · {FORMAT[p.format]} · {p.title}
               </strong>
+              <span className="flex flex-wrap gap-4">
+              <label className="inline-flex min-h-9 items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" checked={p.inPlan} onChange={(e) => setPieces((l) => l.map((x, j) => (j === i ? { ...x, inPlan: e.target.checked } : x)))} className="size-[18px] accent-rosa-forte" />
+                No plano
+              </label>
               <label className="inline-flex min-h-9 items-center gap-2 text-sm font-semibold">
                 <input type="checkbox" checked={p.essential} onChange={(e) => setPieces((l) => l.map((x, j) => (j === i ? { ...x, essential: e.target.checked } : x)))} className="size-[18px] accent-rosa-forte" />
                 Essencial
               </label>
+              </span>
             </div>
             <label className={label}>
               Frase da capa

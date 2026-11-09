@@ -19,35 +19,42 @@ type Piece = Data["pieces"][number] & { phase: number | null };
 const eyebrow = "text-[13px] font-bold uppercase tracking-[0.08em] text-rosa-forte";
 const h2 = "titulo text-[36px] md:text-[44px]";
 
-/** Capa: a arte, se já existe; senão um rascunho limpo com a frase da capa. */
-function Cover({ p }: { p: Piece }) {
-  if (p.coverUrl) return <img src={p.coverUrl} alt="" className="aspect-[4/5] w-full rounded-2xl object-cover" />;
+const WD = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+/** Capa pequena: a arte, se já existe; senão um rascunho limpo com a frase da capa. */
+function Thumb({ p }: { p: Piece }) {
+  if (p.coverUrl) return <img src={p.coverUrl} alt="" className="aspect-[4/5] w-full rounded-xl object-cover" />;
   return (
-    <span className="flex aspect-[4/5] w-full items-center justify-center rounded-2xl bg-[#FBF6F3] p-5 text-center ring-1 ring-linha">
-      <span className="font-[Georgia,serif] text-[17px] italic leading-snug text-vinho">{p.hook ?? p.title}</span>
+    <span className="flex aspect-[4/5] w-full items-center justify-center rounded-xl bg-[#FBF6F3] p-2 text-center ring-1 ring-linha">
+      <span className="font-[Georgia,serif] text-[11px] italic leading-tight text-vinho">{p.hook ?? p.title}</span>
     </span>
   );
 }
 
-function PostCard({ p, n, base }: { p: Piece; n: number; base: string }) {
+/** Uma linha por post: dia, formato, título e do que ele fala. */
+function PostRow({ p, base, color }: { p: Piece; base: string; color: string }) {
+  const d = new Date(`${p.date}T12:00:00Z`);
   return (
-    <li className="flex flex-col gap-3">
-      <Link href={`${base}/c/${p._id}`} aria-label={`Abrir ${p.title}`} className="relative block transition-transform hover:-translate-y-0.5">
-        <Cover p={p} />
-        <span className="absolute left-2.5 top-2.5 flex size-7 items-center justify-center rounded-full bg-white text-xs font-bold text-vinho shadow-sm">{n}</span>
-      </Link>
-      <div className="flex flex-col gap-1 px-0.5">
-        <span className="text-[13px] font-semibold text-texto-2">
-          {dayLabel(p.date)} · {FORMAT[p.format]}
+    <li className="grid grid-cols-[64px_minmax(0,1fr)] gap-4 rounded-[22px] bg-white p-4 md:grid-cols-[84px_minmax(0,1fr)_96px] md:items-start md:gap-6 md:p-5">
+      <span className="flex flex-col items-center rounded-2xl py-2 text-center" style={{ background: `${color}14` }}>
+        <span className="titulo text-[34px] leading-none md:text-[42px]" style={{ color }}>
+          {p.date.slice(8, 10)}
         </span>
-        <Link href={`${base}/c/${p._id}`} className="text-base font-bold leading-snug hover:underline">
+        <span className="mt-1 text-[11px] font-bold uppercase tracking-[0.06em] text-texto-2">{WD[d.getUTCDay()].slice(0, 3)}</span>
+      </span>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <span className="text-[13px] font-semibold text-texto-2">
+          {WD[d.getUTCDay()]}, {dayLabel(p.date).slice(4)} · {FORMAT[p.format]}
+        </span>
+        <Link href={`${base}/c/${p._id}`} className="text-lg font-extrabold leading-snug tracking-tight hover:underline md:text-xl">
           {p.title}
         </Link>
+        {p.about && <p className="text-[15px] leading-relaxed text-texto-3">{p.about}</p>}
         {p.note && (
-          <details className="group mt-1 text-sm">
+          <details className="group text-sm">
             <summary className="cursor-pointer list-none font-semibold text-rosa-forte">
-              <span className="group-open:hidden">Ver a ideia</span>
-              <span className="hidden group-open:inline">Fechar</span>
+              <span className="group-open:hidden">Ver o roteiro</span>
+              <span className="hidden group-open:inline">Fechar o roteiro</span>
             </summary>
             <p className="mt-2 whitespace-pre-line rounded-xl bg-creme p-3 leading-relaxed text-texto-3">
               <Linkify text={p.note} />
@@ -55,6 +62,9 @@ function PostCard({ p, n, base }: { p: Piece; n: number; base: string }) {
           </details>
         )}
       </div>
+      <Link href={`${base}/c/${p._id}`} aria-label={`Abrir ${p.title}`} className="hidden md:block">
+        <Thumb p={p} />
+      </Link>
     </li>
   );
 }
@@ -72,7 +82,6 @@ export function PlanView({ data, plan, slug, month }: { data: Data; plan: Plan; 
     return i < 0 ? null : i;
   };
   const pieces: Piece[] = data.pieces.filter((p) => p.inPlan).map((p) => ({ ...p, phase: phaseOf(p.date) }));
-  const number = new Map(pieces.map((p, i) => [p._id, i + 1]));
   const groups = [
     ...plan.phases.map((ph, i) => ({ key: `f${i}`, title: ph.name, range: rangeLabel(ph.start, ph.end), color: PHASE_COLORS[i % PHASE_COLORS.length], list: pieces.filter((p) => p.phase === i) })),
     { key: "outros", title: plan.phases.length ? "Outros posts" : "Os posts", range: "", color: "#B88AA0", list: pieces.filter((p) => p.phase === null) },
@@ -153,21 +162,21 @@ export function PlanView({ data, plan, slug, month }: { data: Data; plan: Plan; 
           <div className="flex flex-col gap-1.5">
             <span className={eyebrow}>O que vai ao ar</span>
             <h2 id="plano-posts" className={h2}>
-              Os posts de {mes}
+              Dia a dia de {mes}
             </h2>
           </div>
           {groups.map((g) => (
-            <div key={g.key} className="flex flex-col gap-4">
+            <div key={g.key} className="flex flex-col gap-3">
               <div className="flex items-center gap-2.5">
                 <span aria-hidden="true" className="h-[3px] w-6 rounded-full" style={{ background: g.color }} />
                 <h3 className="text-lg font-extrabold">{g.title}</h3>
                 {g.range && <span className="text-sm text-texto-2">{g.range}</span>}
               </div>
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-7 md:grid-cols-4">
+              <ol className="flex flex-col gap-2.5">
                 {g.list.map((p) => (
-                  <PostCard key={p._id} p={p} n={number.get(p._id) ?? 0} base={base} />
+                  <PostRow key={p._id} p={p} base={base} color={g.color} />
                 ))}
-              </ul>
+              </ol>
             </div>
           ))}
         </section>

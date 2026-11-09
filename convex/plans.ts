@@ -28,6 +28,7 @@ const needV = v.object({ text: v.string(), due: v.optional(v.string()), done: v.
 const pieceV = v.object({
   contentId: v.id("contents"),
   hook: v.optional(v.string()),
+  about: v.optional(v.string()),
   note: v.optional(v.string()),
   essential: v.optional(v.boolean()),
 });
@@ -107,6 +108,7 @@ export const get = query({
           objective: c.objective ?? null,
           coverUrl: c.coverId ? await ctx.storage.getUrl(c.coverId) : (c.coverUrl ?? null),
           hook: n?.hook ?? null,
+          about: n?.about ?? null,
           note: n?.note ?? null,
           essential: n?.essential === true,
           // Combinado: o plano mostra só os posts do plano. Peça avulsa do mês ou já postada fica de fora.
@@ -250,6 +252,7 @@ export const save = mutation({
       pieces: args.pieces.map((p) => ({
         contentId: p.contentId,
         hook: clip(p.hook, 140),
+        about: clip(p.about, 300),
         note: clip(p.note, 600),
         essential: p.essential === true ? true : undefined,
       })),
@@ -469,7 +472,9 @@ export const apply = internalMutation({
       highlight: v.optional(highlightV),
       needs: v.optional(v.array(v.object({ text: v.string(), due: v.optional(v.string()) }))),
       pieces: v.optional(
-        v.array(v.object({ key: v.string(), hook: v.optional(v.string()), note: v.optional(v.string()), essential: v.optional(v.boolean()) })),
+        v.array(
+          v.object({ key: v.string(), hook: v.optional(v.string()), about: v.optional(v.string()), note: v.optional(v.string()), essential: v.optional(v.boolean()) }),
+        ),
       ),
     }),
   },
@@ -482,7 +487,6 @@ export const apply = internalMutation({
     if (!client) return `${it.key}: cliente "${it.client}" não existe, pulei`;
     const existing = await findPlan(ctx, client._id, it.month);
     if (existing && existing.importKey !== it.key) return `${it.key}: já existe um plano feito na tela, não mexi`;
-    if (existing && existing.status !== "rascunho") return `${it.key}: já enviado à cliente, não mexi`;
 
     const pieces: Doc<"monthPlans">["pieces"] = [];
     for (const p of it.pieces ?? []) {
@@ -490,7 +494,15 @@ export const apply = internalMutation({
         .query("contents")
         .withIndex("by_import_key", (q) => q.eq("importKey", p.key))
         .first();
-      if (c && c.clientId === client._id) pieces.push({ contentId: c._id, hook: p.hook, note: p.note, essential: p.essential });
+      if (c && c.clientId === client._id) pieces.push({ contentId: c._id, hook: p.hook, about: p.about, note: p.note, essential: p.essential });
+    }
+    // Já enviado à cliente: só atualiza os textos dos posts (sem mexer no status nem reenviar).
+    if (existing && existing.status !== "rascunho") {
+      if (!it.pieces) return `${it.key}: já enviado à cliente, não mexi`;
+      const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+      if (same(existing.pieces, pieces)) return `${it.key}: já enviado à cliente, nada mudou`;
+      await ctx.db.patch(existing._id, { pieces, updatedAt: Date.now() });
+      return `${it.key}: já enviado à cliente, textos dos posts atualizados`;
     }
     const fields = {
       theme: it.theme,

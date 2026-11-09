@@ -79,30 +79,35 @@
     {
       "key": "bia-2026-11-dezembro-tem-foto",
       "hook": "Formatura, confra, Natal, Réveillon. Dezembro tem muita foto pra você sair de qualquer jeito.",
-      "note": "Estático com a frase sobre uma foto de make e penteado. Serviço: make e penteado."
+      "note": "Estático com a frase sobre uma foto de make e penteado. Serviço: make e penteado.",
+      "about": "Formatura, confra, Natal e Réveillon vêm aí. Chamada para garantir make e penteado de dezembro antes da correria."
     },
     {
       "key": "bia-2026-11-nunca-fez-cilios",
       "hook": "Nunca fez cílios? Respondi as dúvidas que mais chegam pra mim",
-      "note": "1. Capa: Nunca fez cílios? Respondi as dúvidas que mais chegam pra mim.\n2. Dói? Não. Você fica de olhos fechados e relaxa.\n3. Quanto tempo dura? [Bea confirma: tempo médio até a manutenção]\n4. Estraga meus cílios naturais? Não, quando a aplicação respeita o fio e você faz manutenção em dia.\n5. Posso molhar e usar rímel? [Bea confirma as orientações dela]\n6. CTA: Primeira vez? Me chama no direct que eu te ajudo a escolher o estilo.\n\nAs respostas entre colchetes a Bea valida, porque variam conforme a técnica dela."
+      "note": "1. Capa: Nunca fez cílios? Respondi as dúvidas que mais chegam pra mim.\n2. Dói? Não. Você fica de olhos fechados e relaxa.\n3. Quanto tempo dura? [Bea confirma: tempo médio até a manutenção]\n4. Estraga meus cílios naturais? Não, quando a aplicação respeita o fio e você faz manutenção em dia.\n5. Posso molhar e usar rímel? [Bea confirma as orientações dela]\n6. CTA: Primeira vez? Me chama no direct que eu te ajudo a escolher o estilo.\n\nAs respostas entre colchetes a Bea valida, porque variam conforme a técnica dela.",
+      "about": "Responde as dúvidas de quem nunca fez cílios: se dói, quanto tempo dura, se estraga o fio natural e se pode molhar e usar rímel."
     },
     {
       "key": "bia-2026-11-trend-cilios-babado",
       "hook": "Se forem te julgar pela aparência, que seja pelos cílios babado",
       "note": "Estático com a frase sobre close de cílios de cliente, boa luz, sem anel de luz no reflexo.",
-      "essential": true
+      "essential": true,
+      "about": "Close de cílios de cliente com a frase \"Se forem te julgar pela aparência, que seja pelos cílios babado\". Post leve, para compartilhar."
     },
     {
       "key": "bia-2026-11-novo-espaco-tour",
       "hook": "Bem-vinda ao meu espaço novo",
       "note": "Tour e sábado de atendimento num post só. Usa as fotos do sábado 14/11: o espaço vazio nos primeiros slides e o espaço em uso, com as clientes, nos últimos. Mostra o lugar funcionando, que vende mais.",
-      "essential": true
+      "essential": true,
+      "about": "Tour pelo espaço novo: primeiro o espaço vazio, depois cheio de clientes no sábado de atendimento (14/11)."
     },
     {
       "key": "bia-2026-11-video-de-natal",
       "hook": "Dezembro tá aberto.",
       "note": "Reel de 10 a 15s: close da agenda aberta em dezembro, Bea organizando o kit com laço rosé ou dourado, Bea vira pra câmera segurando os pincéis. Texto na tela: Formatura, confra, Natal, Réveillon. Dezembro tá aberto. Visual rosé e dourado, sem vermelho e verde. CTA: As datas de dezembro estão saindo. Me chama no direct e garante a sua.",
-      "essential": true
+      "essential": true,
+      "about": "Reel de Natal avisando que a agenda de dezembro está aberta, com chamada para garantir a data no direct."
     }
   ]
 }

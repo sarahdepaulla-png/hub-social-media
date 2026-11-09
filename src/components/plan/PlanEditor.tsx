@@ -50,7 +50,7 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
   const [pieces, setPieces] = useState(
     data.pieces
       .filter((p) => p.inPlan || p.status !== "publicado")
-      .map((p) => ({ contentId: p._id as Id<"contents">, title: p.title, date: p.date, format: p.format, hook: p.hook ?? "", note: p.note ?? "", essential: p.essential, inPlan: p.inPlan })),
+      .map((p) => ({ contentId: p._id as Id<"contents">, title: p.title, date: p.date, format: p.format, hook: p.hook ?? "", about: p.about ?? "", note: p.note ?? "", essential: p.essential, inPlan: p.inPlan })),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
         highlight: kept.highlight ? { title: kept.highlight.title, text: kept.highlight.text ?? undefined, pillar: kept.highlight.pillar } : null,
         phases,
         needs,
-        pieces: pieces.filter((p) => p.inPlan).map(({ contentId, hook, note, essential }) => ({ contentId, hook, note, essential })),
+        pieces: pieces.filter((p) => p.inPlan).map(({ contentId, hook, about, note, essential }) => ({ contentId, hook, about, note, essential })),
       });
       onDone();
     } catch (e) {
@@ -168,7 +168,11 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
               <input value={p.hook} onChange={(e) => setPieces((l) => l.map((x, j) => (j === i ? { ...x, hook: e.target.value } : x)))} className={field} />
             </label>
             <label className={label}>
-              A ideia
+              Do que o post fala (aparece direto para a cliente)
+              <textarea rows={2} value={p.about} onChange={(e) => setPieces((l) => l.map((x, j) => (j === i ? { ...x, about: e.target.value } : x)))} className={area} />
+            </label>
+            <label className={label}>
+              Roteiro (abre em &ldquo;Ver o roteiro&rdquo;)
               <textarea rows={2} value={p.note} onChange={(e) => setPieces((l) => l.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))} className={area} />
             </label>
           </div>

@@ -393,6 +393,7 @@ export default defineSchema({
       v.object({
         contentId: v.id("contents"),
         hook: v.optional(v.string()),
+        about: v.optional(v.string()), // do que o post fala, em uma ou duas frases
         note: v.optional(v.string()),
         essential: v.optional(v.boolean()),
       }),

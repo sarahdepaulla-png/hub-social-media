@@ -197,15 +197,19 @@ export function PlanView({ data, plan, slug, month }: { data: Data; plan: Plan; 
                   </span>
                 );
               })}
-              {plan.palette.map((c) => (
-                <span key={c} className="flex aspect-[4/5] items-end rounded-[10px] p-2.5" style={{ background: c, boxShadow: "inset 0 0 0 1px rgba(59,42,38,0.1)" }}>
-                  <span className="text-[11px] font-semibold uppercase" style={{ color: inkOn(c) }}>
-                    {c}
-                  </span>
-                </span>
-              ))}
             </div>
-            {plan.mood && <figcaption className="px-1 font-[Georgia,serif] text-xl italic text-texto-3">{plan.mood}</figcaption>}
+            {(plan.mood || plan.palette.length > 0) && (
+              <figcaption className="flex flex-wrap items-center justify-between gap-3 px-1">
+                {plan.mood && <span className="font-[Georgia,serif] text-xl italic text-texto-3">{plan.mood}</span>}
+                {plan.palette.length > 0 && (
+                  <span aria-label="Paleta do mês" className="flex gap-1.5">
+                    {plan.palette.map((c) => (
+                      <span key={c} title={c} className="size-7 rounded-full" style={{ background: c, boxShadow: "inset 0 0 0 1px rgba(59,42,38,0.15)" }} />
+                    ))}
+                  </span>
+                )}
+              </figcaption>
+            )}
           </figure>
         )}
       </section>

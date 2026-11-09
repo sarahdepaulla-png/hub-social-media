@@ -43,6 +43,7 @@ function AdminBar({
   name,
   status,
   sentAt,
+  readyMail,
   whatsapp,
   people,
   onEdit,
@@ -52,11 +53,14 @@ function AdminBar({
   name: string;
   status: keyof typeof STATUS_LABEL;
   sentAt: number | null;
+  readyMail: { at: number; to?: string[]; error?: string } | null;
   whatsapp: string | null;
   people: { name: string; token: string }[];
   onEdit: () => void;
 }) {
   const setStatus = useMutation(api.plans.setStatus);
+  const resend = useMutation(api.plans.resendReadyMail);
+  const [copied, setCopied] = useState(false);
   const [who, setWho] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const person = people[who] ?? null;
@@ -64,7 +68,16 @@ function AdminBar({
   const page = `/w/${slug}/plano?mes=${month}`;
   const link = person ? `${origin}/acesso/${person.token}?ir=${encodeURIComponent(page)}` : `${origin}${page}`;
   const first = (person?.name ?? name).split(" ")[0];
-  const message = `Oi, ${first}! Montei o plano de ${monthName(month).toLowerCase()} pra você ver como pensei o mês: o tema, o caminho, o calendário e como o feed vai ficar.\n\nÉ só abrir, dar uma olhada e aprovar ou pedir ajuste:\n${link}`;
+  const message = `Oi, ${first}! Seu calendário de ${monthName(month).toLowerCase()} está pronto para aprovação.\n\nMontei o plano do mês pra você ver como pensei tudo: o caminho, os posts e como o feed vai ficar.\n\nÉ só abrir, dar uma olhada e tocar em "Aprovar e mandar pro calendário" (ou pedir ajuste se quiser mudar algo):\n${link}`;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* sem permissão de cópia */
+    }
+  };
   const run = (s: "rascunho" | "aguardando") => setStatus({ slug, month, status: s }).catch((e) => setError(errorText(e)));
 
   return (
@@ -90,29 +103,46 @@ function AdminBar({
         )}
       </div>
       {status === "aguardando" && (
-        <div className="flex flex-wrap items-center gap-2.5 border-t border-linha pt-3">
-          <a
-            href={`https://wa.me/${whatsapp ?? ""}?text=${encodeURIComponent(message)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1F8F4E] px-5 text-sm font-bold text-white hover:bg-[#187540]"
-          >
-            Mandar no WhatsApp
-          </a>
-          {people.length > 1 && (
-            <label className="flex items-center gap-2 text-sm font-semibold">
-              Para
-              <select value={who} onChange={(e) => setWho(Number(e.target.value))} className="min-h-11 border border-campo bg-white px-3 text-[15px] font-normal">
-                {people.map((p, i) => (
-                  <option key={p.token} value={i}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+        <div className="flex flex-col gap-3 border-t border-linha pt-3">
+          <span className="text-sm text-texto-3">
+            {readyMail === null
+              ? "O e-mail para a cliente ainda não saiu."
+              : readyMail.error
+                ? `E-mail não saiu: ${readyMail.error}`
+                : `E-mail enviado para ${readyMail.to?.join(", ")}, ${stamp(readyMail.at)}.`}{" "}
+            <button type="button" onClick={() => void resend({ slug, month }).catch((e) => setError(errorText(e)))} className="font-semibold text-rosa-forte underline">
+              {readyMail === null ? "Mandar o e-mail" : "Mandar o e-mail de novo"}
+            </button>
+          </span>
+          <p className="whitespace-pre-wrap rounded-xl bg-creme p-3 text-sm leading-relaxed text-texto-3">{message}</p>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <a
+              href={`https://wa.me/${whatsapp ?? ""}?text=${encodeURIComponent(message)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#1F8F4E] px-5 text-sm font-bold text-white hover:bg-[#187540]"
+            >
+              Mandar no WhatsApp
+            </a>
+            <button type="button" onClick={() => void copy()} className="min-h-11 rounded-full border-[1.5px] border-vinho px-4 text-sm font-semibold hover:bg-creme">
+              {copied ? "Mensagem copiada" : "Copiar mensagem"}
+            </button>
+            {people.length > 1 && (
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                Para
+                <select value={who} onChange={(e) => setWho(Number(e.target.value))} className="min-h-11 border border-campo bg-white px-3 text-[15px] font-normal">
+                  {people.map((p, i) => (
+                    <option key={p.token} value={i}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
           <span className="text-xs text-texto-2">
-            {person ? `Link pessoal de ${person.name}: entra direto, sem código.` : "Sem acesso pessoal: a cliente entra com o código."}
+            {person ? `O link é o acesso pessoal de ${person.name}: entra direto, sem código. Mande só para ela.` : "Sem acesso pessoal: a cliente entra com o código."}
+            {!whatsapp && " Sem WhatsApp cadastrado: o WhatsApp abre para você escolher o contato."}
           </span>
         </div>
       )}
@@ -165,6 +195,7 @@ function PlanPage() {
               name={ws.name}
               status={data.plan.status}
               sentAt={data.plan.sentAt}
+              readyMail={data.plan.readyMail}
               whatsapp={data.whatsapp}
               people={data.people}
               onEdit={() => setEditing(month)}

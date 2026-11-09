@@ -47,7 +47,14 @@ async function workspaceHeader(ctx: Parameters<typeof requireAdmin>[0], slug: st
           .query("contents")
           .withIndex("by_client_status", (q) => q.eq("clientId", client._id).eq("status", "aguardando"))
           .collect()
-      ).filter((c) => !c.deletedAt).length,
+      ).filter((c) => !c.deletedAt).length +
+      // Plano do mês esperando a cliente também conta.
+      (
+        await ctx.db
+          .query("monthPlans")
+          .withIndex("by_client_month", (q) => q.eq("clientId", client._id))
+          .collect()
+      ).filter((p) => p.status === "aguardando").length,
       // Ideias que ainda ninguém do estúdio olhou (só interessa à admin).
       newIdeas:
         viewer.role === "admin"

@@ -100,6 +100,7 @@ export default function InicioPage() {
   const ws = useWorkspace();
   const month = currentMonth();
   const data = useQuery(api.dashboard.forClient, { slug: ws.slug, month, today: todayISO() });
+  const plans = useQuery(api.plans.pending, { slug: ws.slug });
 
   if (data === undefined) return <Loading />;
   const { counts, waiting, adjusting, upcoming } = data;
@@ -128,6 +129,22 @@ export default function InicioPage() {
               </>
             )}
           </SelectionBox>
+          {plans?.map((p) => (
+            <Link
+              key={p.month}
+              href={`${base}/plano?mes=${p.month}`}
+              className="flex flex-col gap-3 rounded-[22px] bg-vinho p-5 text-white shadow-[0_14px_36px_rgba(92,15,49,0.28)] hover:bg-vinho-escuro md:flex-row md:items-center md:justify-between md:p-6"
+            >
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="text-sm font-bold uppercase tracking-[0.06em] text-rosa">Para você aprovar</span>
+                <strong className="text-2xl leading-tight tracking-tight md:text-3xl">Seu calendário de {monthName(p.month).toLowerCase()} está pronto</strong>
+                <span className="text-[15px] text-creme">&ldquo;{p.theme}&rdquo;. Veja o caminho do mês e aprove para os posts entrarem no calendário.</span>
+              </span>
+              <span className="inline-flex min-h-12 shrink-0 items-center justify-center self-start rounded-full bg-rosa px-6 text-base font-bold text-vinho md:self-center">
+                Ver e aprovar o plano
+              </span>
+            </Link>
+          ))}
           <div className="mt-2 flex flex-wrap gap-3">
             <Link href={`${base}/briefing/novo`} className={admin ? buttonClass.secondary : buttonClass.primary}>
               Abrir briefing

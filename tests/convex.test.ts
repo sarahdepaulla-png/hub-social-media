@@ -1017,7 +1017,12 @@ describe("plano do mês", () => {
     const cal = await as(biaUser).query(api.calendar.month, { slug: "bia", month: "2026-11" });
     expect(cal.contents.map((c) => c.title)).toEqual(["Sobrancelha"]);
     expect(cal.planHeld?.count).toBe(1);
+    const badgeBefore = (await as(biaUser).query(api.clients.bySlug, { slug: "bia" })).waitingCount;
     await as(admin).mutation(api.plans.setStatus, { slug: "bia", month: "2026-11", status: "aguardando" });
+    // Enviou: e-mail para a cliente agendado e o plano conta no "Aprovar".
+    const jobs = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).map((f) => f.name));
+    expect(jobs.some((n) => n.includes("sendPlanReady"))).toBe(true);
+    expect((await as(biaUser).query(api.clients.bySlug, { slug: "bia" })).waitingCount).toBe(badgeBefore + 1);
     expect(await as(biaUser).query(api.plans.pending, { slug: "bia" })).toEqual([{ month: "2026-11", theme: "Novembro decide o dezembro." }]);
     const view = await as(biaUser).query(api.plans.get, { slug: "bia", month: "2026-11" });
     expect(view.canDecide).toBe(true);

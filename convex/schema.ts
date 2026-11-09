@@ -403,6 +403,8 @@ export default defineSchema({
       v.object({ userId: v.id("users"), name: v.string(), at: v.number(), comment: v.optional(v.string()) }),
     ),
     importKey: v.optional(v.string()),
+    // E-mail "seu plano está pronto" para a cliente.
+    readyMail: v.optional(v.object({ at: v.number(), to: v.optional(v.array(v.string())), error: v.optional(v.string()) })),
     updatedAt: v.number(),
   }).index("by_client_month", ["clientId", "month"]),
 });

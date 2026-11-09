@@ -270,3 +270,74 @@ export const sendPlanDecision = internalAction({
     await mail.transport.sendMail({ from: { name: process.env.MAIL_FROM_NAME || "Hub Social Media", address: mail.user }, to: data.to, subject, text, html });
   },
 });
+
+export function planReadyEmail({ name, month, theme, count, from, link }: {
+  name: string | null; month: string; theme: string; count: number; from: string; link: string;
+}) {
+  const monthLabel = MONTHS[Number(month.slice(5, 7)) - 1] ?? month;
+  const hi = name ? `Oi, ${name.split(" ")[0]}!` : "Oi!";
+  const subject = `Seu calendário de ${monthLabel} está pronto para aprovar`;
+  const posts = count === 1 ? "1 post" : `${count} posts`;
+  const text = [
+    hi,
+    "",
+    `O plano de ${monthLabel} está pronto: "${theme}".`,
+    `Montei o caminho do mês, o calendário com ${posts} e como o feed vai ficar. É só abrir, dar uma olhada e aprovar ou pedir ajuste. Quando você aprova, os posts entram no calendário.`,
+    "",
+    link,
+    "",
+    "O link é só seu e entra direto, sem senha.",
+  ].join("\n");
+  const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f8ece6;font-family:Helvetica,Arial,sans-serif;color:#5c0f31">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8ece6;padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="background:#ff8dc7;padding:26px 28px">
+<div style="font-size:13px;font-weight:700;letter-spacing:.02em;color:#5c0f31">HUB SOCIAL MEDIA</div>
+<div style="font-size:38px;line-height:1;font-weight:800;letter-spacing:-.04em;color:#ffffff;margin-top:12px">Seu ${monthLabel}<br>está pronto *</div>
+</td></tr>
+<tr><td style="padding:26px 28px 6px;font-size:16px;line-height:1.55">
+<p style="margin:0 0 14px;font-weight:700">${escape(hi)}</p>
+<p style="margin:0 0 10px">O plano de ${monthLabel} está pronto:</p>
+<p style="margin:0 0 14px;font-size:22px;font-weight:800;letter-spacing:-.02em">${escape(theme)}</p>
+<p style="margin:0 0 14px">Montei o caminho do mês, o calendário com ${posts} e como o feed vai ficar. É só abrir, dar uma olhada e aprovar ou pedir ajuste. Quando você aprova, os posts entram no calendário.</p>
+</td></tr>
+<tr><td style="padding:8px 28px 26px"><a href="${link}" style="display:inline-block;background:#5c0f31;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:15px 28px;border-radius:999px">Ver e aprovar o plano</a></td></tr>
+<tr><td style="padding:0 28px 28px;font-size:13px;line-height:1.5;color:#7a4a5e">Enviado por ${escape(from)} pelo Hub Social Media. O link é só seu e entra direto, sem senha.<br>
+Se o botão não abrir, copie: <a href="${link}" style="color:#c2186b;word-break:break-all">${link}</a></td></tr>
+</table></td></tr></table></body></html>`;
+  return { subject, text, html };
+}
+
+/** E-mail para a cliente: o plano do mês está pronto para aprovar (um por pessoa, com o link dela). */
+export const sendPlanReady = internalAction({
+  args: { planId: v.id("monthPlans") },
+  handler: async (ctx, { planId }) => {
+    const data = await ctx.runQuery(internal.plans.readyData, { planId });
+    if (!data) return;
+    if (data.recipients.length === 0) {
+      await ctx.runMutation(internal.plans.markReadyMail, { planId, error: "A cliente ainda não tem e-mail cadastrado no Hub." });
+      return;
+    }
+    const mail = gmail();
+    const site = process.env.SITE_URL?.replace(/\/$/, "");
+    if (!mail || !site) {
+      await ctx.runMutation(internal.plans.markReadyMail, { planId, error: "E-mail não configurado (falta a senha de app do Gmail na Vercel)." });
+      return;
+    }
+    const fromName = process.env.MAIL_FROM_NAME || data.adminName || "Hub Social Media";
+    const target = `/w/${data.client.slug}/plano?mes=${data.month}`;
+    const sent: string[] = [];
+    const failed: string[] = [];
+    for (const r of data.recipients) {
+      const link = r.token ? `${site}/acesso/${r.token}?ir=${encodeURIComponent(target)}` : `${site}${target}`;
+      const { subject, text, html } = planReadyEmail({ name: r.name, month: data.month, theme: data.theme, count: data.count, from: fromName, link });
+      try {
+        await mail.transport.sendMail({ from: { name: fromName, address: mail.user }, to: r.email, replyTo: mail.user, subject, text, html });
+        sent.push(r.email);
+      } catch (err) {
+        failed.push(`${r.email}: ${(err instanceof Error ? err.message : String(err)).slice(0, 120)}`);
+      }
+    }
+    await ctx.runMutation(internal.plans.markReadyMail, sent.length ? { planId, to: sent } : { planId, error: `Não deu para enviar. ${failed.join("; ")}` });
+  },
+});

@@ -159,6 +159,7 @@ export const get = query({
             needs: visible.needs,
             status: visible.status,
             sentAt: visible.sentAt ?? null,
+            readyMail: admin ? (visible.readyMail ?? null) : null,
             decision: visible.decision ?? null,
           }
         : null,
@@ -310,6 +311,8 @@ export const setStatus = mutation({
       decision: status === "aguardando" ? undefined : plan.decision,
       updatedAt: Date.now(),
     });
+    // Enviou: a cliente recebe o e-mail com o link pessoal direto para o plano.
+    if (status === "aguardando") await ctx.scheduler.runAfter(0, internal.mailer.sendPlanReady, { planId: plan._id });
   },
 });
 
@@ -349,6 +352,56 @@ export const decide = mutation({
     }
     // Aviso por e-mail para o estúdio.
     await ctx.scheduler.runAfter(0, internal.mailer.sendPlanDecision, { planId: plan._id, promoted });
+  },
+});
+
+/** A admin manda (de novo) o e-mail "seu plano está pronto" para a cliente. */
+export const resendReadyMail = mutation({
+  args: { slug: v.string(), month: v.string() },
+  handler: async (ctx, { slug, month }) => {
+    await requireAdmin(ctx);
+    const { client } = await requireClientBySlug(ctx, slug);
+    const plan = await findPlan(ctx, client._id, month);
+    if (!plan || plan.status !== "aguardando") throw new ConvexError("Envie o plano para a cliente primeiro.");
+    await ctx.db.patch(plan._id, { readyMail: undefined });
+    await ctx.scheduler.runAfter(0, internal.mailer.sendPlanReady, { planId: plan._id });
+  },
+});
+
+/** Quem recebe o e-mail do plano: as pessoas da cliente, com o link pessoal de cada uma. */
+export const readyData = internalQuery({
+  args: { planId: v.id("monthPlans") },
+  handler: async (ctx, { planId }) => {
+    const plan = await ctx.db.get(planId);
+    if (!plan || plan.status !== "aguardando") return null;
+    const client = await ctx.db.get(plan.clientId);
+    if (!client) return null;
+    const people = new Map<string, { email: string; name: string | null; token: string | null }>();
+    for (const u of await ctx.db.query("users").collect()) {
+      if (u.role === "cliente" && u.clientId === client._id && u.email) people.set(u.email.toLowerCase(), { email: u.email, name: u.name ?? null, token: null });
+    }
+    for (const i of await ctx.db.query("invites").collect()) {
+      if (i.clientId !== client._id || i.role !== "cliente") continue;
+      const prev = people.get(i.email.toLowerCase());
+      people.set(i.email.toLowerCase(), { email: i.email, name: prev?.name ?? i.name ?? null, token: i.token ?? null });
+    }
+    const admin = (await ctx.db.query("users").collect()).find((u) => u.role === "admin" && u.name);
+    const count = (await contentsInMonth(ctx, client._id, plan.month)).length;
+    return {
+      client: { name: client.name, slug: client.slug },
+      month: plan.month,
+      theme: plan.theme,
+      count,
+      recipients: [...people.values()],
+      adminName: admin?.name ?? null,
+    };
+  },
+});
+
+export const markReadyMail = internalMutation({
+  args: { planId: v.id("monthPlans"), to: v.optional(v.array(v.string())), error: v.optional(v.string()) },
+  handler: async (ctx, { planId, to, error }) => {
+    await ctx.db.patch(planId, { readyMail: { at: Date.now(), to, error } });
   },
 });
 

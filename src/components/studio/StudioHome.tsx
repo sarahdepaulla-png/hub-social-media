@@ -550,7 +550,7 @@ export function StudioHome({ home, clients, inbox, greeting, time, today }: { ho
             {counts.archived > 0 && (
               <Link href="/estudio/arquivo" className="flex min-h-11 items-center justify-between gap-3 rounded-peca bg-white px-4 py-3 text-sm text-texto-3 hover:bg-[#FFF6FA]">
                 <span>
-                  {counts.archived === 1 ? "1 peça de meses anteriores ficou em aberto" : `${counts.archived} peças de meses anteriores ficaram em aberto`} e foi para o Arquivo.
+                  {counts.archived === 1 ? "1 peça de meses anteriores ficou em aberto e foi para o Arquivo." : `${counts.archived} peças de meses anteriores ficaram em aberto e foram para o Arquivo.`}
                 </span>
                 <span className="shrink-0 font-semibold text-rosa-forte">Ver arquivo</span>
               </Link>

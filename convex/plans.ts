@@ -506,13 +506,18 @@ export const apply = internalMutation({
       importKey: it.key,
       updatedAt: Date.now(),
     };
+    // Regra: plano que sobe pela fila já vai para aprovação (aparece na entrada da cliente e ela recebe o e-mail).
+    const sent = { status: "aguardando" as const, sentAt: Date.now(), decision: undefined };
+    let planId: Id<"monthPlans">;
     if (existing) {
       // Mantém as pendências já marcadas.
       const done = new Set(existing.needs.filter((n) => n.done).map((n) => n.text));
-      await ctx.db.patch(existing._id, { ...fields, needs: fields.needs.map((n) => ({ ...n, done: done.has(n.text) })) });
-      return `${it.key}: atualizado`;
+      await ctx.db.patch(existing._id, { ...fields, ...sent, needs: fields.needs.map((n) => ({ ...n, done: done.has(n.text) })) });
+      planId = existing._id;
+    } else {
+      planId = await ctx.db.insert("monthPlans", { ...emptyPlan(client._id, it.month), ...fields, ...sent });
     }
-    await ctx.db.insert("monthPlans", { ...emptyPlan(client._id, it.month), ...fields });
-    return `${it.key}: criado`;
+    await ctx.scheduler.runAfter(0, internal.mailer.sendPlanReady, { planId });
+    return `${it.key}: ${existing ? "atualizado" : "criado"} e enviado para aprovação`;
   },
 });

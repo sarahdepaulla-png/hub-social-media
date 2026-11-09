@@ -1000,7 +1000,12 @@ describe("plano do mês", () => {
         pieces: [{ key: "p-2", hook: "Bem-vinda", essential: true }],
       },
     });
-    expect(msg).toMatch(/criado/);
+    expect(msg).toMatch(/criado e enviado/);
+    // Regra: subiu pela fila, já está esperando a cliente (e o e-mail foi agendado).
+    expect((await as(biaUser).query(api.plans.get, { slug: "bia", month: "2026-11" })).plan?.status).toBe("aguardando");
+    const queued = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).map((f) => f.name));
+    expect(queued.some((n) => n.includes("sendPlanReady"))).toBe(true);
+    await as(admin).mutation(api.plans.setStatus, { slug: "bia", month: "2026-11", status: "rascunho" });
 
     // Rascunho: a cliente não vê.
     expect((await as(biaUser).query(api.plans.get, { slug: "bia", month: "2026-11" })).plan).toBeNull();

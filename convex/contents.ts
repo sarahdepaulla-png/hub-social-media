@@ -5,6 +5,7 @@ import { cleanDue, cleanOwner } from "./lib/team";
 import { queueApprovalNotice } from "./lib/notify";
 import { canEditContent, requireAdmin, requireClientBySlug, requireContentAccess, requireContentEditor } from "./lib/access";
 import { displayName, logActivity } from "./lib/log";
+import { saveRevision } from "./lib/revisions";
 import { TRASH_MS, UNDO_WINDOW_MS, alive, toCard } from "./lib/content";
 import { internalMutation } from "./_generated/server";
 import { decisionType, format, platform, status } from "./schema";
@@ -407,6 +408,7 @@ export const update = mutation({
       ([k, val]) => val !== undefined && content[k as keyof typeof content] !== val,
     );
     if (changed.length === 0) return;
+    await saveRevision(ctx, { clientId: content.clientId, kind: "conteudo", targetId: contentId, label: content.title, reason: "Antes de editar a ficha", data: content });
     await ctx.db.patch(contentId, Object.fromEntries(changed));
     await logActivity(ctx, {
       clientId: content.clientId,
@@ -433,6 +435,9 @@ export const setTask = mutation({
       throw new ConvexError("Prazo inválido.");
     }
     const patch = { owner: cleanOwner(owner), dueDate: due };
+    if (patch.owner !== content.owner || patch.dueDate !== content.dueDate) {
+      await saveRevision(ctx, { clientId: content.clientId, kind: "conteudo", targetId: contentId, label: content.title, reason: "Antes de mudar responsável e prazo", data: content });
+    }
     await ctx.db.patch(contentId, patch);
     if (content.briefingId && (await ctx.db.get(content.briefingId))) await ctx.db.patch(content.briefingId, patch);
   },
@@ -578,6 +583,8 @@ export const remove = mutation({
 
 async function purge(ctx: MutationCtx, content: Doc<"contents">) {
   const contentId = content._id;
+  const oldCaptions = await ctx.db.query("captions").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect();
+  await saveRevision(ctx, { clientId: content.clientId, kind: "conteudo", targetId: contentId, label: content.title, reason: "Antes de apagar de vez", data: { ...content, captions: oldCaptions } });
   const rows: { _id: Id<"media"> | Id<"captions"> | Id<"comments"> | Id<"decisions"> }[] = [
     ...(await ctx.db.query("media").withIndex("by_content_version", (q) => q.eq("contentId", contentId)).collect()),
     ...(await ctx.db.query("captions").withIndex("by_content", (q) => q.eq("contentId", contentId)).collect()),

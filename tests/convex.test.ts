@@ -1133,3 +1133,37 @@ describe("equipe com edição liberada cria post completo", () => {
     expect((await as(biaUser).query(api.contents.get, { contentId: fromBrief })).content.title).toBe("Show no Mulungu Cultural");
   });
 });
+
+describe("histórico de versões e backup", () => {
+  test("guarda antes de mudar, restaura e traz briefing apagado de volta; backup diário", async () => {
+    const { t, as, admin, liliUser, waiting } = await setup();
+    // Briefing: edita, apaga e traz de volta.
+    const b = await as(liliUser).mutation(api.briefings.create, { slug: "lili", title: "Pedido", body: "Versão 1", links: [] });
+    await as(liliUser).mutation(api.briefings.update, { briefingId: b, title: "Pedido", body: "Versão 2", links: [] });
+    let revs = await as(admin).query(api.revisions.list, { targetId: b });
+    expect(revs).toHaveLength(1);
+    await as(admin).mutation(api.revisions.restore, { revisionId: revs[0]._id });
+    expect((await as(admin).query(api.briefings.get, { briefingId: b })).body).toBe("Versão 1");
+    await as(admin).mutation(api.briefings.remove, { briefingId: b });
+    const gone = await as(admin).query(api.revisions.deletedBriefings, {});
+    expect(gone.map((g) => g.label)).toContain("Pedido");
+    const back = await as(admin).mutation(api.revisions.restore, { revisionId: gone[0]._id });
+    expect((await as(admin).query(api.briefings.get, { briefingId: back.briefingId! })).body).toBe("Versão 1");
+    expect(await as(admin).query(api.revisions.deletedBriefings, {})).toHaveLength(0);
+
+    // Peça: muda a data e volta.
+    const contentId = waiting[0];
+    const before = (await as(admin).query(api.contents.get, { contentId })).content.date;
+    await as(admin).mutation(api.contents.update, { contentId, date: "2026-12-31" });
+    revs = await as(admin).query(api.revisions.list, { targetId: contentId });
+    await as(admin).mutation(api.revisions.restore, { revisionId: revs.find((r) => r.kind === "conteudo")!._id });
+    expect((await as(admin).query(api.contents.get, { contentId })).content.date).toBe(before);
+    await expect(as(liliUser).query(api.revisions.list, { targetId: contentId })).rejects.toThrow(/administradora/);
+
+    // Backup.
+    await t.action(internal.revisions.runBackup, {});
+    const bk = await as(admin).query(api.revisions.backups, {});
+    expect(bk).toHaveLength(1);
+    expect(bk[0].counts.contents).toBeGreaterThan(0);
+  });
+});

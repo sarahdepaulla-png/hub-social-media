@@ -11,6 +11,7 @@ import { errorText } from "@/components/content/DecisionSheet";
 import { PlanView } from "@/components/plan/PlanView";
 import { PlanEditor } from "@/components/plan/PlanEditor";
 import { currentMonth, monthName, shiftMonth, stamp } from "@/lib/dates";
+import { RevisionHistory } from "@/components/RevisionHistory";
 
 const STATUS_LABEL = {
   rascunho: { text: "Rascunho: só você vê", color: "var(--color-st-ideia)" },
@@ -47,7 +48,9 @@ function AdminBar({
   whatsapp,
   people,
   onEdit,
+  planId,
 }: {
+  planId?: string;
   slug: string;
   month: string;
   name: string;
@@ -152,6 +155,14 @@ function AdminBar({
           {error}
         </p>
       )}
+      {planId && (
+        <details className="border-t border-linha pt-3">
+          <summary className="cursor-pointer text-sm font-semibold text-rosa-forte">Versões anteriores do plano</summary>
+          <div className="pt-3">
+            <RevisionHistory targetId={planId} />
+          </div>
+        </details>
+      )}
     </div>
   );
 }
@@ -197,6 +208,7 @@ function PlanPage() {
               status={data.plan.status}
               sentAt={data.plan.sentAt}
               readyMail={data.plan.readyMail}
+              planId={data.plan._id}
               whatsapp={data.whatsapp}
               people={data.people}
               onEdit={() => setEditing(month)}

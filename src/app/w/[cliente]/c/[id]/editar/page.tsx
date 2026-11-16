@@ -18,6 +18,7 @@ import { ApprovalNotice } from "@/components/ApprovalNotice";
 import { FeedPreview, highlightFor } from "@/components/feed/FeedPreview";
 import { STATUS, type Status } from "@/lib/labels";
 import { TaskEditor } from "@/components/PieceDrawer";
+import { RevisionHistory } from "@/components/RevisionHistory";
 
 export default function EditarPage() {
   const { cliente, id } = useParams<{ cliente: string; id: string }>();
@@ -25,7 +26,7 @@ export default function EditarPage() {
   const data = useQuery(api.contents.get, { contentId });
   const setStatus = useMutation(api.contents.setStatus);
   const newVersion = useMutation(api.contents.newVersion);
-  const [side, setSide] = useState<"conversa" | "historico">("conversa");
+  const [side, setSide] = useState<"conversa" | "historico" | "versoes">("conversa");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -133,7 +134,7 @@ export default function EditarPage() {
 
         <aside aria-label="Conversa e histórico" className="flex flex-col gap-5 self-start bg-white p-5 lg:sticky lg:top-4">
           <div role="tablist" className="flex gap-5 border-b border-linha">
-            {(["conversa", "historico"] as const).map((t) => (
+            {(admin ? (["conversa", "historico", "versoes"] as const) : (["conversa", "historico"] as const)).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -142,14 +143,16 @@ export default function EditarPage() {
                 onClick={() => setSide(t)}
                 className={`min-h-11 text-[15px] ${side === t ? "font-bold shadow-[inset_0_-2px_0_var(--color-vinho)]" : "text-texto-2"}`}
               >
-                {t === "conversa" ? `Conversa ${comments.length || ""}` : "Histórico"}
+                {t === "conversa" ? `Conversa ${comments.length || ""}` : t === "historico" ? "Histórico" : "Versões"}
               </button>
             ))}
           </div>
           {side === "conversa" ? (
             <CommentThread contentId={contentId} comments={comments} accent={client.accentColor} />
-          ) : (
+          ) : side === "historico" ? (
             <HistoryList contentId={contentId} />
+          ) : (
+            <RevisionHistory targetId={contentId} />
           )}
         </aside>
       </div>

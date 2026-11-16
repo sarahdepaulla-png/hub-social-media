@@ -5,6 +5,7 @@ import { format, platform } from "./schema";
 import { canEditContent, requireAdmin, requireClientAccess, requireClientBySlug } from "./lib/access";
 import { contentsInMonth, toCard } from "./lib/content";
 import { displayName, logActivity } from "./lib/log";
+import { saveRevision } from "./lib/revisions";
 import { TEAM, cleanOwner } from "./lib/team";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -148,6 +149,7 @@ export const update = mutation({
     }
     const data = clean(f);
 
+    await saveRevision(ctx, { clientId: b.clientId, kind: "briefing", targetId: briefingId, label: b.title, reason: "Antes de editar", data: b });
     await ctx.db.patch(briefingId, data);
     // A peça que nasceu deste briefing acompanha prazo e responsável.
     if (b.contentId) await ctx.db.patch(b.contentId, { dueDate: data.dueDate, owner: data.owner });
@@ -234,6 +236,7 @@ export const remove = mutation({
       const content = await ctx.db.get(b.contentId);
       if (content?.briefingId === briefingId) await ctx.db.patch(content._id, { briefingId: undefined });
     }
+    await saveRevision(ctx, { clientId: b.clientId, kind: "briefing", targetId: briefingId, label: b.title, reason: "Antes de apagar", data: b });
     await ctx.db.delete(briefingId);
   },
 });

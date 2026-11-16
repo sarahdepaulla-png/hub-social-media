@@ -14,6 +14,7 @@ import { DueBadge, OwnerBadge } from "@/components/Task";
 import { longDate, stamp, todayISO } from "@/lib/dates";
 import { BRIEF_STATUS, FORMAT, PLATFORM, type Format, type Platform } from "@/lib/labels";
 import { Linkify } from "@/components/Linkify";
+import { RevisionHistory } from "@/components/RevisionHistory";
 
 function host(url: string) {
   try {
@@ -241,6 +242,14 @@ function BriefingView() {
         </div>
       )}
       {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
+      {admin && (
+        <details className="rounded-peca bg-white p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-rosa-forte">Versões anteriores do briefing</summary>
+          <div className="pt-3">
+            <RevisionHistory targetId={briefingId} />
+          </div>
+        </details>
+      )}
     </main>
   );
 }

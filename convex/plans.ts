@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireAdmin, requireClientBySlug, requireViewer, getViewer } from "./lib/access";
 import { alive, contentsInMonth } from "./lib/content";
 import { logActivity } from "./lib/log";
+import { saveRevision } from "./lib/revisions";
 
 /**
  * Plano do mês: a página que mostra o mês inteiro como um vision board (tema, objetivos,
@@ -269,6 +270,7 @@ export const save = mutation({
     };
     const existing = await findPlan(ctx, client._id, args.month);
     if (existing) {
+      await saveRevision(ctx, { clientId: client._id, kind: "plano", targetId: existing._id, label: existing.theme || `Plano ${args.month}`, reason: "Antes de editar", data: existing });
       await ctx.db.patch(existing._id, fields);
       return existing._id;
     }

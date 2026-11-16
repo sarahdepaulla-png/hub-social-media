@@ -410,4 +410,22 @@ export default defineSchema({
     readyMail: v.optional(v.object({ at: v.number(), to: v.optional(v.array(v.string())), error: v.optional(v.string()) })),
     updatedAt: v.number(),
   }).index("by_client_month", ["clientId", "month"]),
+  // Histórico de versões: cópia de como estava ANTES de cada mudança (para restaurar).
+  revisions: defineTable({
+    clientId: v.id("clients"),
+    kind: v.union(v.literal("briefing"), v.literal("conteudo"), v.literal("legendas"), v.literal("plano")),
+    targetId: v.string(), // id do briefing, da peça ou do plano
+    label: v.string(), // título na época
+    reason: v.string(), // "Antes de editar", "Antes de apagar"...
+    userId: v.optional(v.id("users")),
+    data: v.any(),
+  })
+    .index("by_target", ["targetId"])
+    .index("by_client_kind", ["clientId", "kind"]),
+  // Cópia de segurança diária de tudo (arquivo JSON no storage).
+  backups: defineTable({
+    storageId: v.id("_storage"),
+    counts: v.any(),
+    bytes: v.number(),
+  }),
 });

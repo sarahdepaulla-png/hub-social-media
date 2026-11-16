@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/estudio/clientes", label: "Clientes e acessos" },
   { href: "/estudio/datas", label: "Biblioteca de datas" },
   { href: "/estudio/arquivo", label: "Arquivo" },
+  { href: "/estudio/historico", label: "Histórico" },
   { href: "/estudio/lixeira", label: "Lixeira" },
 ];
 

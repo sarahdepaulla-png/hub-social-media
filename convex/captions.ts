@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { requireContentEditor } from "./lib/access";
 import { logActivity } from "./lib/log";
+import { saveRevision } from "./lib/revisions";
 
 /**
  * Salva todas as opções de legenda de uma vez.
@@ -27,6 +28,9 @@ export const save = mutation({
       .withIndex("by_content", (q) => q.eq("contentId", contentId))
       .collect();
 
+    if (existing.length) {
+      await saveRevision(ctx, { clientId: content.clientId, kind: "legendas", targetId: contentId, label: content.title, reason: "Antes de salvar as legendas", data: existing });
+    }
     const kept = new Set(items.map((i) => i._id).filter(Boolean));
     for (const c of existing) if (!kept.has(c._id)) await ctx.db.delete(c._id);
 

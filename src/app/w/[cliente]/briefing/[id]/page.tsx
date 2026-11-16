@@ -87,7 +87,7 @@ function BriefingView() {
   const params = useSearchParams();
   const router = useRouter();
   const b = useQuery(api.briefings.get, { briefingId });
-  const team = useQuery(api.team.list, ws.viewerRole === "admin" ? {} : "skip");
+  const team = useQuery(api.team.list, {});
   const update = useMutation(api.briefings.update);
   const archive = useMutation(api.briefings.archive);
   const remove = useMutation(api.briefings.remove);
@@ -149,7 +149,7 @@ function BriefingView() {
 
       {editing ? (
         <BriefingForm
-          team={admin ? (team ?? []) : undefined}
+          team={team ?? []}
           initial={{
             title: b.title,
             platform: b.platform ?? undefined,

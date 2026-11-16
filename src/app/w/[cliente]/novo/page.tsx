@@ -26,7 +26,7 @@ function NovoForm() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [links, setLinks] = useState<string[]>([""]);
-  const team = useQuery(api.team.list, ws.viewerRole === "admin" ? {} : "skip");
+  const team = useQuery(api.team.list, {});
   const [files, setFiles] = useState<File[]>([]);
   const media = useMediaUpload();
   const previews = useMemo(() => files.map((f) => ({ f, url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null })), [files]);
@@ -99,7 +99,7 @@ function NovoForm() {
               </select>
             </label>
           </div>
-          {ws.viewerRole === "admin" && <TaskFields team={team ?? []} id="novo" />}
+          <TaskFields team={team ?? []} id="novo" />
         </Step>
 
         <Step n={2} title="Fotos e vídeos" hint="Opcional. Pode escolher várias de uma vez; num carrossel, a ordem aqui é a ordem dos cards.">

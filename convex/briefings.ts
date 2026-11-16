@@ -71,8 +71,8 @@ async function shape(ctx: QueryCtx, b: Doc<"briefings">, viewer: Doc<"users">) {
     format: b.format ?? null,
     desiredDate: b.desiredDate ?? null,
     // Prazo é combinado interno do estúdio.
-    dueDate: viewer.role === "admin" ? (b.dueDate ?? null) : null,
-    owner: viewer.role === "admin" ? (b.owner ?? null) : null,
+    dueDate: b.dueDate ?? null,
+    owner: b.owner ?? null,
     objective: b.objective ?? null,
     body: b.body,
     links: b.links,
@@ -127,10 +127,7 @@ export const create = mutation({
   handler: async (ctx, { slug, ...f }) => {
     const { viewer, client } = await requireClientBySlug(ctx, slug);
     const data = clean(f);
-    if (viewer.role !== "admin") {
-      data.dueDate = undefined;
-      data.owner = undefined;
-    }
+
     const briefingId = await ctx.db.insert("briefings", {
       clientId: client._id,
       authorId: viewer._id,
@@ -150,14 +147,10 @@ export const update = mutation({
       throw new ConvexError("Este briefing já está com o estúdio. Mande o que mudou pelos comentários da peça.");
     }
     const data = clean(f);
-    // Quem não é admin não vê o prazo: mantém o que já estava.
-    if (viewer.role !== "admin") {
-      data.dueDate = b.dueDate;
-      data.owner = b.owner;
-    }
+
     await ctx.db.patch(briefingId, data);
     // A peça que nasceu deste briefing acompanha prazo e responsável.
-    if (viewer.role === "admin" && b.contentId) await ctx.db.patch(b.contentId, { dueDate: data.dueDate, owner: data.owner });
+    if (b.contentId) await ctx.db.patch(b.contentId, { dueDate: data.dueDate, owner: data.owner });
   },
 });
 

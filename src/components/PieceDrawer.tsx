@@ -22,7 +22,7 @@ import { Linkify } from "@/components/Linkify";
 type Tab = "briefing" | "legenda" | "ajustes" | "historico" | "feed";
 
 /** Com quem está e prazo: mostra os selos e abre a edição num toque. */
-function TaskEditor({ contentId, owner, dueDate, done }: { contentId: Id<"contents">; owner: string | null; dueDate: string | null; done: boolean }) {
+export function TaskEditor({ contentId, owner, dueDate, done }: { contentId: Id<"contents">; owner: string | null; dueDate: string | null; done: boolean }) {
   const team = useQuery(api.team.list, {});
   const setTask = useMutation(api.contents.setTask);
   const [open, setOpen] = useState(false);

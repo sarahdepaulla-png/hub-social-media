@@ -114,8 +114,8 @@ export const get = query({
         coverSource: content.coverSource ?? null,
         deletedAt: content.deletedAt ?? null,
         // Gestão interna: só a admin vê.
-        dueDate: viewer.role === "admin" ? (content.dueDate ?? null) : null,
-        owner: viewer.role === "admin" ? (content.owner ?? null) : null,
+        dueDate: content.dueDate ?? null,
+        owner: content.owner ?? null,
       },
       briefing: brief && {
         _id: brief._id,
@@ -332,10 +332,6 @@ export const create = mutation({
     // Admin, ou a equipe da cliente com edição liberada (ex.: Entalpia) criando post direto no calendário.
     const { viewer: admin, client } = await requireClientBySlug(ctx, args.clientSlug);
     if (!canEditContent(admin, client)) throw new ConvexError("Só a administradora cria conteúdos.");
-    if (admin.role !== "admin") {
-      args.owner = undefined;
-      args.dueDate = undefined;
-    }
     const brief = args.briefing && args.briefing.body.trim() ? args.briefing : null;
     let due: string | undefined;
     try {
@@ -428,9 +424,8 @@ export const update = mutation({
 export const setTask = mutation({
   args: { contentId: v.id("contents"), owner: v.optional(v.string()), dueDate: v.optional(v.string()) },
   handler: async (ctx, { contentId, owner, dueDate }) => {
-    await requireAdmin(ctx);
-    const content = await ctx.db.get(contentId);
-    if (!content) throw new ConvexError("Conteúdo não encontrado.");
+    // Liberado para todos que acessam a cliente: admin, equipe e cliente.
+    const { content } = await requireContentAccess(ctx, contentId);
     let due: string | undefined;
     try {
       due = cleanDue(dueDate);

@@ -71,7 +71,7 @@ export function TaskFields({ team, owner, dueDate, id = "tarefa" }: { team: stri
         {/* No iPhone o campo de data ignora a largura: min-w-0 e appearance-none seguram dentro da caixa. */}
         <input name="dueDate" type="date" defaultValue={dueDate ?? ""} className={`${field} min-w-0 max-w-full appearance-none [&::-webkit-date-and-time-value]:text-left`} />
       </label>
-      <p className="text-xs text-texto-2 sm:col-span-2">Só o estúdio vê. Aparece na esteira.</p>
+      <p className="text-xs text-texto-2 sm:col-span-2">Todo mundo da conta vê. Aparece na peça e na esteira.</p>
     </div>
   );
 }

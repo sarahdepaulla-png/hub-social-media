@@ -751,17 +751,16 @@ describe("edição pela equipe da cliente", () => {
 });
 
 describe("responsável e prazo", () => {
-  test("ficam no briefing e na peça, só para o estúdio", async () => {
+  test("ficam no briefing e na peça, liberados para todos", async () => {
     const { as, admin, liliUser } = await setup();
-    // Cliente não consegue definir prazo nem responsável.
+    // Cliente também define prazo e responsável.
     const fromClient = await as(liliUser).mutation(api.briefings.create, { slug: "lili", title: "Pedido", body: "Algo", links: [], owner: "Mai", dueDate: "2026-10-10" });
-    expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: null, dueDate: null });
+    expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: "Mai", dueDate: "2026-10-10" });
 
     await as(admin).mutation(api.briefings.update, { briefingId: fromClient, title: "Pedido", body: "Algo", links: [], owner: "mai", dueDate: "2026-10-10" });
     expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: "Mai", dueDate: "2026-10-10" });
-    expect(await as(liliUser).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: null, dueDate: null });
-    // Cliente edita o texto e não apaga o que o estúdio definiu.
-    await as(liliUser).mutation(api.briefings.update, { briefingId: fromClient, title: "Pedido 2", body: "Algo", links: [] });
+    expect(await as(liliUser).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: "Mai", dueDate: "2026-10-10" });
+    await as(liliUser).mutation(api.briefings.update, { briefingId: fromClient, title: "Pedido 2", body: "Algo", links: [], owner: "Mai", dueDate: "2026-10-10" });
     expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: "Mai", dueDate: "2026-10-10" });
 
     // Começar a criação leva para a peça.
@@ -771,7 +770,7 @@ describe("responsável e prazo", () => {
     // Trocar na ficha atualiza peça e briefing.
     await as(admin).mutation(api.contents.setTask, { contentId, owner: "Leo", dueDate: "2026-10-12" });
     expect(await as(admin).query(api.briefings.get, { briefingId: fromClient })).toMatchObject({ owner: "Leo", dueDate: "2026-10-12" });
-    await expect(as(liliUser).mutation(api.contents.setTask, { contentId, owner: "Eu" })).rejects.toThrow(/administradora/);
+    await as(liliUser).mutation(api.contents.setTask, { contentId, owner: "Leo", dueDate: "2026-10-12" });
     await expect(as(admin).mutation(api.contents.setTask, { contentId, dueDate: "amanhã" })).rejects.toThrow(/Prazo/);
 
     // Novo conteúdo com responsável e prazo direto.
@@ -779,7 +778,7 @@ describe("responsável e prazo", () => {
     const pipe = await as(admin).query(api.briefings.pipeline, { month: "2026-10" });
     expect(pipe.contents.find((c) => c._id === direct)).toMatchObject({ owner: "Sarita", dueDate: "2026-10-16" });
     expect(pipe.team.slice(0, 3)).toEqual(["Sarita", "Mai", "Leo"]);
-    expect((await as(liliUser).query(api.contents.get, { contentId: direct })).content).toMatchObject({ owner: null, dueDate: null });
+    expect((await as(liliUser).query(api.contents.get, { contentId: direct })).content).toMatchObject({ owner: "Sarita", dueDate: "2026-10-16" });
     expect(await as(admin).query(api.team.list, {})).toEqual(["Sarita", "Mai", "Leo"]);
   });
 });
@@ -1123,6 +1122,10 @@ describe("equipe com edição liberada cria post completo", () => {
     const id = await as(biaUser).mutation(api.contents.create, { ...base, owner: "Mai", dueDate: "2026-11-18" });
     const got = await as(biaUser).query(api.contents.get, { contentId: id });
     expect(got.viewer.canEdit).toBe(true);
+    // Com quem está e prazo: liberado para todos.
+    expect(got.content.owner).toBe("Mai");
+    await as(biaUser).mutation(api.contents.setTask, { contentId: id, owner: "Leo", dueDate: "2026-11-19" });
+    expect((await as(biaUser).query(api.contents.get, { contentId: id })).content).toMatchObject({ owner: "Leo", dueDate: "2026-11-19" });
     expect(got.content.title).toBe("POV: você é musicista");
     // Briefing que ela abriu vira post também.
     const briefingId = await as(biaUser).mutation(api.briefings.create, { slug: "bia", title: "Show no Mulungu Cultural", body: "Divulgar o show", links: [] });

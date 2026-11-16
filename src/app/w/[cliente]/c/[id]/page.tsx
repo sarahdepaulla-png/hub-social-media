@@ -17,6 +17,7 @@ import { FeedPreview, highlightFor } from "@/components/feed/FeedPreview";
 import { longDate, stamp } from "@/lib/dates";
 import { FORMAT, PLATFORM } from "@/lib/labels";
 import { Linkify } from "@/components/Linkify";
+import { TaskEditor } from "@/components/PieceDrawer";
 
 type Tab = "legenda" | "comentarios" | "historico" | "briefing";
 
@@ -106,6 +107,9 @@ export default function ConteudoPage() {
                   onDone={() => router.push(`/w/${cliente}/calendario`)}
                 />
               </span>
+            )}
+            {!content.deletedAt && (
+              <TaskEditor contentId={content._id} owner={content.owner} dueDate={content.dueDate} done={content.status === "publicado"} />
             )}
             {(content.objective || content.pillar) && (
               <dl className="mt-1 grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">

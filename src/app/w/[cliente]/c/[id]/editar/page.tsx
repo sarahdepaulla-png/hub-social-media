@@ -17,6 +17,7 @@ import { AutoCovers } from "@/components/AutoCovers";
 import { ApprovalNotice } from "@/components/ApprovalNotice";
 import { FeedPreview, highlightFor } from "@/components/feed/FeedPreview";
 import { STATUS, type Status } from "@/lib/labels";
+import { TaskEditor } from "@/components/PieceDrawer";
 
 export default function EditarPage() {
   const { cliente, id } = useParams<{ cliente: string; id: string }>();
@@ -63,6 +64,7 @@ export default function EditarPage() {
             <StatusTag status={content.status} />
             <span className="rounded-full border border-campo px-2.5 py-0.5 text-xs font-semibold">versão {content.version}</span>
           </span>
+          <TaskEditor contentId={contentId} owner={content.owner} dueDate={content.dueDate} done={content.status === "publicado"} />
         </div>
         {admin ? (
         <div className="flex flex-wrap items-center gap-2.5">

@@ -18,7 +18,7 @@ function NovoBriefing() {
   const attach = useMutation(api.briefings.attach);
   const forContent = params.get("conteudo") as Id<"contents"> | null;
   const admin = ws.viewerRole === "admin";
-  const team = useQuery(api.team.list, admin ? {} : "skip");
+  const team = useQuery(api.team.list, {});
   const date = params.get("data");
 
   return (
@@ -39,7 +39,7 @@ function NovoBriefing() {
         </p>
       </header>
       <BriefingForm
-        team={admin ? (team ?? []) : undefined}
+        team={team ?? []}
         initial={{ desiredDate: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined, title: params.get("tema") ?? "" }}
         submitLabel={forContent ? "Salvar briefing" : admin ? "Salvar na esteira" : "Enviar para o estúdio"}
         pendingLabel="Enviando"

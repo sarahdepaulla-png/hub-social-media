@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { format, platform } from "./schema";
-import { requireAdmin, requireClientAccess, requireClientBySlug } from "./lib/access";
+import { canEditContent, requireAdmin, requireClientAccess, requireClientBySlug } from "./lib/access";
 import { contentsInMonth, toCard } from "./lib/content";
 import { displayName, logActivity } from "./lib/log";
 import { TEAM, cleanOwner } from "./lib/team";
@@ -192,9 +192,12 @@ export const attach = mutation({
 export const start = mutation({
   args: { briefingId: v.id("briefings"), date: v.string(), platform, format },
   handler: async (ctx, { briefingId, date, platform: plat, format: fmt }) => {
-    const admin = await requireAdmin(ctx);
     const b = await ctx.db.get(briefingId);
     if (!b) throw new ConvexError("Briefing não encontrado.");
+    // Admin, ou a equipe da cliente com edição liberada transformando o próprio briefing em post.
+    const admin = await requireClientAccess(ctx, b.clientId);
+    const client = await ctx.db.get(b.clientId);
+    if (!client || !canEditContent(admin, client)) throw new ConvexError("Só a administradora pode fazer isso.");
     if (b.contentId) return b.contentId;
     if (!DATE.test(date)) throw new ConvexError("Escolha a data da peça.");
     const contentId = await ctx.db.insert("contents", {

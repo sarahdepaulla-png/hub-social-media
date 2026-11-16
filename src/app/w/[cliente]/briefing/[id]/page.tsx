@@ -143,7 +143,7 @@ function BriefingView() {
         </Link>
       )}
 
-      {admin && b.status === "novo" && !editing && (
+      {(admin || ws.canEdit) && b.status === "novo" && !editing && (
         <StartPanel briefingId={briefingId} desiredDate={b.desiredDate} platform={b.platform} format={b.format} slug={ws.slug} />
       )}
 

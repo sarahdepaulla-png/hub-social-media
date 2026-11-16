@@ -329,8 +329,13 @@ export const create = mutation({
     dueDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const admin = await requireAdmin(ctx);
-    const { client } = await requireClientBySlug(ctx, args.clientSlug);
+    // Admin, ou a equipe da cliente com edição liberada (ex.: Entalpia) criando post direto no calendário.
+    const { viewer: admin, client } = await requireClientBySlug(ctx, args.clientSlug);
+    if (!canEditContent(admin, client)) throw new ConvexError("Só a administradora cria conteúdos.");
+    if (admin.role !== "admin") {
+      args.owner = undefined;
+      args.dueDate = undefined;
+    }
     const brief = args.briefing && args.briefing.body.trim() ? args.briefing : null;
     let due: string | undefined;
     try {

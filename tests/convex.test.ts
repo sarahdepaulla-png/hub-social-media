@@ -1113,3 +1113,20 @@ describe("avisos", () => {
     vi.useRealTimers();
   });
 });
+
+describe("equipe com edição liberada cria post completo", () => {
+  test("cria conteúdo direto e transforma o próprio briefing em post; sem edição liberada, não", async () => {
+    const { t, as, biaUser } = await setup();
+    const base = { clientSlug: "bia", date: "2026-11-20", title: "POV: você é musicista", platform: "instagram" as const, format: "reels" as const };
+    await expect(as(biaUser).mutation(api.contents.create, base)).rejects.toThrow(/administradora/);
+    await t.mutation(internal.clients.applyOnce, { key: "lib", slug: "bia", clientCanEdit: true });
+    const id = await as(biaUser).mutation(api.contents.create, { ...base, owner: "Mai", dueDate: "2026-11-18" });
+    const got = await as(biaUser).query(api.contents.get, { contentId: id });
+    expect(got.viewer.canEdit).toBe(true);
+    expect(got.content.title).toBe("POV: você é musicista");
+    // Briefing que ela abriu vira post também.
+    const briefingId = await as(biaUser).mutation(api.briefings.create, { slug: "bia", title: "Show no Mulungu Cultural", body: "Divulgar o show", links: [] });
+    const fromBrief = await as(biaUser).mutation(api.briefings.start, { briefingId, date: "2026-11-21", platform: "instagram", format: "carrossel" });
+    expect((await as(biaUser).query(api.contents.get, { contentId: fromBrief })).content.title).toBe("Show no Mulungu Cultural");
+  });
+});

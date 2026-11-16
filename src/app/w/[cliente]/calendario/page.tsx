@@ -119,6 +119,8 @@ function CalendarView() {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"mes" | "lista">("mes");
   const admin = ws.viewerRole === "admin";
+  // Equipe com edição liberada (ex.: Entalpia) também cria post completo, com capa, legenda e links.
+  const creator = admin || ws.canEdit;
   const base = `/w/${ws.slug}`;
 
   const filtered = useMemo(
@@ -205,11 +207,11 @@ function CalendarView() {
           </Link>
           <Link
             href={`${base}/briefing/novo?data=${selected}`}
-            className={`ml-2 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold md:px-5 ${admin ? "border-[1.5px] border-vinho text-vinho" : "bg-vinho text-white"}`}
+            className={`ml-2 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold md:px-5 ${creator ? "border-[1.5px] border-vinho text-vinho" : "bg-vinho text-white"}`}
           >
             Briefing
           </Link>
-          {admin && (
+          {creator && (
             <Link href={`${base}/novo?data=${selected}`} className="ml-2 inline-flex min-h-11 items-center rounded-full bg-vinho px-4 text-sm font-semibold text-white md:px-5">
               <span className="md:hidden">Novo</span>
               <span className="hidden md:inline">Novo conteúdo</span>
@@ -364,7 +366,7 @@ function CalendarView() {
                 <Link href={`${base}/briefing/novo?data=${selected}`} className="min-h-11 content-center text-[15px] font-semibold text-rosa-forte">
                   Abrir briefing para este dia
                 </Link>
-                {admin && (
+                {creator && (
                   <Link href={`${base}/novo?data=${selected}`} className="min-h-11 content-center text-[15px] font-semibold text-rosa-forte">
                     Criar conteúdo neste dia
                   </Link>
@@ -405,8 +407,8 @@ function CalendarView() {
                       <span className="flex items-baseline justify-between">
                         <span className={`text-[26px] font-extrabold leading-none tracking-[-0.04em] ${past ? "text-rosa" : ""}`}>{day.slice(8)}</span>
                         <Link
-                          href={admin ? `${base}/novo?data=${day}` : `${base}/briefing/novo?data=${day}`}
-                          aria-label={admin ? `Criar conteúdo em ${longDate(day)}` : `Abrir briefing para ${longDate(day)}`}
+                          href={creator ? `${base}/novo?data=${day}` : `${base}/briefing/novo?data=${day}`}
+                          aria-label={creator ? `Criar conteúdo em ${longDate(day)}` : `Abrir briefing para ${longDate(day)}`}
                           className="flex size-7 items-center justify-center rounded-full text-lg text-texto-2 opacity-0 hover:bg-creme focus:opacity-100 group-hover:opacity-100"
                         >
                           +

@@ -32,7 +32,7 @@ function NovoForm() {
   const previews = useMemo(() => files.map((f) => ({ f, url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null })), [files]);
   useEffect(() => () => previews.forEach((p) => p.url && URL.revokeObjectURL(p.url)), [previews]);
 
-  if (ws.viewerRole !== "admin") return <p className="px-6 py-16 text-lg">Só a administradora cria conteúdos.</p>;
+  if (ws.viewerRole !== "admin" && !ws.canEdit) return <p className="px-6 py-16 text-lg">Só a administradora cria conteúdos.</p>;
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -99,7 +99,7 @@ function NovoForm() {
               </select>
             </label>
           </div>
-          <TaskFields team={team ?? []} id="novo" />
+          {ws.viewerRole === "admin" && <TaskFields team={team ?? []} id="novo" />}
         </Step>
 
         <Step n={2} title="Fotos e vídeos" hint="Opcional. Pode escolher várias de uma vez; num carrossel, a ordem aqui é a ordem dos cards.">

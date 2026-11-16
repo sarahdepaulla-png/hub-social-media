@@ -8,7 +8,7 @@ export async function logActivity(
     clientId: Id<"clients">;
     contentId?: Id<"contents">;
     userId: Id<"users">;
-    kind: "status" | "decisao" | "comentario" | "versao" | "edicao" | "legenda" | "midia" | "ideia" | "criacao" | "briefing";
+    kind: "status" | "decisao" | "comentario" | "versao" | "edicao" | "legenda" | "midia" | "ideia" | "criacao" | "briefing" | "entrada" | "plano";
     summary: string;
     before?: unknown;
     after?: unknown;

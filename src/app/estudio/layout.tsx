@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand";
 import { SignOutButton } from "@/components/SignOutButton";
 import { StudioNav } from "@/components/StudioNav";
+import { AvisosBell } from "@/components/AvisosBell";
 
 export const metadata = { title: "Estúdio" };
 
@@ -14,7 +15,10 @@ export default function EstudioLayout({ children }: { children: React.ReactNode 
             <Link href="/estudio" aria-label="Estúdio, visão geral">
               <Logo />
             </Link>
-            <SignOutButton variant="link" />
+            <span className="flex items-center gap-2">
+              <AvisosBell />
+              <SignOutButton variant="link" />
+            </span>
           </div>
           <StudioNav />
         </div>

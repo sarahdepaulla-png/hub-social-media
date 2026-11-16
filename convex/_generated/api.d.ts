@@ -41,6 +41,7 @@ import type * as notify from "../notify.js";
 import type * as opportunities from "../opportunities.js";
 import type * as otp from "../otp.js";
 import type * as pautas from "../pautas.js";
+import type * as presence from "../presence.js";
 import type * as previews from "../previews.js";
 import type * as plans from "../plans.js";
 import type * as profile from "../profile.js";
@@ -89,6 +90,7 @@ import type * as viewer from "../viewer.js";
 "opportunities": typeof opportunities,
 "otp": typeof otp,
 "pautas": typeof pautas,
+"presence": typeof presence,
 "previews": typeof previews,
 "plans": typeof plans,
 "profile": typeof profile,

@@ -1080,3 +1080,33 @@ describe("virada do mês", () => {
     expect(inbox.filter((i) => i.kind === "ajuste")).toEqual([]);
   });
 });
+
+describe("avisos", () => {
+  test("entrada no Hub, online e movimentos das clientes; admin lê e zera", async () => {
+    const { t, as, admin, biaUser } = await setup();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-16T12:00:00Z"));
+    await as(biaUser).mutation(api.presence.ping, {});
+    await as(biaUser).mutation(api.presence.ping, {}); // logo em seguida: não duplica
+    await as(admin).mutation(api.presence.ping, {}); // admin não conta
+    let feed = await as(admin).query(api.presence.feed, {});
+    expect(feed.items.filter((i) => i.kind === "entrada")).toHaveLength(1);
+    expect(feed.people.find((p) => p.name === "Bia")?.online).toBe(true);
+    expect(await as(admin).query(api.presence.unread, {})).toBeGreaterThan(0);
+    expect(await as(biaUser).query(api.presence.unread, {})).toBeNull();
+    await expect(as(biaUser).query(api.presence.feed, {})).rejects.toThrow(/administradora/);
+
+    await as(admin).mutation(api.presence.markSeen, {});
+    expect(await as(admin).query(api.presence.unread, {})).toBe(0);
+
+    // Volta depois de 1 hora: nova entrada; quem não deu sinal há 3 min sai do online.
+    vi.setSystemTime(new Date("2026-11-16T13:00:00Z"));
+    feed = await as(admin).query(api.presence.feed, {});
+    expect(feed.people.find((p) => p.name === "Bia")?.online).toBe(false);
+    await as(biaUser).mutation(api.presence.ping, {});
+    feed = await as(admin).query(api.presence.feed, {});
+    expect(feed.items.filter((i) => i.kind === "entrada")).toHaveLength(2);
+    void t;
+    vi.useRealTimers();
+  });
+});

@@ -9,6 +9,7 @@ import type { FunctionReturnType } from "convex/server";
 import { Avatar, Loading, Logo } from "./brand";
 import { ViewAsButton } from "@/components/ViewAs";
 import { SignOutButton } from "./SignOutButton";
+import { AvisosBell } from "./AvisosBell";
 
 type Workspace = FunctionReturnType<typeof api.clients.bySlug>;
 const WorkspaceContext = createContext<Workspace | null>(null);
@@ -103,6 +104,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
           <div className="flex items-center gap-3">
             <span className="max-w-[110px] truncate text-sm font-semibold sm:max-w-none sm:text-[15px]">{ws.name}</span>
             <Avatar name={ws.name} color={ws.accentColor} url={ws.photoUrl} />
+            <AvisosBell className="-mx-1" />
             <SignOutButton variant="link" />
           </div>
         </header>

@@ -356,8 +356,8 @@ export const decide = mutation({
     await logActivity(ctx, {
       clientId: client._id,
       userId: who._id,
-      kind: "decisao",
-      summary: type === "aprovado" ? `Aprovou o plano de ${month}` : `Pediu ajuste no plano de ${month}`,
+      kind: "plano",
+      summary: `${type === "aprovado" ? "Aprovou" : "Pediu ajuste n"}o plano de ${["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"][Number(month.slice(5, 7)) - 1]}${text ? `: "${text.slice(0, 80)}"` : ""}`,
     });
     // Aprovado: as peças do plano saem de "Ideia" e entram no calendário do mês como "Em produção".
     let promoted = 0;

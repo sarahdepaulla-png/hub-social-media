@@ -5,6 +5,7 @@ import "./globals.css";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { TrashToastHost } from "@/components/Trash";
 import { ViewAsBanner } from "@/components/ViewAs";
+import { Presence } from "@/components/Presence";
 
 export const metadata: Metadata = {
   title: { default: "Hub Social Media", template: "%s | Hub Social Media" },
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body className="min-h-dvh antialiased">
           <ConvexClientProvider>
             <ViewAsBanner />
+            <Presence />
             {children}
             <TrashToastHost />
           </ConvexClientProvider>

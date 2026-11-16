@@ -13,6 +13,19 @@ import { platformOf } from "./lib/preview";
  */
 const kindV = v.union(v.literal("post"), v.literal("carrossel"), v.literal("reels"));
 
+/** Mexida da cliente na prévia do feed vai para os Avisos do estúdio (sem repetir a mesma ação em 10 minutos). */
+async function logFeed(ctx: MutationCtx, clientId: Id<"clients">, summary: string) {
+  const viewer = await getViewer(ctx);
+  if (!viewer || viewer.role !== "cliente" || viewer.viewingAs) return;
+  const recent = await ctx.db
+    .query("activity")
+    .withIndex("by_client", (q) => q.eq("clientId", clientId))
+    .order("desc")
+    .take(5);
+  if (recent.some((a) => a.userId === viewer._id && a.summary === summary && Date.now() - a._creationTime < 10 * 60 * 1000)) return;
+  await ctx.db.insert("activity", { clientId, userId: viewer._id, kind: "edicao", summary });
+}
+
 export const get = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
@@ -136,6 +149,7 @@ export const addPosts = mutation({
     }
     const ids = current.map((p) => p._id);
     await renumber(ctx, where === "topo" ? [...created, ...ids] : [...ids, ...created]);
+    await logFeed(ctx, client._id, created.length === 1 ? "Adicionou um post na prévia do feed" : `Adicionou ${created.length} posts na prévia do feed`);
   },
 });
 
@@ -151,6 +165,7 @@ export const movePost = mutation({
     if (i < 0 || j < 0 || j >= list.length) return;
     [list[i], list[j]] = [list[j], list[i]];
     await renumber(ctx, list.map((p) => p._id));
+    await logFeed(ctx, post.clientId, "Reorganizou a prévia do feed");
   },
 });
 
@@ -165,6 +180,7 @@ export const reorder = mutation({
     // O que não veio na lista (alguém acrescentou no meio tempo) vai para o fim.
     for (const p of current) if (!next.includes(p._id)) next.push(p._id);
     await renumber(ctx, next);
+    await logFeed(ctx, client._id, "Reorganizou a prévia do feed");
   },
 });
 
@@ -177,6 +193,7 @@ export const setFrame = mutation({
     await requireClientAccess(ctx, post.clientId);
     const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
     await ctx.db.patch(postId, { zoom: clamp(zoom, 1, 3), focusX: clamp(focusX, 0, 100), focusY: clamp(focusY, 0, 100) });
+    await logFeed(ctx, post.clientId, "Ajustou o enquadramento de um post na prévia do feed");
   },
 });
 
@@ -192,6 +209,7 @@ export const setPinned = mutation({
       if (count >= 3) throw new ConvexError("Já tem 3 posts fixados. Desafixe um antes.");
     }
     await ctx.db.patch(postId, { pinnedAt: pinned ? (post.pinnedAt ?? Date.now()) : undefined });
+    await logFeed(ctx, post.clientId, pinned ? "Fixou um post na prévia do feed" : "Desafixou um post na prévia do feed");
   },
 });
 
@@ -214,6 +232,7 @@ export const removePost = mutation({
     await ctx.db.delete(postId);
     for (const id of [post.storageId, ...(post.extraIds ?? [])]) await ctx.storage.delete(id);
     await renumber(ctx, (await ordered(ctx, post.clientId)).map((p) => p._id));
+    await logFeed(ctx, post.clientId, "Tirou um post da prévia do feed");
   },
 });
 
@@ -246,6 +265,7 @@ export const updateProfile = mutation({
         following: short(p.following, 12),
       },
     });
+    await logFeed(ctx, client._id, "Editou o perfil na prévia do feed");
   },
 });
 

@@ -1089,9 +1089,12 @@ describe("avisos", () => {
     await as(biaUser).mutation(api.presence.ping, {});
     await as(biaUser).mutation(api.presence.ping, {}); // logo em seguida: não duplica
     await as(admin).mutation(api.presence.ping, {}); // admin não conta
-    let feed = await as(admin).query(api.presence.feed, {});
-    expect(feed.items.filter((i) => i.kind === "entrada")).toHaveLength(1);
-    expect(feed.people.find((p) => p.name === "Bia")?.online).toBe(true);
+    const bia = (f: Awaited<ReturnType<typeof getFeed>>) => f.clients.find((c) => c.slug === "bia")!;
+    const getFeed = () => as(admin).query(api.presence.feed, {});
+    let feed = await getFeed();
+    expect(bia(feed).items.filter((i) => i.kind === "entrada")).toHaveLength(1);
+    expect(bia(feed).people[0].online).toBe(true);
+    expect(bia(feed).people[0].lastEntryAt).not.toBeNull();
     expect(await as(admin).query(api.presence.unread, {})).toBeGreaterThan(0);
     expect(await as(biaUser).query(api.presence.unread, {})).toBeNull();
     await expect(as(biaUser).query(api.presence.feed, {})).rejects.toThrow(/administradora/);
@@ -1101,11 +1104,11 @@ describe("avisos", () => {
 
     // Volta depois de 1 hora: nova entrada; quem não deu sinal há 3 min sai do online.
     vi.setSystemTime(new Date("2026-11-16T13:00:00Z"));
-    feed = await as(admin).query(api.presence.feed, {});
-    expect(feed.people.find((p) => p.name === "Bia")?.online).toBe(false);
+    feed = await getFeed();
+    expect(bia(feed).people[0].online).toBe(false);
     await as(biaUser).mutation(api.presence.ping, {});
-    feed = await as(admin).query(api.presence.feed, {});
-    expect(feed.items.filter((i) => i.kind === "entrada")).toHaveLength(2);
+    feed = await getFeed();
+    expect(bia(feed).items.filter((i) => i.kind === "entrada")).toHaveLength(2);
     void t;
     vi.useRealTimers();
   });

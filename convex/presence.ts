@@ -25,54 +25,70 @@ export const ping = mutation({
   },
 });
 
-/** Avisos do estúdio: tudo o que as clientes fizeram, quem está online e quando cada pessoa foi vista. */
+/**
+ * Avisos do estúdio, por cliente: cada pessoa com online / último acesso / última entrada,
+ * e os movimentos daquela cliente, do mais novo para o mais antigo.
+ */
 export const feed = query({
   args: {},
   handler: async (ctx) => {
     const admin = await requireAdmin(ctx);
     const users = await ctx.db.query("users").collect();
     const byId = new Map(users.map((u) => [u._id, u]));
-    const clients = new Map((await ctx.db.query("clients").collect()).map((c) => [c._id, c]));
+    const clients = await ctx.db.query("clients").collect();
     const now = Date.now();
+    const seenAt = admin.noticesSeenAt ?? 0;
 
-    const recent = await ctx.db.query("activity").order("desc").take(600);
-    const items = [];
+    const recent = await ctx.db.query("activity").order("desc").take(800);
+    const lastEntry = new Map<string, number>();
+    const perClient = new Map<string, { _id: string; at: number; kind: string; summary: string; who: string; content: { _id: string; title: string } | null; unread: boolean }[]>();
     for (const a of recent) {
       const who = byId.get(a.userId);
       if (!who || who.role === "admin") continue;
+      if (a.kind === "entrada" && !lastEntry.has(a.userId)) lastEntry.set(a.userId, a._creationTime);
       if (a.summary.startsWith("Entrou no calendário com a aprovação")) continue; // já aparece como "aprovou o plano"
-      const client = clients.get(a.clientId);
-      if (!client) continue;
+      const list = perClient.get(a.clientId) ?? [];
+      if (list.length >= 25) continue;
       const content = a.contentId ? await ctx.db.get(a.contentId) : null;
-      items.push({
+      list.push({
         _id: a._id,
         at: a._creationTime,
         kind: a.kind,
         summary: a.summary,
         who: displayName(who),
-        client: { slug: client.slug, name: client.name, accentColor: client.accentColor },
         content: content && !content.deletedAt ? { _id: content._id, title: content.title } : null,
-        unread: a._creationTime > (admin.noticesSeenAt ?? 0),
+        unread: a._creationTime > seenAt,
       });
-      if (items.length >= 150) break;
+      perClient.set(a.clientId, list);
     }
 
-    const people = users
-      .filter((u): u is Doc<"users"> & { clientId: NonNullable<Doc<"users">["clientId"]> } => u.role === "cliente" && !!u.clientId)
-      .map((u) => {
-        const client = clients.get(u.clientId);
+    const result = await Promise.all(
+      clients.map(async (c) => {
+        const people = users
+          .filter((u): u is Doc<"users"> => u.role === "cliente" && u.clientId === c._id)
+          .map((u) => ({
+            _id: u._id,
+            name: displayName(u),
+            online: !!u.lastSeenAt && now - u.lastSeenAt < ONLINE_MS,
+            lastSeenAt: u.lastSeenAt ?? null,
+            lastEntryAt: lastEntry.get(u._id) ?? null,
+          }))
+          .sort((a, b) => Number(b.online) - Number(a.online) || (b.lastSeenAt ?? 0) - (a.lastSeenAt ?? 0));
+        const items = perClient.get(c._id) ?? [];
         return {
-          _id: u._id,
-          name: displayName(u),
-          client: client ? { slug: client.slug, name: client.name, accentColor: client.accentColor } : null,
-          lastSeenAt: u.lastSeenAt ?? null,
-          online: !!u.lastSeenAt && now - u.lastSeenAt < ONLINE_MS,
+          slug: c.slug,
+          name: c.name,
+          accentColor: c.accentColor,
+          photoUrl: c.photoId ? await ctx.storage.getUrl(c.photoId) : null,
+          people,
+          items,
+          unread: items.filter((i) => i.unread).length,
+          lastAt: Math.max(items[0]?.at ?? 0, ...people.map((p) => p.lastSeenAt ?? 0)),
         };
-      })
-      .filter((p) => p.client)
-      .sort((a, b) => Number(b.online) - Number(a.online) || (b.lastSeenAt ?? 0) - (a.lastSeenAt ?? 0));
-
-    return { items, people, now };
+      }),
+    );
+    result.sort((a, b) => b.unread - a.unread || b.lastAt - a.lastAt);
+    return { clients: result, now };
   },
 });
 

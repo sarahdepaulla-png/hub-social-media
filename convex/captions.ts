@@ -36,13 +36,19 @@ export const save = mutation({
 
     const clean = (s?: string) => (s?.trim() ? s.trim() : undefined);
     let order = 0;
+    const ids: (string | null)[] = [];
     for (const item of items) {
-      if (!item.text.trim()) continue;
+      if (!item.text.trim()) {
+        ids.push(item._id ?? null);
+        continue;
+      }
       order++;
       const fields = { order, text: item.text.trim(), cta: clean(item.cta), hashtags: clean(item.hashtags), notes: clean(item.notes) };
       const current = item._id ? existing.find((c) => c._id === item._id) : undefined;
-      if (current) await ctx.db.patch(current._id, fields);
-      else await ctx.db.insert("captions", { contentId, ...fields });
+      if (current) {
+        await ctx.db.patch(current._id, fields);
+        ids.push(current._id);
+      } else ids.push(await ctx.db.insert("captions", { contentId, ...fields }));
     }
     await logActivity(ctx, {
       clientId: content.clientId,
@@ -51,5 +57,7 @@ export const save = mutation({
       kind: "legenda",
       summary: `Salvou ${order} ${order === 1 ? "opção" : "opções"} de legenda`,
     });
+    // Mesma ordem das opções recebidas: o editor guarda o id das novas.
+    return ids;
   },
 });

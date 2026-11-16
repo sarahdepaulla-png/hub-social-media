@@ -1158,12 +1158,47 @@ describe("histórico de versões e backup", () => {
     revs = await as(admin).query(api.revisions.list, { targetId: contentId });
     await as(admin).mutation(api.revisions.restore, { revisionId: revs.find((r) => r.kind === "conteudo")!._id });
     expect((await as(admin).query(api.contents.get, { contentId })).content.date).toBe(before);
-    await expect(as(liliUser).query(api.revisions.list, { targetId: contentId })).rejects.toThrow(/administradora/);
+    // A cliente vê as versões da própria conta, mas sem edição liberada não restaura.
+    revs = await as(liliUser).query(api.revisions.list, { targetId: contentId });
+    expect(revs.length).toBeGreaterThan(0);
+    await expect(as(liliUser).mutation(api.revisions.restore, { revisionId: revs[0]._id })).rejects.toThrow(/estúdio/);
 
     // Backup.
     await t.action(internal.revisions.runBackup, {});
     const bk = await as(admin).query(api.revisions.backups, {});
     expect(bk).toHaveLength(1);
     expect(bk[0].counts.contents).toBeGreaterThan(0);
+  });
+});
+
+describe("histórico da cliente e salvamento automático", () => {
+  test("gravações seguidas viram uma versão e uma linha; equipe com edição vê e restaura", async () => {
+    const { t, as, admin, biaUser, liliUser, biaContent } = await setup();
+    await t.mutation(internal.clients.applyOnce, { key: "lib", slug: "bia", clientCanEdit: true });
+    const original = (await as(admin).query(api.contents.get, { contentId: biaContent })).content.title;
+    // Autosave: três gravações seguidas da mesma pessoa.
+    for (const title of ["Primeiro", "Primeiro rascunho", "Primeiro rascunho ok"]) {
+      await as(biaUser).mutation(api.contents.update, { contentId: biaContent, title });
+    }
+    await as(biaUser).mutation(api.contents.update, { contentId: biaContent, date: "2026-11-20" });
+    const revs = await as(biaUser).query(api.revisions.list, { targetId: biaContent });
+    expect(revs.filter((r) => r.reason === "Antes de editar a ficha")).toHaveLength(1);
+    const hist = await as(biaUser).query(api.revisions.forClient, { slug: "bia" });
+    const edits = hist.changes.filter((c) => c.kind === "edicao" && c.contentId === biaContent);
+    expect(edits).toHaveLength(1);
+    expect(edits[0].summary).toMatch(/tema.*data/i);
+    // Legendas: a gravação devolve os ids, a próxima atualiza sem duplicar.
+    const ids = await as(biaUser).mutation(api.captions.save, { contentId: biaContent, items: [{ text: "Oi" }, { text: "" }] });
+    expect(ids[0]).toBeTruthy();
+    expect(ids[1]).toBeNull();
+    await as(biaUser).mutation(api.captions.save, { contentId: biaContent, items: [{ _id: ids[0] as Id<"captions">, text: "Oi, gente" }] });
+    expect((await as(biaUser).query(api.contents.get, { contentId: biaContent })).captions).toHaveLength(1);
+    // A equipe restaura a ficha.
+    const v = (await as(biaUser).query(api.revisions.forClient, { slug: "bia" })).versions.find((x) => x.kind === "conteudo")!;
+    expect(v.canRestore).toBe(true);
+    await as(biaUser).mutation(api.revisions.restore, { revisionId: v._id });
+    expect((await as(biaUser).query(api.contents.get, { contentId: biaContent })).content.title).toBe(original);
+    // Cada cliente só vê o próprio histórico.
+    await expect(as(liliUser).query(api.revisions.forClient, { slug: "bia" })).rejects.toThrow();
   });
 });

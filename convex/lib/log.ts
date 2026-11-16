@@ -14,7 +14,28 @@ export async function logActivity(
     after?: unknown;
   },
 ) {
+  // Salvamento automático: edições seguidas da mesma pessoa na mesma peça viram uma linha só.
+  if (entry.contentId && (entry.kind === "edicao" || entry.kind === "legenda")) {
+    const contentId = entry.contentId;
+    const recent = await ctx.db
+      .query("activity")
+      .withIndex("by_content", (q) => q.eq("contentId", contentId))
+      .order("desc")
+      .first();
+    if (recent && recent.userId === entry.userId && recent.kind === entry.kind && Date.now() - recent._creationTime < 10 * 60 * 1000) {
+      await ctx.db.patch(recent._id, { summary: mergeSummary(recent.summary, entry.summary), after: entry.after ?? recent.after });
+      return;
+    }
+  }
   await ctx.db.insert("activity", entry);
+}
+
+/** "Alterou Tema" + "Alterou Data" = "Alterou Tema, Data". */
+function mergeSummary(a: string, b: string) {
+  const pre = "Alterou ";
+  if (!a.startsWith(pre) || !b.startsWith(pre)) return b;
+  const parts = [...a.slice(pre.length).split(", "), ...b.slice(pre.length).split(", ")];
+  return pre + [...new Set(parts)].join(", ");
 }
 
 export function displayName(user: { name?: string; email?: string; role?: string } | null) {

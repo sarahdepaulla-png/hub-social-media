@@ -28,6 +28,7 @@ const ICONS = {
     </>
   ),
   inicio: <path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
+  historico: <path d="M4 12a8 8 0 102.3-5.6M4 4v4h4M12 8v4l3 2" />,
   calendario: (
     <>
       <rect x="3.5" y="5" width="17" height="15" />
@@ -58,6 +59,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
     { href: `${base}/datas`, label: "Datas", icon: ICONS.datas, active: pathname.startsWith(`${base}/datas`) },
     { href: `${base}/ideias`, label: "Ideias", icon: ICONS.ideias, active: pathname.startsWith(`${base}/ideias`), badge: ws.newIdeas },
     { href: `${base}/feed`, label: "Feed", icon: ICONS.feed, active: pathname.startsWith(`${base}/feed`) },
+    { href: `${base}/historico`, label: "Histórico", icon: ICONS.historico, active: pathname.startsWith(`${base}/historico`) },
     ...(ws.viewerRole === "admin"
       ? [{ href: `${base}/perfil`, label: "Perfil", icon: ICONS.perfil, active: pathname.startsWith(`${base}/perfil`) }]
       : []),
@@ -65,7 +67,8 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
 
   // No celular cabem 6: o Perfil (só do estúdio) fica no menu do topo, no computador.
   // No celular cabem 6: Perfil e Datas saem da barra (Datas continua no calendário).
-  const mobileTabs = tabs.length > 6 ? tabs.filter((t) => !t.href.endsWith("/perfil") && !t.href.endsWith("/datas")) : tabs;
+  // Histórico também sai da barra do celular: fica no Início.
+  const mobileTabs = tabs.filter((t) => !t.href.endsWith("/perfil") && !t.href.endsWith("/datas") && !t.href.endsWith("/historico"));
 
   return (
     <WorkspaceContext.Provider value={ws}>
@@ -84,7 +87,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
               <Logo className="text-[15px] sm:text-[19px]" />
             )}
           </div>
-          <nav aria-label="Workspace" className="hidden items-center gap-7 text-[15px] md:flex">
+          <nav aria-label="Workspace" className="hidden items-center gap-4 text-[15px] md:flex lg:gap-7">
             {tabs.map((t) => (
               <Link
                 key={t.href}

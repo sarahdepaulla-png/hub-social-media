@@ -2,20 +2,30 @@ import { ConvexError, v } from "convex/values";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requireAdmin, requireClientBySlug } from "./lib/access";
+import { canEditContent, requireAdmin, requireClientAccess, requireClientBySlug, type Viewer } from "./lib/access";
 import { displayName } from "./lib/log";
 import { saveRevision } from "./lib/revisions";
+
+type Kind = Doc<"revisions">["kind"];
+
+/** Quem pode trazer uma versão de volta: a admin sempre; a equipe com edição liberada, menos o plano. */
+function canRestore(viewer: Viewer, client: Doc<"clients">, kind: Kind) {
+  if (viewer.role === "admin") return true;
+  return kind !== "plano" && canEditContent(viewer, client);
+}
 
 /** Versões guardadas de um briefing, peça (ficha e legendas) ou plano, da mais nova para a mais antiga. */
 export const list = query({
   args: { targetId: v.string() },
   handler: async (ctx, { targetId }) => {
-    await requireAdmin(ctx);
     const rows = await ctx.db
       .query("revisions")
       .withIndex("by_target", (q) => q.eq("targetId", targetId))
       .order("desc")
       .take(60);
+    if (rows.length === 0) return [];
+    const viewer = await requireClientAccess(ctx, rows[0].clientId);
+    if (viewer.role !== "admin" && rows[0].kind === "plano") return [];
     return await Promise.all(
       rows.map(async (r) => ({
         _id: r._id,
@@ -80,9 +90,11 @@ function pick(data: Record<string, unknown>, keys: readonly string[]) {
 export const restore = mutation({
   args: { revisionId: v.id("revisions") },
   handler: async (ctx, { revisionId }) => {
-    await requireAdmin(ctx);
     const r = await ctx.db.get(revisionId);
     if (!r) throw new ConvexError("Versão não encontrada.");
+    const viewer = await requireClientAccess(ctx, r.clientId);
+    const owner = (await ctx.db.get(r.clientId))!;
+    if (!canRestore(viewer, owner, r.kind)) throw new ConvexError("Peça para o estúdio restaurar esta versão.");
     const data = r.data as Record<string, unknown>;
 
     if (r.kind === "briefing") {
@@ -136,6 +148,79 @@ export const restore = mutation({
     await saveRevision(ctx, { clientId: r.clientId, kind: "plano", targetId: id, label: now.theme, reason: "Antes de restaurar", data: now });
     await ctx.db.patch(id, { ...pick(data, PLAN_FIELDS), updatedAt: Date.now() });
     return { planId: id };
+  },
+});
+
+/** Histórico de uma cliente: tudo o que mudou e as versões guardadas, da mais nova para a mais antiga. */
+export const forClient = query({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    const { viewer, client } = await requireClientBySlug(ctx, slug);
+    const admin = viewer.role === "admin";
+    const names = new Map<string, string>();
+    const who = async (id?: Id<"users">) => {
+      if (!id) return "Sistema";
+      if (!names.has(id)) {
+        const u = await ctx.db.get(id);
+        names.set(id, u?.role === "admin" ? `${displayName(u)} (estúdio)` : displayName(u));
+      }
+      return names.get(id)!;
+    };
+    const titles = new Map<string, string | null>();
+    const contentTitle = async (id: Id<"contents">) => {
+      if (!titles.has(id)) {
+        const c = await ctx.db.get(id);
+        titles.set(id, c && (!c.deletedAt || admin) ? c.title : null);
+      }
+      return titles.get(id)!;
+    };
+
+    const acts = await ctx.db
+      .query("activity")
+      .withIndex("by_client", (q) => q.eq("clientId", client._id))
+      .order("desc")
+      .take(400);
+    const changes = [];
+    for (const a of acts) {
+      if (a.kind === "entrada" && !admin) continue;
+      const title = a.contentId ? await contentTitle(a.contentId) : null;
+      changes.push({ _id: a._id, at: a._creationTime, kind: a.kind, summary: a.summary, who: await who(a.userId), contentId: title ? a.contentId! : null, contentTitle: title });
+      if (changes.length >= 250) break;
+    }
+
+    const kinds: Kind[] = admin ? ["briefing", "conteudo", "legendas", "plano"] : ["briefing", "conteudo", "legendas"];
+    const rows = (
+      await Promise.all(
+        kinds.map((k) =>
+          ctx.db
+            .query("revisions")
+            .withIndex("by_client_kind", (q) => q.eq("clientId", client._id).eq("kind", k))
+            .order("desc")
+            .take(80),
+        ),
+      )
+    )
+      .flat()
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .slice(0, 200);
+    const versions = await Promise.all(
+      rows.map(async (r) => {
+        const d = r.data as Record<string, unknown>;
+        return {
+          _id: r._id,
+          at: r._creationTime,
+          kind: r.kind,
+          label: r.label,
+          reason: r.reason,
+          who: await who(r.userId),
+          preview: preview(r.kind, r.data),
+          targetId: r.targetId,
+          month: r.kind === "plano" ? ((d.month as string | undefined) ?? null) : null,
+          canRestore: canRestore(viewer, client, r.kind),
+        };
+      }),
+    );
+    return { changes, versions };
   },
 });
 

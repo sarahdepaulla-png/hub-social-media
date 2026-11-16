@@ -2,9 +2,10 @@
 
 import { useMutation } from "convex/react";
 import { useState } from "react";
+import { useAutosave } from "@/lib/useAutosave";
+import { AutosaveNote } from "@/components/AutosaveNote";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { errorText } from "@/components/content/DecisionSheet";
 import { FORMAT, PLATFORM, type Format, type Platform } from "@/lib/labels";
 
 type Fields = {
@@ -24,34 +25,25 @@ const field = "min-h-11 border border-campo bg-white px-3 text-[15px] font-norma
 export function ContentForm({ contentId, initial }: { contentId: Id<"contents">; initial: Fields }) {
   const update = useMutation(api.contents.update);
   const [f, setF] = useState(initial);
-  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
-  const [error, setError] = useState<string | null>(null);
-  const set = (patch: Partial<Fields>) => {
-    setF((p) => ({ ...p, ...patch }));
-    setState("idle");
-  };
-
-  const submit = async () => {
-    setState("saving");
-    setError(null);
-    try {
-      await update({
+  const set = (patch: Partial<Fields>) => setF((p) => ({ ...p, ...patch }));
+  // Data vazia não grava (o campo de data fica vazio enquanto a pessoa troca o dia).
+  const auto = useAutosave(
+    f,
+    (v) =>
+      update({
         contentId,
-        date: f.date,
-        time: f.time || undefined,
-        platform: f.platform,
-        format: f.format,
-        title: f.title.trim() || "Sem título",
-        objective: f.objective,
-        pillar: f.pillar,
-        externalUrl: f.externalUrl,
-      });
-      setState("saved");
-    } catch (err) {
-      setError(errorText(err));
-      setState("idle");
-    }
-  };
+        date: v.date,
+        time: v.time || undefined,
+        platform: v.platform,
+        format: v.format,
+        title: v.title.trim() || "Sem título",
+        objective: v.objective,
+        pillar: v.pillar,
+        externalUrl: v.externalUrl,
+      }),
+    { enabled: /^\d{4}-\d{2}-\d{2}$/.test(f.date) },
+  );
+  const submit = () => void auto.flush().catch(() => undefined);
 
   return (
     <section aria-label="Ficha" className="flex flex-col gap-4">
@@ -100,15 +92,17 @@ export function ContentForm({ contentId, initial }: { contentId: Id<"contents">;
         Link externo da peça (opcional)
         <input type="url" value={f.externalUrl} onChange={(e) => set({ externalUrl: e.target.value })} placeholder="https://" className={field} />
       </label>
-      {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
-      <button
-        type="button"
-        onClick={submit}
-        disabled={state === "saving"}
-        className="min-h-11 self-start rounded-full bg-vinho px-5 text-sm font-semibold text-white disabled:opacity-50"
-      >
-        {state === "saving" ? "Salvando" : state === "saved" ? "Ficha salva" : "Salvar ficha"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={auto.saving}
+          className="min-h-11 rounded-full bg-vinho px-5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          Salvar ficha
+        </button>
+        <AutosaveNote state={auto} />
+      </div>
     </section>
   );
 }

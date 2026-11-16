@@ -6,7 +6,8 @@ import type { FunctionReturnType } from "convex/server";
 import type { Id } from "@convex/_generated/dataModel";
 import { api } from "@convex/_generated/api";
 import { buttonClass } from "@/components/brand";
-import { errorText } from "@/components/content/DecisionSheet";
+import { useAutosave } from "@/lib/useAutosave";
+import { AutosaveNote } from "@/components/AutosaveNote";
 import { monthName } from "@/lib/dates";
 import { FORMAT } from "@/lib/labels";
 import { dayLabel } from "./planLook";
@@ -52,29 +53,28 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
       .filter((p) => p.inPlan || p.status !== "publicado")
       .map((p) => ({ contentId: p._id as Id<"contents">, title: p.title, date: p.date, format: p.format, hook: p.hook ?? "", about: p.about ?? "", note: p.note ?? "", essential: p.essential, inPlan: p.inPlan })),
   );
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const auto = useAutosave({ theme, concept, phases, needs, pieces }, (v) =>
+    save({
+      slug,
+      month,
+      theme: v.theme,
+      concept: v.concept,
+      ...kept,
+      highlight: kept.highlight ? { title: kept.highlight.title, text: kept.highlight.text ?? undefined, pillar: kept.highlight.pillar } : null,
+      phases: v.phases,
+      needs: v.needs,
+      pieces: v.pieces.filter((p) => p.inPlan).map(({ contentId, hook, about, note, essential }) => ({ contentId, hook, about, note, essential })),
+    }),
+    // Sem tema o plano não grava: espera a primeira frase.
+    { enabled: theme.trim() !== "" },
+  );
 
   const submit = async () => {
-    setBusy(true);
-    setError(null);
     try {
-      await save({
-        slug,
-        month,
-        theme,
-        concept,
-        ...kept,
-        highlight: kept.highlight ? { title: kept.highlight.title, text: kept.highlight.text ?? undefined, pillar: kept.highlight.pillar } : null,
-        phases,
-        needs,
-        pieces: pieces.filter((p) => p.inPlan).map(({ contentId, hook, about, note, essential }) => ({ contentId, hook, about, note, essential })),
-      });
+      await auto.flush();
       onDone();
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setBusy(false);
+    } catch {
+      /* o erro aparece no indicador */
     }
   };
 
@@ -203,18 +203,14 @@ export function PlanEditor({ data, slug, month, onDone }: { data: Data; slug: st
         </button>
       </section>
 
-      {error && (
-        <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">
-          {error}
-        </p>
-      )}
-      <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 flex gap-3 rounded-full bg-creme/95 py-2 md:bottom-4">
-        <button type="button" disabled={busy} onClick={() => void submit()} className={buttonClass.primary}>
-          {busy ? "Salvando…" : "Salvar plano"}
+      <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 flex flex-wrap items-center gap-3 rounded-[22px] bg-creme/95 py-2 md:bottom-4">
+        <button type="button" disabled={auto.saving} onClick={() => void submit()} className={buttonClass.primary}>
+          Salvar e ver o plano
         </button>
         <button type="button" onClick={onDone} className={buttonClass.outline}>
-          Cancelar
+          Fechar
         </button>
+        <AutosaveNote state={auto} enabled={theme.trim() !== ""} />
       </div>
     </div>
   );

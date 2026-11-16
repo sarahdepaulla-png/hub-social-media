@@ -2,12 +2,16 @@
 
 import { useMutation } from "convex/react";
 import { useState } from "react";
+import { useAutosave } from "@/lib/useAutosave";
+import { AutosaveNote } from "@/components/AutosaveNote";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { errorText } from "@/components/content/DecisionSheet";
 
 type Caption = { _id: string; order: number; text: string; cta: string | null; hashtags: string | null; notes: string | null; chosen: boolean };
-type Draft = { _id?: Id<"captions">; text: string; cta: string; hashtags: string; notes: string; chosen: boolean };
+type Draft = { k: string; _id?: Id<"captions">; text: string; cta: string; hashtags: string; notes: string; chosen: boolean };
+
+let seq = 0;
+const newKey = () => `novo-${Date.now()}-${seq++}`;
 
 const field = "border border-campo bg-white px-3 text-[15px] font-normal";
 
@@ -16,31 +20,21 @@ export function CaptionEditor({ contentId, captions }: { contentId: Id<"contents
   const save = useMutation(api.captions.save);
   const [items, setItems] = useState<Draft[]>(() =>
     captions.length
-      ? captions.map((c) => ({ _id: c._id as Id<"captions">, text: c.text, cta: c.cta ?? "", hashtags: c.hashtags ?? "", notes: c.notes ?? "", chosen: c.chosen }))
-      : [{ text: "", cta: "", hashtags: "", notes: "", chosen: false }],
+      ? captions.map((c) => ({ k: c._id, _id: c._id as Id<"captions">, text: c.text, cta: c.cta ?? "", hashtags: c.hashtags ?? "", notes: c.notes ?? "", chosen: c.chosen }))
+      : [{ k: newKey(), text: "", cta: "", hashtags: "", notes: "", chosen: false }],
   );
-  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
-  const [error, setError] = useState<string | null>(null);
+  const set = (i: number, patch: Partial<Draft>) => setItems((prev) => prev.map((it, j) => (j === i ? { ...it, ...patch } : it)));
 
-  const set = (i: number, patch: Partial<Draft>) => {
-    setItems((prev) => prev.map((it, j) => (j === i ? { ...it, ...patch } : it)));
-    setState("idle");
-  };
-
-  const submit = async () => {
-    setState("saving");
-    setError(null);
-    try {
-      await save({
-        contentId,
-        items: items.map(({ _id, text, cta, hashtags, notes }) => ({ _id, text, cta, hashtags, notes })),
-      });
-      setState("saved");
-    } catch (err) {
-      setError(errorText(err));
-      setState("idle");
-    }
-  };
+  const auto = useAutosave(items, async (list) => {
+    const ids = await save({
+      contentId,
+      items: list.map(({ _id, text, cta, hashtags, notes }) => ({ _id, text, cta, hashtags, notes })),
+    });
+    // Opções novas ganham o id do banco: a próxima gravação atualiza em vez de duplicar.
+    const byKey = new Map(list.map((it, i) => [it.k, ids[i]]));
+    setItems((prev) => prev.map((it) => (it._id || !byKey.get(it.k) ? it : { ...it, _id: byKey.get(it.k) as Id<"captions"> })));
+  });
+  const submit = () => void auto.flush().catch(() => undefined);
 
   return (
     <section aria-label="Legendas" className="flex flex-col gap-4">
@@ -48,7 +42,7 @@ export function CaptionEditor({ contentId, captions }: { contentId: Id<"contents
         <h2 className="text-xl font-extrabold tracking-[-0.04em]">Opções de legenda</h2>
         <button
           type="button"
-          onClick={() => setItems((p) => [...p, { text: "", cta: p.at(-1)?.cta ?? "", hashtags: p.at(-1)?.hashtags ?? "", notes: "", chosen: false }])}
+          onClick={() => setItems((p) => [...p, { k: newKey(), text: "", cta: p.at(-1)?.cta ?? "", hashtags: p.at(-1)?.hashtags ?? "", notes: "", chosen: false }])}
           className="min-h-11 text-[15px] font-semibold text-rosa-forte"
         >
           Adicionar opção
@@ -56,7 +50,7 @@ export function CaptionEditor({ contentId, captions }: { contentId: Id<"contents
       </div>
 
       {items.map((it, i) => (
-        <fieldset key={it._id ?? `novo-${i}`} className={`flex flex-col gap-3 rounded-peca border-2 bg-white p-4 ${it.chosen ? "border-vinho" : "border-linha"}`}>
+        <fieldset key={it.k} className={`flex flex-col gap-3 rounded-peca border-2 bg-white p-4 ${it.chosen ? "border-vinho" : "border-linha"}`}>
           <legend className="sr-only">Opção {i + 1}</legend>
           <div className="flex items-center justify-between">
             <strong className="text-sm">
@@ -89,15 +83,17 @@ export function CaptionEditor({ contentId, captions }: { contentId: Id<"contents
         </fieldset>
       ))}
 
-      {error && <p role="alert" className="text-sm font-semibold text-st-ajuste-texto">{error}</p>}
-      <button
-        type="button"
-        onClick={submit}
-        disabled={state === "saving"}
-        className="min-h-11 self-start rounded-full bg-vinho px-5 text-sm font-semibold text-white disabled:opacity-50"
-      >
-        {state === "saving" ? "Salvando" : state === "saved" ? "Legendas salvas" : "Salvar legendas"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={auto.saving}
+          className="min-h-11 rounded-full bg-vinho px-5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          Salvar legendas
+        </button>
+        <AutosaveNote state={auto} />
+      </div>
     </section>
   );
 }

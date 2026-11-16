@@ -165,6 +165,9 @@ function BriefingView() {
           submitLabel="Salvar briefing"
           pendingLabel="Salvando"
           onCancel={() => setEditing(false)}
+          onAutoSave={async (v) => {
+            await update({ briefingId, ...v });
+          }}
           onSubmit={async (v) => {
             await update({ briefingId, ...v });
             setEditing(false);

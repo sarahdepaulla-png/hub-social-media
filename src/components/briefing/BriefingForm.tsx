@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useAutosave } from "@/lib/useAutosave";
+import { AutosaveNote } from "@/components/AutosaveNote";
 import { buttonClass } from "@/components/brand";
 import { errorText } from "@/components/content/DecisionSheet";
 import { TaskFields } from "@/components/Task";
@@ -47,8 +49,11 @@ export function BriefingForm({
   pendingLabel,
   onSubmit,
   onCancel,
+  onAutoSave,
   team,
 }: {
+  /** Ao editar um briefing que já existe: grava sozinho enquanto a pessoa escreve. */
+  onAutoSave?: (v: BriefingValues) => Promise<void>;
   /** Só para a admin: mostra "com quem está" e prazo. */
   team?: string[];
   initial?: Partial<BriefingValues>;
@@ -61,23 +66,43 @@ export function BriefingForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const read = (form: HTMLFormElement, ls: string[]): BriefingValues => {
+    const d = new FormData(form);
+    const text = (k: string) => String(d.get(k) ?? "").trim() || undefined;
+    return {
+      title: String(d.get("title") ?? ""),
+      platform: (text("platform") as Platform | undefined) ?? undefined,
+      format: (text("format") as Format | undefined) ?? undefined,
+      desiredDate: text("desiredDate"),
+      ...(team ? { dueDate: text("dueDate"), owner: text("owner") } : {}),
+      objective: text("objective"),
+      body: String(d.get("body") ?? ""),
+      links: ls.map((l) => l.trim()).filter(Boolean),
+    };
+  };
+
+  // Salvamento automático (só na edição): o formulário não é controlado, então lemos os campos a cada mudança.
+  const [snap, setSnap] = useState<Omit<BriefingValues, "links"> | null>(null);
+  const values = snap ? { ...snap, links: links.map((l) => l.trim()).filter(Boolean) } : null;
+  const auto = useAutosave(values, async (v) => (v && onAutoSave ? onAutoSave(v) : undefined), {
+    enabled: !!onAutoSave && !!values && values.title.trim() !== "" && values.body.trim() !== "",
+  });
+  const capture = () => {
+    if (!onAutoSave || !formRef.current) return;
+    const { links: _l, ...rest } = read(formRef.current, []);
+    void _l;
+    setSnap(rest);
+  };
+
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const d = new FormData(e.currentTarget);
-    const text = (k: string) => String(d.get(k) ?? "").trim() || undefined;
+    const v = read(e.currentTarget, links);
     setPending(true);
     setError(null);
     try {
-      await onSubmit({
-        title: String(d.get("title") ?? ""),
-        platform: (text("platform") as Platform | undefined) ?? undefined,
-        format: (text("format") as Format | undefined) ?? undefined,
-        desiredDate: text("desiredDate"),
-        ...(team ? { dueDate: text("dueDate"), owner: text("owner") } : {}),
-        objective: text("objective"),
-        body: String(d.get("body") ?? ""),
-        links: links.map((l) => l.trim()).filter(Boolean),
-      });
+      await onSubmit(v);
     } catch (err) {
       setError(errorText(err));
       setPending(false);
@@ -85,7 +110,7 @@ export function BriefingForm({
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-8">
+    <form ref={formRef} onSubmit={submit} onChange={capture} className="flex flex-col gap-8">
       <Step n={1} title="O que é o conteúdo" hint="O tema em uma frase. Formato e data ajudam o estúdio a encaixar no calendário.">
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
           Tema
@@ -183,9 +208,10 @@ export function BriefingForm({
         </button>
         {onCancel && (
           <button type="button" onClick={onCancel} className={buttonClass.outline}>
-            Cancelar
+            {onAutoSave ? "Fechar" : "Cancelar"}
           </button>
         )}
+        {onAutoSave && <AutosaveNote state={auto} enabled={!!values && values.title.trim() !== "" && values.body.trim() !== ""} className="self-center" />}
       </div>
     </form>
   );

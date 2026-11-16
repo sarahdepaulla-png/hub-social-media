@@ -262,6 +262,11 @@ export default function InicioPage() {
             </ul>
           )}
         </section>
+
+        <Link href={`${base}/historico`} className="mx-6 flex min-h-12 items-center justify-between gap-3 border-t border-linha py-3 text-[15px] font-semibold text-rosa-forte md:hidden">
+          Histórico de alterações e versões
+          <span aria-hidden="true">→</span>
+        </Link>
       </div>
     </main>
   );

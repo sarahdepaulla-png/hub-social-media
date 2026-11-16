@@ -29,6 +29,18 @@ function ago(ts: number, now: number) {
   return stamp(ts);
 }
 
+/** Frase com sujeito: "Bia aprovou a versão 1", "Mai pediu ajuste na versão 2". */
+function phrase(summary: string) {
+  const s = summary
+    .replace(/^Aprovado com observação na versão/, "Aprovou com observação a versão")
+    .replace(/^Aprovado na versão/, "Aprovou a versão")
+    .replace(/^Ajuste solicitado na versão/, "Pediu ajuste na versão")
+    .replace(/^Desfez "Aprovado com observação"/, "Desfez a aprovação com observação")
+    .replace(/^Desfez "Aprovado"/, "Desfez a aprovação")
+    .replace(/^Desfez "Ajuste solicitado"/, "Desfez o pedido de ajuste");
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
 type Client = NonNullable<ReturnType<typeof useQuery<typeof api.presence.feed>>>["clients"][number];
 
 function ClientCard({ c, now }: { c: Client; now: number }) {
@@ -75,7 +87,7 @@ function ClientCard({ c, now }: { c: Client; now: number }) {
         <ol className="flex flex-col">
           {shown.map((it) => {
             const k = KIND[it.kind] ?? { label: "Movimento", color: "#7A4A5E" };
-            const text = it.summary.charAt(0).toLowerCase() + it.summary.slice(1);
+            const text = phrase(it.summary);
             return (
               <li key={it._id} className={`flex flex-col gap-1 border-t border-linha py-2.5 first:border-t-0 ${it.unread ? "-mx-2 rounded-xl bg-[#FFF6FA] px-2" : ""}`}>
                 <span className="text-[14px] leading-snug">

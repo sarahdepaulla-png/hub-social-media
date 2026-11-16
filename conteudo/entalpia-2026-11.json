@@ -1,0 +1,56 @@
+[
+  {
+    "key": "entalpia-2026-11-pov-projeto-na-estrada",
+    "client": "entalpia",
+    "date": "2026-11-16",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "POV: projeto na estrada",
+    "status": "ideia"
+  },
+  {
+    "key": "entalpia-2026-11-fotos-individuais",
+    "client": "entalpia",
+    "date": "2026-11-20",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Fotos individuais da Entalpia",
+    "status": "ideia"
+  },
+  {
+    "key": "entalpia-2026-11-letras-do-ep",
+    "client": "entalpia",
+    "date": "2026-11-22",
+    "platform": "instagram",
+    "format": "carrossel",
+    "title": "Carrossel: letras do EP",
+    "status": "ideia"
+  },
+  {
+    "key": "entalpia-2026-11-pov-calmo-liniker",
+    "client": "entalpia",
+    "date": "2026-11-27",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "POV: Calmô, da Liniker",
+    "status": "ideia"
+  },
+  {
+    "key": "entalpia-2026-11-respiro-vem",
+    "client": "entalpia",
+    "date": "2026-11-30",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "Você precisa de um respiro hoje (Vem)",
+    "status": "ideia"
+  },
+  {
+    "key": "entalpia-2026-11-pov-sarau-brasilis",
+    "client": "entalpia",
+    "date": "2026-12-04",
+    "platform": "instagram",
+    "format": "reels",
+    "title": "POV: projeto no Sarau Brasilis",
+    "status": "ideia"
+  }
+]

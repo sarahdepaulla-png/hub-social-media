@@ -91,7 +91,16 @@ export const get = query({
       .sort((a, b) => a.month.localeCompare(b.month));
 
     const notes = new Map((visible?.pieces ?? []).map((p) => [p.contentId, p]));
-    const contents = (await contentsInMonth(ctx, client._id, month))
+    // Peças do mês + peças do plano que caem no começo do mês seguinte (ex.: 04/12 no plano de novembro).
+    const inMonth = await contentsInMonth(ctx, client._id, month);
+    const seen = new Set(inMonth.map((c) => c._id));
+    const extra = [];
+    for (const id of notes.keys()) {
+      if (seen.has(id)) continue;
+      const c = await ctx.db.get(id);
+      if (c && c.clientId === client._id) extra.push(c);
+    }
+    const contents = [...inMonth, ...extra]
       .filter(alive)
       .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
     const pieces = await Promise.all(
@@ -354,8 +363,11 @@ export const decide = mutation({
     let promoted = 0;
     if (type === "aprovado") {
       const inPlan = new Set(plan.pieces.map((p) => p.contentId));
-      for (const c of await contentsInMonth(ctx, client._id, month)) {
-        if (c.status !== "ideia" || (inPlan.size > 0 && !inPlan.has(c._id))) continue;
+      const candidates = inPlan.size
+        ? (await Promise.all([...inPlan].map((id) => ctx.db.get(id)))).filter((c): c is Doc<"contents"> => !!c && c.clientId === client._id && !c.deletedAt)
+        : await contentsInMonth(ctx, client._id, month);
+      for (const c of candidates) {
+        if (c.status !== "ideia") continue;
         await ctx.db.patch(c._id, { status: "producao" });
         await logActivity(ctx, { clientId: client._id, contentId: c._id, userId: who._id, kind: "status", summary: "Entrou no calendário com a aprovação do plano do mês" });
         promoted++;

@@ -1,0 +1,46 @@
+{
+  "key": "entalpia-2026-11",
+  "client": "entalpia",
+  "month": "2026-11",
+  "theme": "A Entalpia de perto.",
+  "concept": "Em novembro, a ideia é aproximar o público da banda e da música de vocês: performances espontâneas, as pessoas por trás da Entalpia, as letras do EP e um gostinho de como é estar num show.",
+  "needs": [
+    {
+      "text": "Dizer se o post de 20/11 (Dia da Consciência Negra) deve trazer alguma abordagem relacionada à data",
+      "due": "Até 18/11"
+    }
+  ],
+  "pieces": [
+    {
+      "key": "entalpia-2026-11-pov-projeto-na-estrada",
+      "hook": "POV: projeto na estrada",
+      "about": "Trazer uma performance espontânea de vocês, mostrando a música de um jeito orgânico e aproximando o público da banda."
+    },
+    {
+      "key": "entalpia-2026-11-fotos-individuais",
+      "hook": "Fotos individuais da Entalpia",
+      "about": "Carrossel de duas telas: na primeira, a foto de uma pessoa da banda; na segunda, um trecho de música do EP numa estética inspirada no Spotify ou num card compartilhável.",
+      "note": "Ponto de atenção: por ser Dia da Consciência Negra, deixamos essa publicação em aberto para entender se vocês gostariam de trazer alguma abordagem relacionada à data."
+    },
+    {
+      "key": "entalpia-2026-11-letras-do-ep",
+      "hook": "Carrossel: letras do EP",
+      "about": "Explorar trechos das músicas do EP numa construção visual criativa, valorizando as composições e buscando identificação e compartilhamento."
+    },
+    {
+      "key": "entalpia-2026-11-pov-calmo-liniker",
+      "hook": "POV: Calmô, da Liniker",
+      "about": "Aproveitar uma música conhecida para apresentar a interpretação e a identidade musical de vocês a novos públicos."
+    },
+    {
+      "key": "entalpia-2026-11-respiro-vem",
+      "hook": "Você precisa de um respiro hoje (Vem)",
+      "about": "Uma abordagem mais emocional, usando a música Vem para gerar identificação e despertar aquela vontade de ouvir a música inteira."
+    },
+    {
+      "key": "entalpia-2026-11-pov-sarau-brasilis",
+      "hook": "POV: projeto no Sarau Brasilis",
+      "about": "Mostrar a música acontecendo ao vivo e, principalmente, a conexão do público com vocês. A ideia é trazer um pouco da experiência de estar num show da Entalpia."
+    }
+  ]
+}

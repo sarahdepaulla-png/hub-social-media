@@ -118,6 +118,12 @@ export const apply = internalMutation({
           await log(client._id, contentId, "Atualizou a ficha pelo planejamento");
           report.push(`${it.key}: atualizada`);
         }
+        // Ideia que já pode ir direto para o calendário: a fila manda "producao".
+        if (existing.status === "ideia" && it.status === "producao") {
+          await ctx.db.patch(contentId, { status: "producao" });
+          await log(client._id, contentId, "Entrou no calendário pelo planejamento");
+          report.push(`${it.key}: foi para o calendário`);
+        }
       }
 
       if (it.captions) {

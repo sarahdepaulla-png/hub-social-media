@@ -103,6 +103,7 @@ export default defineSchema({
       }),
     ),
     feedShowPlanned: v.optional(v.boolean()), // mostra as peças do calendário no topo da prévia
+    folders: v.optional(v.array(v.string())), // pastas criadas no painel do estúdio (ficam mesmo vazias)
   }).index("by_slug", ["slug"]),
 
   contents: defineTable({

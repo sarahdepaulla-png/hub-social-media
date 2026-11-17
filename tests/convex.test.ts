@@ -716,7 +716,7 @@ describe("perfil da cliente", () => {
     await expect(as(admin).mutation(api.profile.add, { slug: "lili", folder: "Marca", kind: "link", title: "Sem link" })).rejects.toThrow(/link/);
 
     const p = await as(admin).query(api.profile.get, { slug: "lili" });
-    expect(p.folders).toEqual(["Drive e arquivos", "Acessos e senhas", "Marca", "Anotações", "Contratos"]);
+    expect(p.folders).toEqual(["Recebidos da cliente", "Drive e arquivos", "Fotos e vídeos", "Marca", "Acessos e senhas", "Anotações", "Contratos"]);
     expect(p.items.find((i) => i.kind === "acesso")).toMatchObject({ login: "lili.fisio", secret: "segredo" });
     expect(p.items.find((i) => i.kind === "link")).toMatchObject({ url: "https://drive.google.com/abc", title: "drive.google.com/abc" });
 
@@ -1225,5 +1225,27 @@ describe("histórico da cliente e salvamento automático", () => {
     expect((await as(biaUser).query(api.contents.get, { contentId: biaContent })).content.title).toBe(original);
     // Cada cliente só vê o próprio histórico.
     await expect(as(liliUser).query(api.revisions.forClient, { slug: "bia" })).rejects.toThrow();
+  });
+});
+
+describe("painel da cliente no estúdio", () => {
+  test("visão do mês, pastas criadas, arquivos em lote e mover de pasta; só a admin", async () => {
+    const { t, as, admin, liliUser } = await setup();
+    const panel = await as(admin).query(api.panel.get, { slug: "lili", today: "2026-10-15" });
+    expect(panel.counts.total).toBeGreaterThan(0);
+    expect(panel.folders.map((f) => f.name)).toContain("Recebidos da cliente");
+    await as(admin).mutation(api.profile.createFolder, { slug: "lili", name: "Show de dezembro" });
+    const fileId = await t.run((ctx) => ctx.storage.store(new Blob(["x"], { type: "image/png" })));
+    expect(await as(admin).mutation(api.profile.addFiles, { slug: "lili", folder: "Show de dezembro", files: [{ id: fileId, name: "foto.png", type: "image/png" }] })).toBe(1);
+    let profile = await as(admin).query(api.profile.get, { slug: "lili" });
+    expect(profile.folders).toContain("Show de dezembro");
+    const item = profile.items.find((i) => i.title === "foto.png")!;
+    await expect(as(admin).mutation(api.profile.deleteFolder, { slug: "lili", name: "Show de dezembro" })).rejects.toThrow(/vazia/);
+    await as(admin).mutation(api.profile.moveItem, { itemId: item._id, folder: "Fotos e vídeos" });
+    await as(admin).mutation(api.profile.deleteFolder, { slug: "lili", name: "Show de dezembro" });
+    profile = await as(admin).query(api.profile.get, { slug: "lili" });
+    expect(profile.folders).not.toContain("Show de dezembro");
+    expect(profile.items.find((i) => i._id === item._id)?.folder).toBe("Fotos e vídeos");
+    await expect(as(liliUser).query(api.panel.get, { slug: "lili", today: "2026-10-15" })).rejects.toThrow();
   });
 });

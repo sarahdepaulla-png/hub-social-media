@@ -44,6 +44,7 @@ import type * as otp from "../otp.js";
 import type * as pautas from "../pautas.js";
 import type * as presence from "../presence.js";
 import type * as previews from "../previews.js";
+import type * as panel from "../panel.js";
 import type * as plans from "../plans.js";
 import type * as profile from "../profile.js";
 import type * as revisions from "../revisions.js";
@@ -95,6 +96,7 @@ import type * as viewer from "../viewer.js";
 "pautas": typeof pautas,
 "presence": typeof presence,
 "previews": typeof previews,
+"panel": typeof panel,
 "plans": typeof plans,
 "profile": typeof profile,
 "revisions": typeof revisions,

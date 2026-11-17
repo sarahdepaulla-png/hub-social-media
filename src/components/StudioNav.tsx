@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/estudio", label: "Visão geral" },
+  { href: "/estudio/c", label: "Painel das clientes" },
   { href: "/estudio/esteira", label: "Esteira" },
   { href: "/estudio/avisos", label: "Avisos" },
   { href: "/estudio/clientes", label: "Clientes e acessos" },
@@ -19,7 +20,7 @@ export function StudioNav() {
   return (
     <nav aria-label="Estúdio" className="flex gap-6 overflow-x-auto text-[15px]">
       {LINKS.map((l) => {
-        const active = l.href === "/estudio" ? path === l.href : path.startsWith(l.href);
+        const active = l.href === "/estudio" ? path === l.href : l.href === "/estudio/c" ? path === l.href || path.startsWith("/estudio/c/") : path.startsWith(l.href);
         return (
           <Link
             key={l.href}

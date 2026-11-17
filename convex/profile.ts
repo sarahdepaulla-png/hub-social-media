@@ -8,7 +8,7 @@ import { requireAdmin, requireClientBySlug } from "./lib/access";
  * (Drive, acessos e senhas, marca, anotações). Só a admin vê e edita.
  */
 
-const DEFAULT_FOLDERS = ["Drive e arquivos", "Acessos e senhas", "Marca", "Anotações"];
+export const DEFAULT_FOLDERS = ["Recebidos da cliente", "Drive e arquivos", "Fotos e vídeos", "Marca", "Acessos e senhas", "Anotações"];
 
 const kind = v.union(v.literal("link"), v.literal("acesso"), v.literal("arquivo"), v.literal("nota"));
 const fileV = v.object({ id: v.id("_storage"), name: v.string(), type: v.string() });
@@ -91,7 +91,7 @@ export const get = query({
         updatedAt: r.updatedAt,
       })),
     );
-    const custom = [...new Set(rows.map((r) => r.folder))]
+    const custom = [...new Set([...rows.map((r) => r.folder), ...(client.folders ?? [])])]
       .filter((f) => !DEFAULT_FOLDERS.includes(f))
       .sort((a, b) => a.localeCompare(b, "pt-BR"));
     return {
@@ -143,6 +143,64 @@ export const renameFolder = mutation({
       .withIndex("by_client", (q) => q.eq("clientId", client._id))
       .collect();
     for (const r of rows.filter((r) => r.folder === from)) await ctx.db.patch(r._id, { folder: name });
+    const list = client.folders ?? [];
+    if (list.includes(from)) await ctx.db.patch(client._id, { folders: [...new Set(list.map((f) => (f === from ? name : f)))] });
+  },
+});
+
+/** Cria uma pasta (fica guardada mesmo vazia). */
+export const createFolder = mutation({
+  args: { slug: v.string(), name: v.string() },
+  handler: async (ctx, { slug, name }) => {
+    await requireAdmin(ctx);
+    const { client } = await requireClientBySlug(ctx, slug);
+    const folder = name.trim().slice(0, 60);
+    if (!folder) throw new ConvexError("Dê um nome à pasta.");
+    const list = client.folders ?? [];
+    if (!DEFAULT_FOLDERS.includes(folder) && !list.includes(folder)) await ctx.db.patch(client._id, { folders: [...list, folder] });
+    return folder;
+  },
+});
+
+/** Apaga uma pasta criada. Só vazia: o que estiver dentro precisa ser movido antes. */
+export const deleteFolder = mutation({
+  args: { slug: v.string(), name: v.string() },
+  handler: async (ctx, { slug, name }) => {
+    await requireAdmin(ctx);
+    const { client } = await requireClientBySlug(ctx, slug);
+    if (DEFAULT_FOLDERS.includes(name)) throw new ConvexError("Essa pasta é fixa.");
+    const rows = await ctx.db
+      .query("profileItems")
+      .withIndex("by_client", (q) => q.eq("clientId", client._id))
+      .collect();
+    if (rows.some((r) => r.folder === name)) throw new ConvexError("A pasta não está vazia. Mova ou apague o que tem dentro antes.");
+    await ctx.db.patch(client._id, { folders: (client.folders ?? []).filter((f) => f !== name) });
+  },
+});
+
+/** Vários arquivos de uma vez numa pasta. */
+export const addFiles = mutation({
+  args: { slug: v.string(), folder: v.string(), files: v.array(fileV) },
+  handler: async (ctx, { slug, folder, files }) => {
+    await requireAdmin(ctx);
+    const { client } = await requireClientBySlug(ctx, slug);
+    const name = folder.trim().slice(0, 60);
+    if (!name) throw new ConvexError("Escolha a pasta.");
+    for (const f of files.slice(0, 50)) {
+      await ctx.db.insert("profileItems", { clientId: client._id, folder: name, kind: "arquivo", title: f.name.slice(0, 120), file: f, updatedAt: Date.now() });
+    }
+    return files.length;
+  },
+});
+
+/** Muda um item de pasta. */
+export const moveItem = mutation({
+  args: { itemId: v.id("profileItems"), folder: v.string() },
+  handler: async (ctx, { itemId, folder }) => {
+    await loadItem(ctx, itemId);
+    const name = folder.trim().slice(0, 60);
+    if (!name) throw new ConvexError("Escolha a pasta.");
+    await ctx.db.patch(itemId, { folder: name, updatedAt: Date.now() });
   },
 });
 

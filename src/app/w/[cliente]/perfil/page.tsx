@@ -25,6 +25,8 @@ const KINDS: { id: Kind; label: string }[] = [
 ];
 
 const FOLDER_HINT: Record<string, string> = {
+  "Recebidos da cliente": "Tudo o que a cliente mandou por WhatsApp, e-mail ou Drive.",
+  "Fotos e vídeos": "Fotos e vídeos brutos para os posts.",
   "Drive e arquivos": "Pasta do Drive, fotos brutas, materiais que a cliente mandou.",
   "Acessos e senhas": "Instagram, Meta Business, TikTok, Canva. Só você vê.",
   Marca: "Logo, paleta, fontes, manual da marca.",

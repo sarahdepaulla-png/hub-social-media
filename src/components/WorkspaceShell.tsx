@@ -81,6 +81,9 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
                 <Link href="/estudio" className="text-sm font-semibold text-rosa-forte hover:text-rosa-forte-hover">
                   Estúdio
                 </Link>
+                <Link href={`/estudio/c/${ws.slug}`} className="text-sm font-semibold text-rosa-forte hover:text-rosa-forte-hover">
+                  Painel
+                </Link>
                 <ViewAsButton slug={ws.slug} />
               </>
             ) : (

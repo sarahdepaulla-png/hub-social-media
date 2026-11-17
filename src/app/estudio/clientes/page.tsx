@@ -354,6 +354,7 @@ function ClientCard({ client, mailReady }: { client: Client; mailReady: boolean 
           </span>
         </span>
         <span className="flex items-center gap-2">
+          <Link href={`/estudio/c/${client.slug}`} className="min-h-10 content-center px-2 text-sm font-semibold text-rosa-forte">Painel</Link>
           <Link href={`/w/${client.slug}`} className="min-h-10 content-center px-2 text-sm font-semibold text-rosa-forte">Abrir</Link>
           <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="min-h-10 rounded-full border border-campo bg-white px-4 text-sm font-semibold">
             {open ? "Fechar" : "Editar"}

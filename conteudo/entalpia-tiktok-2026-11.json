@@ -44,15 +44,24 @@
     "platform": "tiktok",
     "format": "video",
     "title": "Como nasceu \"se cuida\"",
-    "objective": "Criar conexão com a história por trás da música",
-    "pillar": "Música autoral",
-    "externalUrl": "https://www.instagram.com/reel/DboeTmPvUR4/",
+    "remove": true
+  },
+  {
+    "key": "entalpia-tiktok-2026-11-pov-musicista",
+    "client": "entalpia",
+    "date": "2026-11-22",
+    "platform": "tiktok",
+    "format": "video",
+    "title": "POV: você é musicista (Dia do Músico)",
+    "objective": "Comemorar o dia do músico",
+    "pillar": "Datas",
+    "externalUrl": "https://drive.google.com/file/d/1zERSqJHXSBSp2JQ7TBZ71sGoZmQ2FsGt/view?usp=drive_link",
     "status": "producao",
     "captions": [
       {
-        "text": "\"se cuida\" nasceu numa noite de muitos sentimentos misturados. que tipo de cuidado você tem construído? 💌",
-        "hashtags": "#mpb #soul #composicaoautoral #musicaautoral #bandaindependente",
-        "notes": "Ref: https://www.instagram.com/reel/DboeTmPvUR4/ | Texto de abertura na tela: \"a história por trás de 'se cuida'\""
+        "text": "hoje, no dia nacional da pessoa música, celebramos a habilidade de construir trilha sonora para a vida ♥️ os bastidores não são fáceis, mas o palco das conexões vale sempre a pena. entre montagens, desmontagens, ensaios, passagens, deslocamentos, cansaço e riso, a gente se encontra. 🫂",
+        "hashtags": "#música #show #liveinconcert",
+        "notes": "Mesmo conteúdo do Reels do Instagram de 22/11 (já aprovado): https://hub-social-media.vercel.app/w/entalpia/c/kd7617xetjhst4z7ddjfy3tjfn8jbhpc"
       }
     ]
   },

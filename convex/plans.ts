@@ -474,6 +474,7 @@ export const apply = internalMutation({
   args: {
     plan: v.object({
       key: v.string(),
+      force: v.optional(v.boolean()),
       client: v.string(),
       month: v.string(),
       theme: v.string(),
@@ -501,6 +502,8 @@ export const apply = internalMutation({
     if (!client) return `${it.key}: cliente "${it.client}" não existe, pulei`;
     const existing = await findPlan(ctx, client._id, it.month);
     if (existing && existing.importKey !== it.key) return `${it.key}: já existe um plano feito na tela, não mexi`;
+    // Regra: a fila só cria. Depois que o plano existe, quem manda é o Hub (só com "force": true a fila mexe).
+    if (existing && !it.force) return `${it.key}: já existe, o Hub manda, não mexi`;
 
     const pieces: Doc<"monthPlans">["pieces"] = [];
     for (const p of it.pieces ?? []) {

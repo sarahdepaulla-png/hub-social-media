@@ -303,8 +303,33 @@ describe("fila de conteúdo", () => {
     month = await as(admin).query(api.calendar.month, { slug: "vivi", month: "2026-10" });
     expect(month.contents.find((c) => c._id === first._id)?.date).toBe("2026-10-05");
 
-    const moved = await t.mutation(internal.imports.apply, { items: [{ ...items[1], date: "2026-10-09" }] });
+    // A fila só cria: mudar o arquivo não mexe na peça que já existe, a não ser com force.
+    const second = month.contents.find((c) => c.date === items[1].date)!;
+    expect(await t.mutation(internal.imports.apply, { items: [{ ...items[1], date: "2026-10-09" }] })).not.toContain("atualizada");
+    expect((await as(admin).query(api.contents.get, { contentId: second._id })).content.date).toBe(items[1].date);
+    const moved = await t.mutation(internal.imports.apply, { items: [{ ...items[1], date: "2026-10-09", force: true }] });
     expect(moved).toContain("atualizada");
+  });
+
+  test("o que a equipe mudou no Hub não volta a cada publicação, e o que a fila tinha desfeito é recuperado", async () => {
+    const { t, as, biaUser } = await setup();
+    await t.mutation(internal.clients.applyOnce, { key: "lib", slug: "bia", clientCanEdit: true });
+    const item = { key: "bia-x", client: "bia", date: "2026-11-16", platform: "instagram" as const, format: "reels" as const, title: "POV" };
+    await t.mutation(internal.imports.apply, { items: [item] });
+    const id = await t.run(async (ctx) => (await ctx.db.query("contents").withIndex("by_import_key", (q) => q.eq("importKey", "bia-x")).unique())!._id);
+    // Mai muda a data no Hub; antes da regra, a publicação seguinte voltava a data do arquivo.
+    await as(biaUser).mutation(api.contents.update, { contentId: id, date: "2026-11-18" });
+    await t.run(async (ctx) => {
+      const c = (await ctx.db.get(id))!;
+      await ctx.db.patch(id, { date: "2026-11-16" });
+      await ctx.db.insert("activity", { clientId: c.clientId, contentId: id, userId: biaUser, kind: "edicao", summary: "Atualizou a ficha pelo planejamento" });
+    });
+    const report = await t.mutation(internal.imports.apply, { items: [item] });
+    expect(report).toContain("recuperada");
+    expect((await as(biaUser).query(api.contents.get, { contentId: id })).content.date).toBe("2026-11-18");
+    // Publicações seguintes não mexem mais.
+    expect(await t.mutation(internal.imports.apply, { items: [item] })).toBe("Nada mudou");
+    expect((await as(biaUser).query(api.contents.get, { contentId: id })).content.date).toBe("2026-11-18");
   });
 });
 

@@ -23,11 +23,17 @@ export async function logActivity(
       .order("desc")
       .first();
     if (recent && recent.userId === entry.userId && recent.kind === entry.kind && Date.now() - recent._creationTime < 10 * 60 * 1000) {
-      await ctx.db.patch(recent._id, { summary: mergeSummary(recent.summary, entry.summary), after: entry.after ?? recent.after });
+      await ctx.db.patch(recent._id, { summary: mergeSummary(recent.summary, entry.summary), after: mergeAfter(recent.after, entry.after) });
       return;
     }
   }
   await ctx.db.insert("activity", entry);
+}
+
+/** Junta os campos alterados nas gravações seguidas (o valor mais novo de cada um vence). */
+function mergeAfter(a: unknown, b: unknown) {
+  if (a && b && typeof a === "object" && typeof b === "object") return { ...(a as object), ...(b as object) };
+  return b ?? a;
 }
 
 /** "Alterou Tema" + "Alterou Data" = "Alterou Tema, Data". */

@@ -33,7 +33,6 @@ const STATUS = {
 } as const;
 
 const field = "w-full border-[1.5px] border-campo bg-white px-3 text-base font-normal";
-const MAX_BYTES = 25 * 1024 * 1024;
 
 function Composer({ slug, admin }: { slug: string; admin: boolean }) {
   const create = useMutation(api.ideas.create);
@@ -52,7 +51,6 @@ function Composer({ slug, admin }: { slug: string; admin: boolean }) {
     try {
       let fileId: Id<"_storage"> | undefined;
       if (file && file.size > 0) {
-        if (file.size > MAX_BYTES) throw new Error("O arquivo passa de 25 MB. Cole o link no lugar.");
         const url = await uploadUrl();
         const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
         if (!res.ok) throw new Error("Não foi possível enviar o arquivo.");
@@ -186,7 +184,6 @@ function EditCard({ idea, onDone }: { idea: Idea; onDone: () => void }) {
     try {
       let fileId: Id<"_storage"> | undefined;
       if (file && file.size > 0) {
-        if (file.size > MAX_BYTES) throw new Error("O arquivo passa de 25 MB.");
         const url = await uploadUrl();
         const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
         if (!res.ok) throw new Error("Não foi possível enviar o arquivo.");

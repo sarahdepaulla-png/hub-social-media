@@ -549,7 +549,6 @@ function useUpload() {
     const ids: Id<"_storage">[] = [];
     for (const [i, f] of files.entries()) {
       onStep?.(i);
-      if (f.size > 100 * 1024 * 1024) throw new Error(`${f.name} passa de 100 MB.`);
       const res = await fetch(await uploadUrl(), { method: "POST", headers: { "Content-Type": f.type || "application/octet-stream" }, body: f });
       if (!res.ok) throw new Error(`Falha no envio (${res.status})`);
       ids.push(((await res.json()) as { storageId: Id<"_storage"> }).storageId);

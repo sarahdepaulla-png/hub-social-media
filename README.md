@@ -95,14 +95,14 @@ npm run dev
 - **Decisão**: Aprovar, Aprovar com observação, Solicitar ajuste. Registra quem, quando e o comentário. Ajuste exige texto e pode apontar o card. Desfazer em até 10 minutos. "Ver o próximo" leva à próxima pendente
 - **Comentários** em thread e **histórico** de tudo
 - **Datas**: próximos 90 dias do nicho, com "Quero conteúdo sobre isso"
-- **Caixa de Ideias**: título, descrição, link e arquivo (até 25 MB)
+- **Caixa de Ideias**: título, descrição, link e arquivo
 
 **Admin**
 - **Visão geral**: ajustes pedidos e ideias novas no topo, resumo do mês por cliente
 - **Clientes e acessos**: criar cliente, cores, logo, foto, nichos, pausar. Liberar e tirar acesso por e-mail, com mensagem pronta para WhatsApp
 - **Biblioteca de datas**: datas por nicho ou só para um cliente, datas de mês inteiro
 - **Calendário**: arrastar para reagendar, criar conteúdo em qualquer dia
-- **Editor**: ficha, upload de imagens e vídeos (até 100 MB), ordem dos cards, links, legendas, status, enviar para aprovação, nova versão guardando a anterior
+- **Editor**: ficha, upload de imagens e vídeos (sem limite de tamanho), ordem dos cards, links, legendas, status, enviar para aprovação, nova versão guardando a anterior
 - **Ideia ou data para conteúdo**: "Levar ao calendário" já preenche o tema e marca a ideia como convertida
 
 ## Segurança

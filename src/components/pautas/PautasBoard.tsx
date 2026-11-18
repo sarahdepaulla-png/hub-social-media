@@ -32,7 +32,6 @@ const STATUS = {
   guardada: { label: "Guardada", color: "var(--color-st-ideia)" },
 } as const;
 
-const MAX_BYTES = 100 * 1024 * 1024;
 const input = "w-full border-[1.5px] border-campo bg-white px-3 text-[15px] font-normal text-vinho";
 
 function monthLabel(m: string | null) {
@@ -52,7 +51,6 @@ function useUploader() {
   return async (files: File[]): Promise<FileRef[]> => {
     const out: FileRef[] = [];
     for (const file of files) {
-      if (file.size > MAX_BYTES) throw new Error(`"${file.name}" passa de 100 MB. Mande pelo link do Drive.`);
       const url = await uploadUrl();
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
       if (!res.ok) throw new Error(`Não deu para enviar "${file.name}".`);

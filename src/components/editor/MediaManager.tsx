@@ -10,7 +10,6 @@ import { linkHost } from "@/components/Linkify";
 import { Lightbox, lightboxItems } from "@/components/content/Lightbox";
 import { captureFrame, uploadToStorage } from "@/lib/videoFrame";
 
-const MAX_BYTES = 100 * 1024 * 1024;
 
 const IMAGE_EXT = /\.(jpe?g|png|webp|gif|heic|heif|avif)$/i;
 const VIDEO_EXT = /\.(mp4|mov|m4v|webm)$/i;
@@ -34,11 +33,9 @@ export function useMediaUpload() {
     setError(null);
     const list = Array.from(files);
     const problems: string[] = [];
-    const tooBig = list.filter((f) => f.size > MAX_BYTES);
-    if (tooBig.length) problems.push(`${tooBig.map((f) => f.name).join(", ")} passa de 100 MB. Suba no Drive ou Vimeo e cole o link.`);
-    const wrong = list.filter((f) => f.size <= MAX_BYTES && !mediaKind(f));
+    const wrong = list.filter((f) => !mediaKind(f));
     if (wrong.length) problems.push(`${wrong.map((f) => f.name).join(", ")} não é imagem nem vídeo.`);
-    const ok = list.filter((f) => f.size <= MAX_BYTES && mediaKind(f));
+    const ok = list.filter((f) => mediaKind(f));
     for (const [i, file] of ok.entries()) {
       setProgress(ok.length > 1 ? `Enviando ${i + 1} de ${ok.length}: ${file.name}` : `Enviando ${file.name}`);
       try {
@@ -201,7 +198,7 @@ export function MediaManager({
           {progress ?? (media.length ? "Adicionar mais fotos ou vídeos" : "Escolha as fotos ou vídeos")}
         </strong>
         <span className="text-[13px] text-texto-2">
-          Pode selecionar várias de uma vez (Ctrl ou Shift no computador, toque em várias no celular). Entram na ordem escolhida, até 100 MB cada.
+          Pode selecionar várias de uma vez (Ctrl ou Shift no computador, toque em várias no celular). Entram na ordem escolhida.
         </span>
         <input
           ref={input}

@@ -120,7 +120,7 @@ export const status = query({
           .filter((u) => u.clientId === c._id)
           .map((u) => {
             const r = reads.find((x) => x.userId === u._id);
-            return { name: displayName(u), seenAt: r?.seenAt ?? null, answer: r?.answer ?? null, answeredAt: r?.answeredAt ?? null };
+            return { userId: u._id, name: displayName(u), seenAt: r?.seenAt ?? null, answer: r?.answer ?? null, answeredAt: r?.answeredAt ?? null };
           }),
       })),
     };
@@ -137,3 +137,22 @@ export const adminEmails = internalQuery({
   },
 });
 
+
+/** Desfaz o que um teste registrou: a pessoa volta a ver o recado como novo. */
+export const reset = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    await requireAdmin(ctx);
+    const read = await ctx.db
+      .query("noticeReads")
+      .withIndex("by_user_key", (q) => q.eq("userId", userId).eq("key", NOTICE.key))
+      .unique();
+    if (!read) return;
+    await ctx.db.delete(read._id);
+    const acts = await ctx.db
+      .query("activity")
+      .withIndex("by_client", (q) => q.eq("clientId", read.clientId))
+      .collect();
+    for (const a of acts) if (a.kind === "recado" && a.userId === userId) await ctx.db.delete(a._id);
+  },
+});

@@ -126,6 +126,7 @@ function ClientCard({ c, now }: { c: Client; now: number }) {
 /** O recado do Hub (chat do recesso): quem viu e o que respondeu. */
 function NoticeStatus() {
   const data = useQuery(api.notices.status);
+  const reset = useMutation(api.notices.reset);
   if (!data) return null;
   const people = data.clients.flatMap((c) => c.people);
   const yes = people.filter((p) => p.answer === "continuar").length;
@@ -162,6 +163,15 @@ function NoticeStatus() {
                   {l.text}
                   {(p.answeredAt ?? p.seenAt) && <span className="text-texto-2">· {stamp((p.answeredAt ?? p.seenAt)!)}</span>}
                 </span>
+                {p.seenAt && (
+                  <button
+                    type="button"
+                    onClick={() => window.confirm(`Desfazer o que ficou registrado para ${p.name}? O recado volta a abrir como novo para ela.`) && void reset({ userId: p.userId })}
+                    className="self-start text-xs font-semibold text-rosa-forte underline"
+                  >
+                    Foi teste, desfazer
+                  </button>
+                )}
               </li>
             );
           }),

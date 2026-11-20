@@ -341,3 +341,29 @@ export const sendPlanReady = internalAction({
     await ctx.runMutation(internal.plans.markReadyMail, sent.length ? { planId, to: sent } : { planId, error: `Não deu para enviar. ${failed.join("; ")}` });
   },
 });
+
+/** Avisa o estúdio quando a cliente responde o recado do Hub. */
+export const sendNoticeAnswer = internalAction({
+  args: { clientName: v.string(), slug: v.string(), who: v.string(), answer: v.union(v.literal("continuar"), v.literal("pensar")) },
+  handler: async (ctx, { clientName, who, answer }) => {
+    const to = await ctx.runQuery(internal.notices.adminEmails, {});
+    const mail = gmail();
+    const site = process.env.SITE_URL?.replace(/\/$/, "");
+    if (!mail || !site || to.length === 0) return;
+    const yes = answer === "continuar";
+    const subject = yes ? `${clientName} quer continuar em 2027` : `${clientName} vai pensar sobre 2027`;
+    const line = yes ? `${who} (${clientName}) respondeu o recado do recesso: quer continuar em 2027.` : `${who} (${clientName}) respondeu o recado do recesso: vai pensar e te fala.`;
+    const link = `${site}/estudio/avisos`;
+    const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f8ece6;font-family:Helvetica,Arial,sans-serif;color:#5c0f31">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8ece6;padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="background:${yes ? "#ff8dc7" : "#5c0f31"};padding:24px 28px">
+<div style="font-size:13px;font-weight:700;letter-spacing:.02em;color:${yes ? "#5c0f31" : "#ff8dc7"}">HUB SOCIAL MEDIA</div>
+<div style="font-size:34px;line-height:1.02;font-weight:800;letter-spacing:-.04em;color:#ffffff;margin-top:12px">${yes ? "Bora 2027 *" : "Vai pensar"}</div>
+</td></tr>
+<tr><td style="padding:24px 28px 6px;font-size:16px;line-height:1.55"><p style="margin:0 0 12px">${escape(line)}</p></td></tr>
+<tr><td style="padding:8px 28px 28px"><a href="${link}" style="display:inline-block;background:#5c0f31;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;padding:15px 28px;border-radius:999px">Ver nos Avisos</a></td></tr>
+</table></td></tr></table></body></html>`;
+    await mail.transport.sendMail({ from: { name: process.env.MAIL_FROM_NAME || "Hub Social Media", address: mail.user }, to, subject, text: `${line}\n\n${link}`, html });
+  },
+});

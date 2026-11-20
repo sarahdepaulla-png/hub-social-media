@@ -18,6 +18,7 @@ const KIND: Record<string, { label: string; color: string }> = {
   ideia: { label: "Ideia", color: "#0F7A6E" },
   briefing: { label: "Briefing", color: "#0F7A6E" },
   status: { label: "Status", color: "#7A4A5E" },
+  recado: { label: "Recado", color: "#FF5FA2" },
 };
 
 function ago(ts: number, now: number) {
@@ -122,6 +123,54 @@ function ClientCard({ c, now }: { c: Client; now: number }) {
   );
 }
 
+/** O recado do Hub (chat do recesso): quem viu e o que respondeu. */
+function NoticeStatus() {
+  const data = useQuery(api.notices.status);
+  if (!data) return null;
+  const people = data.clients.flatMap((c) => c.people);
+  const yes = people.filter((p) => p.answer === "continuar").length;
+  const seen = people.filter((p) => p.seenAt).length;
+  const label = (p: (typeof people)[number]) =>
+    p.answer === "continuar"
+      ? { text: "Quer continuar em 2027", color: "var(--color-st-aprovado)" }
+      : p.answer === "pensar"
+        ? { text: "Vai pensar", color: "var(--color-st-aguardando)" }
+        : p.seenAt
+          ? { text: "Viu, ainda não respondeu", color: "var(--color-st-producao)" }
+          : { text: "Ainda não viu", color: "var(--color-campo)" };
+  return (
+    <section className="flex flex-col gap-4 rounded-[22px] bg-white p-5 md:p-6" aria-labelledby="recado">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="recado" className="text-xl font-extrabold tracking-[-0.04em]">
+          Recado do recesso no Hub
+        </h2>
+        <span className="text-sm text-texto-2">
+          {seen} de {people.length} viram · {yes} {yes === 1 ? "quer" : "querem"} continuar · {data.live ? `no ar até ${data.until.slice(8, 10)}/${data.until.slice(5, 7)}` : "encerrado"}
+        </span>
+      </div>
+      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {data.clients.flatMap((c) =>
+          c.people.map((p) => {
+            const l = label(p);
+            return (
+              <li key={`${c.slug}-${p.name}`} className="flex flex-col gap-0.5 rounded-2xl bg-creme px-4 py-3">
+                <strong className="text-[15px]">
+                  {p.name} <span className="font-normal text-texto-2">· {c.name}</span>
+                </strong>
+                <span className="inline-flex items-center gap-2 text-sm">
+                  <span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: l.color }} />
+                  {l.text}
+                  {(p.answeredAt ?? p.seenAt) && <span className="text-texto-2">· {stamp((p.answeredAt ?? p.seenAt)!)}</span>}
+                </span>
+              </li>
+            );
+          }),
+        )}
+      </ul>
+    </section>
+  );
+}
+
 /** Avisos: por cliente, quem está online, quando entrou e tudo o que fez no Hub. */
 export default function AvisosPage() {
   const data = useQuery(api.presence.feed);
@@ -145,6 +194,7 @@ export default function AvisosPage() {
         </h1>
         <p className="max-w-xl text-lg leading-relaxed text-texto-3">Cada cliente com quem está online, a última vez que entrou e tudo o que fez no Hub.</p>
       </header>
+      <NoticeStatus />
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         {data.clients.map((c) => (
           <ClientCard key={c.slug} c={c} now={data.now} />

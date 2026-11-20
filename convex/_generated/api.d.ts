@@ -39,6 +39,7 @@ import type * as lib_team from "../lib/team.js";
 import type * as mailer from "../mailer.js";
 import type * as media from "../media.js";
 import type * as notify from "../notify.js";
+import type * as notices from "../notices.js";
 import type * as opportunities from "../opportunities.js";
 import type * as otp from "../otp.js";
 import type * as pautas from "../pautas.js";
@@ -91,6 +92,7 @@ import type * as viewer from "../viewer.js";
 "mailer": typeof mailer,
 "media": typeof media,
 "notify": typeof notify,
+"notices": typeof notices,
 "opportunities": typeof opportunities,
 "otp": typeof otp,
 "pautas": typeof pautas,

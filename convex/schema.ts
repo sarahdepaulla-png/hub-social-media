@@ -332,6 +332,17 @@ export default defineSchema({
   })
     .index("by_content", ["contentId"])
     .index("by_client", ["clientId"]),
+  // Recados do estúdio no Hub (o chat que abre sozinho): quem viu e o que respondeu.
+  noticeReads: defineTable({
+    key: v.string(),
+    userId: v.id("users"),
+    clientId: v.id("clients"),
+    seenAt: v.number(),
+    answer: v.optional(v.union(v.literal("continuar"), v.literal("pensar"))),
+    answeredAt: v.optional(v.number()),
+  })
+    .index("by_user_key", ["userId", "key"])
+    .index("by_key", ["key"]),
   // Perfil da cliente (só o estúdio vê): pastas com links, acessos, arquivos e notas.
   profileItems: defineTable({
     clientId: v.id("clients"),

@@ -1249,3 +1249,27 @@ describe("painel da cliente no estúdio", () => {
     await expect(as(liliUser).query(api.panel.get, { slug: "lili", today: "2026-10-15" })).rejects.toThrow();
   });
 });
+
+describe("recado do estúdio no Hub", () => {
+  test("cliente vê, responde, o estúdio acompanha; prévia e admin não contam", async () => {
+    const { t, as, admin, biaUser } = await setup();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-20T12:00:00Z"));
+    const mine = await as(biaUser).query(api.notices.mine, { slug: "bia" });
+    expect(mine?.seenAt).toBeNull();
+    expect(await as(admin).query(api.notices.mine, { slug: "bia" })).toBeNull();
+    await as(biaUser).mutation(api.notices.seen, { slug: "bia" });
+    await as(biaUser).mutation(api.notices.answer, { slug: "bia", answer: "continuar" });
+    const after = await as(biaUser).query(api.notices.mine, { slug: "bia" });
+    expect(after?.answer).toBe("continuar");
+    const st = await as(admin).query(api.notices.status, {});
+    const bia = st.clients.find((c) => c.slug === "bia")!;
+    expect(bia.people[0].answer).toBe("continuar");
+    await expect(as(biaUser).query(api.notices.status, {})).rejects.toThrow();
+    // Depois de 12/12 o recado sai do ar.
+    vi.setSystemTime(new Date("2026-12-13T12:00:00Z"));
+    expect(await as(biaUser).query(api.notices.mine, { slug: "bia" })).toBeNull();
+    vi.useRealTimers();
+    await t.finishAllScheduledFunctions(vi.runAllTimers).catch(() => undefined);
+  });
+});

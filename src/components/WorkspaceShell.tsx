@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NoticeChat } from "@/components/NoticeChat";
 import { usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
 import { createContext, useContext, type ReactNode } from "react";
@@ -143,6 +144,7 @@ export function WorkspaceShell({ slug, children }: { slug: string; children: Rea
           ))}
         </nav>
       </div>
+      {!focused && <NoticeChat slug={ws.slug} />}
     </WorkspaceContext.Provider>
   );
 }
